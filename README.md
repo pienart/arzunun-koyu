@@ -36,17 +36,33 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
 - **Ayarlar:** grafik kalitesi (Düşük/Orta/Yüksek: çözünürlük, su ve parçacık kalitesi), hava efektleri, canlılık,
   otomatik kayıt, FPS göstergesi ve dört ses seviyesi (ana, müzik, atmosfer, efektler). Değişiklikler anında uygulanır.
 - **Ekonomi:** Köylüler odun, yiyecek (meyve/çiftlik), altın ve taş toplar; 10 birim dolunca en yakın uygun binaya bırakır.
-- **Başlangıç:** 1000 yiyecek · 1000 odun · 500 altın · 1000 taş ve 3 köylü.
+- **Başlangıç:** 5000 yiyecek · 5000 odun · 5000 altın · 5000 taş ve 3 köylü.
+- **Kaynak verimi:** Üst bardaki bir kaynağın üzerine gelince **saatlik çıkarım** (son 5 dakikanın ortalaması, oyun
+  süresi), dakikalık hız, o kaynağı toplayan köylü/tekne sayısı, tersane geliri ve toplam toplanan miktar görünür.
 - **Binalar:** Ev · Kereste Kampı · Değirmen (kanatları döner) · Maden Kampı · Çiftlik · **Tersane** · **Ahşap Çit** ·
-  **Kapı** · **Kışla** · **Okçuluk Alanı** (Feodal) · **Ahır** (Feodal) · **Gözetleme Kulesi** (Feodal) ·
+  **Kapı** · **Ateş Çukuru** · **Kışla** · **Okçuluk Alanı** (Feodal) · **Ahır** (Feodal) · **Gözetleme Kulesi** (Feodal) ·
   **Kuşatma Atölyesi** (Kale) · Pazar (Feodal) · Harika (İmparatorluk).
 - **Tersane ve balıkçılık:** Yalnızca köylüler kurabilir ve yalnızca su kenarına yerleşir. **Balıkçı teknesi** üretir;
   tekne kendi gölündeki en yakın **balık sürüsüne** gider, ağ atar ve dolunca tersaneye boşaltır (her su kütlesi ayrı
   numaralanır, tekne başka göle gitmeye çalışmaz). Köylüler kıyıdaki balık sürüsünden de balık tutabilir.
   **Balık Ağları** (Feodal) tekneleri %50 hızlandırır. Tersanenin gölünde balık yoksa uyarı çıkar.
+- **Bina seviyeleri:** Çiftlik, Kereste Kampı, Değirmen, Maden Kampı ve Tersane seçiliyken **Seviye 2 / 3** ile
+  yükseltilir (bedel: bina maliyeti × 1,5 × seviye + 60 × seviye altın; süre 20 sn × seviye). Her seviye üretimi %25
+  artırır: kamp/değirmene bırakılan kaynak artar, çiftlik daha hızlı ürün verir ve yiyeceği tazelenir, tersanede
+  balıkçı geliri ve teknelerin getirdiği balık artar. Seviye, seçim panelinde "Sv. 2" olarak görünür.
+- **Yarım inşaatı yık:** Tamamlanmamış kendi inşaatınızı seçince **İnşaatı Yık** düğmesi çıkar; inşaat kaldırılır ve
+  maliyetin **yarısı** geri verilir (tamamı değil).
+- **Ateş Çukuru:** Köylüler kurar (30 odun, 10 taş). Gece köylüler ateşi yakar, başında iki köylü ısınır; çevresi geniş ve
+  merkezde daha parlak iki ışık halkasıyla diğer yerlerden belirgin şekilde aydınlık olur.
+- **Alevler:** Tüm ateşlerin (kamp ateşi, ateş çukuru, yanan binalar, ev ışıkları) parlaklığı mum alevi gibi **yavaş ve
+  rastgele** büyüyüp küçülür (sinüsün düzenli nabzı yerine yumuşak gürültü).
 - **Çit ve kapı:** Çit seçiliyken başlangıç karosundan bitişe **sürükleyin**; hat 4-komşulu çizilir (delik kalmaz),
   geçersiz karolar atlanır. Köylüler parçaları sırayla kurar. **Kapı** yalnızca sizin birimlerinizi geçirir.
   Düşman askerleri yol kapalıysa çiti/kapıyı **kırarak** geçer.
+- **Surlar çağla değişir:** Karanlık Çağ'da **Ahşap Çit** (300 can, 3 odun), Feodal'de **Taş Sur** (1100 can, zırh 6/10,
+  5 taş), Kale/İmparatorluk'ta daha kalın ve yüksek **Kale Suru** (2600 can, zırh 10/14, 8 taş). Kapı da Ahşap → Taş →
+  Kale Kapısı olur. Çağ atlayınca mevcut surlar ve kapılar da yeni kademeye geçer (hasarlıysa can oranı korunur);
+  görünüm, kalınlık ve sağlamlık birlikte değişir.
 - **Tamir:** Köylüleri seçip hasarlı kendi binanıza sağ tıklayın ya da binayı seçip **Tamir Ettir**'e basın (en yakın
   4 köylü gelir). Tamir, onarılan cana orantılı olarak bina maliyetinin yarısı oranında kaynak harcar.
 - **Köylüleri Çağır:** Kasaba Merkezi (15) ve Gözetleme Kulesi (5) seçiliyken köylüler çanla çağrılır ve içeri sığınır:
@@ -58,6 +74,9 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
   **Dolunay** gökyüzünün en tepesinde gece boyunca soldan sağa yay çizerek ilerler, gün ağarınca kaybolur.
   Üst bardaki saat düğmesi veya **L**: Otomatik → Gece → Gündüz.
 - **Bekleyen inşaatlar:** Sağ üstteki listede her inşaatın yüzdesi ve işçi sayısı görünür; tıklayınca kamera binaya gider.
+  Başlıktaki ok düğmesi listeyi **gizler/gösterir** (tercih hatırlanır).
+- **Köylü düğmesi:** Üst bardaki köylü düğmesinin üzerine gelince yazısız üç ikon açılır (açıklaması fare ile üzerine
+  gelince çıkar): **boştaki tüm köylüleri seç**, **tüm köylüleri seç**, **boştaki bir köylüyü seç** (kamerayı ona götürür).
 - **Çağlar:** Karanlık → Feodal → Kale → İmparatorluk; binaların görünümü her çağda değişir.
 - **Savaş**
   - **Milis** (yakın dövüş, binalara ×3 hasar), **Okçu** (menzilli; oklar kavisli yörüngede uçar), **Atlı Keşifçi**
@@ -65,12 +84,23 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
     ×30 hasar, oklara neredeyse dayanıklı).
   - Hasar = max(1, saldırı − zırh); yakın dövüş ve ok zırhı ayrı. Teknolojiler: Uzun Kılıç, Pul Zırh, Talimli Okçular.
   - Askerler görüş alanındaki düşmanla kendiliğinden savaşır; saldırıya uğrayan boştaki birim karşılık verir.
+  - **Otomatik savaş:** Bir askerin yanına düşman gelip çatışma başlayınca 7 karo içindeki boştaki/nöbetteki müttefik
+    askerler de savaşa katılır (sizin ve düşmanın askerleri için).
+  - **Düşman hedef önceliği:** Düşman askerleri (ve yaratık) her zaman önce **surları/kapıları**, sonra **askerleri**,
+    sonra **köylüleri**, en son diğer binaları hedefler.
   - Kasaba Merkezi ve kuleler menzile giren düşmana ok atar. Hasar alan binalar yanar; yıkılan binanın yerinde yıkıntı kalır.
 - **Düşman (kırmızı):** Haritanın uzak ama karadan ulaşılabilir bir köşesinde üs kurar (Kasaba Merkezi, Kışla, Okçuluk Alanı,
   2 kule, nöbetçiler). **Ekonomisi vardır:** köylüleri üssün çevresinde kaynak toplar, düşman zamanla yeni köylü yetiştirir
   ve biriken kaynakla her dalgaya ek asker satın alır → düşman köylülerine baskın yapmak dalgaları küçültür.
-  Zorluk; ilk saldırı zamanını (Kolay 12 / Normal 8,5 / Zor 6 dk; dalga aralığı 4,7 / 3,7 / 2,8 dk), dalga büyüklüğünü, düşman köylü
-  sayısını ve toplama hızını belirler. Düşman zamanla çağ atlar ve güçlenir. Kalan süre üst barda görünür.
+  **İlk 20 dakika asla saldırı olmaz**; ilk saldırı 20–25 dk (Kolay 25–30 dk) arasında rastgele bir anda gelir, sonraki
+  saldırılar da rastgele aralıklarla (ortalama Kolay 5 / Normal 4 / Zor 3 dk, her seferinde %60–%150) gelir. Saldırı
+  zamanı önceden gösterilmez; saldırı başlayınca savaş borusu ve uyarı çıkar. Zorluk ayrıca dalga büyüklüğünü, düşman
+  köylü sayısını ve toplama hızını belirler. Düşman zamanla çağ atlar ve güçlenir.
+- **Mağara ve Koca Ayak:** Haritanın rastgele ama hem size hem düşmana uzak bir yerinde bir **mağara** vardır. Mevsim
+  döngüsü 30 dakikadır ve yaratık **yalnızca kışın** (yani 30 dakikada bir) dışarı çıkar: kış başlayınca ~25 sn sonra
+  uyanır, rastgele bir tarafın üssüne saldırır, 140 sn sonra diğer tarafa yönelir — **hem size hem düşmana** saldırır.
+  Surları hızla yıkar (sura karşı ×4,5 hasar) ama diğer binaları yavaş yıkar (×0,45). Kış bitince mağarasına döner.
+  1500 canı vardır; öldüren taraf 400 yiyecek + 200 altın kazanır, sonraki kış yeni bir yaratık uyanır.
 - **Savaş sisi:** Keşfedilmemiş alanlar karanlıktır. Keşfettiğiniz yerler açık kalır (yalnızca hafif gölgeli), ama oradan
   geçen düşman birimleri yalnızca görüş alanınızdaysa görünür (minimap dahil). Görüş geniştir: birim görüşünün 1,5 katı
   + 3 karo, Kasaba Merkezi 15 karo. Gece görüş biraz kısalır. Yeni oyunda kapatılabilir.
@@ -78,8 +108,10 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
   dağılan kümeler alanla orantılıdır ve birbirinden uzaktır (aynı tür en az 22, farklı tür en az 8 karo).
 - **Görünüm:** Binalar, ağaçlar ve dağlar arkalarındaki birimlerin ve tavukların ÖNÜNDE çizilir (ayak izine göre derinlik).
   Örtülen kendi birimleriniz soluk siluetle görünür, düşman tamamen gizlenir.
-- **Mevsimler ve hava:** İlkbahar → Yaz → Sonbahar → Kış (her biri 6 dakika). Sonbaharda meşeler kızıla döner, kışın
-  kar örtüsü tonu ve kar yağışı olur; **kışın çiftlikler %25 yavaş, ilkbaharda %10 hızlı**. Her mevsimin kendi hava
+- **Mevsimler ve hava:** İlkbahar → Yaz → Sonbahar → Kış (her biri 7,5 dakika; oyun yazla başlar). Sonbaharda meşeler
+  kızıla döner. **Kışın her yer beyaza bürünür:** zemin ~40 sn içinde karla kaplanır (göller açık kalır, kıyılar buzlu
+  görünür), ağaçlar, çalılar, dağlar, madenler ve bina çatıları karlı görünüme geçer, mini harita da beyazlar;
+  ilkbaharda kar aynı hızla erir. Kar yağışı kışın daha sık olur; **kışın çiftlikler %25 yavaş, ilkbaharda %10 hızlı**. Her mevsimin kendi hava
   olasılıkları vardır: yağmur (hava kararır, yağmur sesi), kar (rüzgâr sesi), sis.
 - **Canlılık:** gündüz kuş sürüleri (yerde gölgeleri kayar), Kasaba Merkezi çevresinde gezinip yem gagalayan tavuklar,
   balık sürülerinin su altı gölgeleri, ara sıra sudan sıçrayan balıklar, ev ve atölyelerin bacalarından duman.

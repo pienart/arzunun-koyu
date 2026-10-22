@@ -476,6 +476,48 @@ export const MANIFEST = {
       "h": 64,
       "anchorX": 0.5185,
       "baseW": 27.0
+    },
+    "yeti_idle": {
+      "file": "assets/sprites/yeti_idle.webp",
+      "w": 210,
+      "h": 300,
+      "anchorX": 0.4738,
+      "baseW": 184.0
+    },
+    "cave": {
+      "file": "assets/sprites/cave.webp",
+      "w": 560,
+      "h": 480,
+      "anchorX": 0.4991,
+      "baseW": 560.0
+    },
+    "palisade_1": {
+      "file": "assets/sprites/palisade_1.webp",
+      "w": 207,
+      "h": 220,
+      "anchorX": 0.5,
+      "baseW": 206.0
+    },
+    "palisade_2": {
+      "file": "assets/sprites/palisade_2.webp",
+      "w": 229,
+      "h": 300,
+      "anchorX": 0.4978,
+      "baseW": 229.0
+    },
+    "gate_1": {
+      "file": "assets/sprites/gate_1.webp",
+      "w": 209,
+      "h": 220,
+      "anchorX": 0.4976,
+      "baseW": 207.0
+    },
+    "gate_2": {
+      "file": "assets/sprites/gate_2.webp",
+      "w": 234,
+      "h": 300,
+      "anchorX": 0.4979,
+      "baseW": 234.0
     }
   },
   "icons": {
@@ -1122,6 +1164,32 @@ export const MANIFEST = {
         0.0171,
         0.8857,
         0.9798
+      ]
+    },
+    "yeti_walk": {
+      "file": "assets/anims/yeti_walk.webp",
+      "frames": 16,
+      "w": 234,
+      "h": 313,
+      "anchorX": 0.5171,
+      "ref": [
+        0.0915,
+        0.031,
+        0.8981,
+        0.9586
+      ]
+    },
+    "yeti_attack": {
+      "file": "assets/anims/yeti_attack.webp",
+      "frames": 14,
+      "w": 278,
+      "h": 347,
+      "anchorX": 0.3581,
+      "ref": [
+        0.0,
+        0.1269,
+        0.7558,
+        0.8638
       ]
     }
   }

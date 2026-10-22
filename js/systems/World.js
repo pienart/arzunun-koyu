@@ -1,5 +1,5 @@
 import { CONFIG } from '../config.js';
-import { BUILDINGS, UNITS, TECHS, AGES, MARKET, RESOURCE_NAMES, START, PLAYER, ENEMY, REPAIR, DIFFICULTY, formatCost } from '../data/gameData.js';
+import { BUILDINGS, UNITS, TECHS, AGES, MARKET, RESOURCE_NAMES, START, PLAYER, ENEMY, WILD, REPAIR, DIFFICULTY, LEVELS, formatCost } from '../data/gameData.js';
 import { TileId, TileRegistry } from '../world/TileTypes.js';
 import { SpatialGrid } from './SpatialGrid.js';
 import { Weather } from './Weather.js';
@@ -11,6 +11,7 @@ import { Soldier } from '../entities/Soldier.js';
 import { Player } from './Player.js';
 import { Pathfinder } from './Pathfinder.js';
 import { EnemyAI } from './EnemyAI.js';
+import { Wild } from './Wild.js';
 
 const CORPSE_TIME = 6; // ceset: ölüm animasyonu + yerde kalma + solma (sn)
 
@@ -49,7 +50,7 @@ export class World {
     this._pass = new Map();
     this._navPass = (i, j) => (this.isNavigable(i, j) ? 1 : 0);
     this.fishNodes = this.collectFish();
-    this.players = { [PLAYER]: new Player(PLAYER), [ENEMY]: new Player(ENEMY) };
+    this.players = { [PLAYER]: new Player(PLAYER), [ENEMY]: new Player(ENEMY), [WILD]: new Player(WILD) };
     this.player = this.players[PLAYER];
     this.pathfinder = new Pathfinder(this.map);
     this.units = [];
@@ -65,6 +66,7 @@ export class World {
     this._popWarnAt = -99;
     this._attackAlertAt = -99;
     this.enemyAI = new EnemyAI(this);
+    this.wild = new Wild(this);
     if (opts.save) return; // SaveGame.apply gerisini kurar
 
     // Başlangıç: kasaba merkezi + köylüler
@@ -76,6 +78,8 @@ export class World {
 
     // Düşman üssü (haritanın uzak, karadan ulaşılabilir bir köşesi)
     this.enemyAI.setup();
+    // Mağara: iki üsten de uzak, rastgele bir yer
+    this.wild.setup();
     this.recountPopulation();
   }
 
@@ -132,6 +136,7 @@ export class World {
     for (const c of this.corpses) c.t += dt;
     if (this.corpses.length && this.corpses[0].t > CORPSE_TIME) this.corpses = this.corpses.filter((c) => c.t <= CORPSE_TIME);
     this.enemyAI.update(dt);
+    this.wild.update(dt);
   }
 
   // ───────────── Sorgular ─────────────
@@ -196,7 +201,7 @@ export class World {
    */
   passFor(u) {
     if (u.naval) return this._navPass;
-    const breach = u.owner === ENEMY && u.isMilitary;
+    const breach = (u.owner === ENEMY || u.owner === WILD) && u.isMilitary;
     const key = u.owner * 2 + (breach ? 1 : 0);
     let fn = this._pass.get(key);
     if (!fn) {
@@ -522,7 +527,7 @@ export class World {
     const hp = Math.min(b.maxHp - b.hp, (b.maxHp / b.def.buildTime) * REPAIR.HP_RATE * factor * dt);
     if (hp <= 0) return false;
     const p = this.players[b.owner], cost = {};
-    for (const [k, v] of Object.entries(b.def.cost)) cost[k] = (v * REPAIR.COST * hp) / b.maxHp;
+    for (const [k, v] of Object.entries(b.cost ?? b.def.cost)) cost[k] = (v * REPAIR.COST * hp) / b.maxHp;
     if (!p.spend(cost)) {
       if (b.owner === PLAYER && this.time - (this._repairWarnAt ?? -99) > 6) {
         this._repairWarnAt = this.time;
@@ -625,9 +630,52 @@ export class World {
     return got;
   }
 
+  // ───────────── Bina seviyeleri, çağ kademeleri, maliyet ─────────────
+  /** Bu türün sahibin çağındaki maliyeti (sur/kapı çağla taşa döner) */
+  costOf(type, owner = PLAYER) {
+    const def = BUILDINGS[type];
+    return def.tiers ? def.tiers[Math.min(def.tiers.length - 1, this.players[owner].tier)].cost : def.cost;
+  }
+
+  /** Üretim çarpanı: seviye başına +%25 (seviyesiz bina / yok → 1) */
+  levelMul(b) { return b?.isBuilding && b.def.levels ? 1 + LEVELS.bonus * (b.level - 1) : 1; }
+
+  upgradeCost(b) {
+    const cost = {};
+    for (const [k, v] of Object.entries(b.def.cost)) cost[k] = Math.round(v * LEVELS.costMul * b.level);
+    cost.gold = (cost.gold ?? 0) + LEVELS.gold * b.level;
+    return cost;
+  }
+
+  /** Sur/kapı: çağ kademesine geç; can oransal korunur (hasarlı sur hasarlı kalır) */
+  applyTier(b, tier) {
+    const T = b.def.tiers;
+    if (!T) return;
+    tier = Math.min(T.length - 1, tier);
+    if (tier === b.tier && b.maxHp === T[tier].hp) return;
+    const frac = b.hp / b.maxHp;
+    b.tier = tier;
+    b.maxHp = T[tier].hp;
+    b.hp = Math.max(1, frac * b.maxHp);
+  }
+
+  /** Yarım kalmış inşaatı yık: maliyetin YARISI geri verilir */
+  demolishSite(b) {
+    if (!b || b.complete || b.destroyed || b.owner !== PLAYER) return;
+    const half = {};
+    for (const [k, v] of Object.entries(b.cost ?? b.def.cost)) half[k] = Math.floor(v / 2);
+    for (const u of this.units) if (u.task?.target === b) u.stop();
+    this.removeBuilding(b);
+    this.players[b.owner].refund(half);
+    this.notify(`${b.name} inşaatı yıkıldı: ${formatCost(half) || 'kaynak'} geri alındı.`, 'info');
+    this.sound('collapse', b.centerI, b.centerJ, 0.5);
+  }
+
   // ───────────── Binalar ─────────────
   addBuilding(type, oi, oj, owner, complete = false) {
     const b = new Building(type, oi, oj, { complete, owner });
+    b.cost = this.costOf(type, owner);
+    if (b.def.tiers) { this.applyTier(b, this.players[owner].tier); b.hp = complete ? b.maxHp : 1; }
     this.map.addObject(b);
     this.buildings.push(b);
     if (type === 'farm') this.map.groundVersion++; // çiftlik zemin katmanında çizilir
@@ -640,7 +688,7 @@ export class World {
     for (const req of def.requires ?? []) {
       if (!this.buildings.some((b) => b.owner === owner && b.type === req && b.complete)) return `Önce ${BUILDINGS[req].name} gerekli`;
     }
-    if (!p.canAfford(def.cost)) return 'Yetersiz kaynak';
+    if (!p.canAfford(this.costOf(type, owner))) return 'Yetersiz kaynak';
     return null;
   }
 
@@ -660,7 +708,7 @@ export class World {
     if (!builders?.some((u) => u.type === 'villager')) { this.notify('Yalnızca köylüler inşa edebilir.', 'warn'); return null; }
     const perr = this.checkPlacement(type, oi, oj);
     if (perr) { this.notify(perr, 'warn'); return null; }
-    this.player.spend(def.cost);
+    this.player.spend(this.costOf(type));
     const b = this.addBuilding(type, oi, oj, PLAYER, false);
     if (b.blocks) {
       for (const u of this.units) {
@@ -685,7 +733,7 @@ export class World {
     let first = null, n = 0;
     for (const t of tiles) {
       if (this.checkPlacement('wall', t.i, t.j)) continue;
-      if (!this.player.spend(def.cost)) { this.notify('Yetersiz kaynak: çitin bir kısmı kurulamadı.', 'warn'); break; }
+      if (!this.player.spend(this.costOf('wall'))) { this.notify('Yetersiz kaynak: çitin bir kısmı kurulamadı.', 'warn'); break; }
       const b = this.addBuilding('wall', t.i, t.j, PLAYER, false);
       first ??= b;
       n++;
@@ -784,6 +832,12 @@ export class World {
       if (this.buildings.some((o) => o.owner === b.owner && o.queue.some((q) => q.kind === 'tech' && q.id === id))) return 'Araştırılıyor';
       return p.canAfford(t.cost) ? null : 'Yetersiz kaynak';
     }
+    if (kind === 'level') {
+      if (!b.def.levels) return 'Yükseltilemez';
+      if (b.level >= LEVELS.MAX_LEVEL) return 'En yüksek seviye';
+      if (b.queue.some((q) => q.kind === 'level')) return 'Yükseltiliyor';
+      return p.canAfford(this.upgradeCost(b)) ? null : 'Yetersiz kaynak';
+    }
     return 'Bilinmeyen';
   }
 
@@ -794,6 +848,7 @@ export class World {
     let cost, time;
     if (kind === 'unit') { cost = UNITS[id].cost; time = UNITS[id].trainTime; }
     else if (kind === 'age') { const n = p.nextAge; cost = n.cost; time = n.time; id = n.id; }
+    else if (kind === 'level') { cost = this.upgradeCost(b); time = LEVELS.time * b.level; id = b.level + 1; }
     else { cost = TECHS[id].cost; time = TECHS[id].time; }
     p.spend(cost);
     b.queue.push({ kind, id, total: time, remaining: time, cost, started: kind !== 'unit' });
@@ -837,8 +892,15 @@ export class World {
         for (const u of this.units) if (u.owner === b.owner && u.type === type) { u.maxHp += stats.hp; u.hp += stats.hp; }
       }
       if (b.owner === PLAYER) { this.notify(`${t.name} araştırıldı.`, 'good'); this.sound('bell', null, null, 0.6); }
+    } else if (item.kind === 'level') {
+      b.level = Math.min(LEVELS.MAX_LEVEL, b.level + 1);
+      if (b.type === 'farm') { b.food += b.def.farmFood * 0.5; this.map.groundVersion++; } // yükseltilen tarla tazelenir
+      this.map.version++;
+      if (b.owner === PLAYER) { this.notify(`${b.name} seviye ${b.level} oldu: üretim +%${Math.round(LEVELS.bonus * (b.level - 1) * 100)}.`, 'good'); this.sound('bell', b.centerI, b.centerJ, 0.6); }
     } else if (item.kind === 'age') {
       p.advanceAge();
+      // Surlar ve kapılar yeni çağın taşına/kalesine dönüşür (daha kalın, daha sağlam)
+      for (const o of this.buildings) if (o.owner === b.owner && o.def.tiers) this.applyTier(o, p.tier);
       this.map.version++; // tüm binaların görünümü yeni çağa geçer
       if (b.owner === PLAYER) { this.notify(`Yeni çağ: ${p.ageDef.name}!`, 'age'); this.sound('fanfare'); }
     }
@@ -850,7 +912,7 @@ export class World {
       const inc = b.def.income;
       if (!inc || !b.complete) continue;
       const p = this.players[b.owner];
-      for (const [res, rate] of Object.entries(inc)) p.add(res, rate * (p.modifiers.fish ?? 1) * dt);
+      for (const [res, rate] of Object.entries(inc)) p.add(res, rate * (p.modifiers.fish ?? 1) * this.levelMul(b) * dt);
     }
   }
 
@@ -943,8 +1005,9 @@ export class World {
     let amount = base, armor;
     if (target.isUnit) armor = this.stat(target, kind);
     else {
-      armor = target.def.armor?.[kind] ?? 0;
-      if (attacker?.isUnit) amount *= attacker.def.bldgMul ?? 1;
+      armor = target.armor?.[kind] ?? 0;
+      // Yaratık surlara karşı çok güçlü (wallMul), diğer binalara karşı yavaş (bldgMul)
+      if (attacker?.isUnit) amount *= (target.def.wall || target.def.gate) && attacker.def.wallMul ? attacker.def.wallMul : attacker.def.bldgMul ?? 1;
     }
     const dmg = Math.max(1, amount - armor);
     target.hp -= dmg;
@@ -959,11 +1022,33 @@ export class World {
     if (target.isUnit && attacker?.isUnit && !attacker.dead && attacker.owner !== target.owner) {
       if (target.state === 'idle') target.attack(attacker);
       else if (target.state === 'guard') target.attack(attacker, 'guard');
+      // Yakındaki boştaki askerler savaşa katılır (her iki taraf için)
+      if (target.isMilitary) this.callAllies(target, attacker);
+      if (attacker.isMilitary) this.callAllies(attacker, target);
     }
+  }
+
+  /**
+   * Otomatik savaş: çatışan bir askerin (u) 7 karo yakınındaki BOŞTA / nöbetteki / saldırı yürüyüşündeki müttefik
+   * askerler düşmana (foe) saldırır. Yürüyen ya da başka hedefle savaşan birimlere dokunulmaz.
+   * Aynı asker için en fazla 0,5 sn'de bir çağrılır.
+   */
+  callAllies(u, foe) {
+    if (u.owner === WILD || this.time - (u._allyAt ?? -9) < 0.5) return;
+    u._allyAt = this.time;
+    this.grid.each(u.x, u.y, 7, (o) => {
+      if (o === u || o.owner !== u.owner || o.dead || !o.isMilitary || o.target) return;
+      if (o.def.siege && foe.isUnit) return;
+      if (foe.naval && (o.def.range ?? 0) <= 0) return;
+      if (o.state === 'idle') o.attack(foe);
+      else if (o.state === 'guard') o.attack(foe, 'guard');
+      else if (o.state === 'attackMove') o.attack(foe, 'attackMove');
+    });
   }
 
   killUnit(u, killerOwner) {
     u.dead = true;
+    if (u.type === 'yeti') this.wild.onKilled(u, killerOwner);
     this.units = this.units.filter((x) => x !== u);
     this.corpses.push({ type: u.type, owner: u.owner, x: u.x, y: u.y, facing: u.facing, dir: u.dir, t: 0, naval: !!u.naval });
     this.players[u.owner].stats.losses++;
@@ -1011,6 +1096,7 @@ export class World {
 
   /** Görüş alanındaki en yakın düşman (önce birimler; istenirse ardından binalar). Mekânsal ızgarayla aranır. */
   findEnemyNear(u, radius, includeBuildings) {
+    if (u.owner !== PLAYER && u.isMilitary && !u.def.siege) return this._findByPriority(u, radius, includeBuildings);
     let best = null, bestD = radius;
     if (!u.def.siege) {
       const melee = (u.def.range ?? 0) <= 0;
@@ -1022,6 +1108,36 @@ export class World {
     }
     if (best || !includeBuildings) return best;
     bestD = radius;
+    for (const b of this.buildings) {
+      if (b.owner === u.owner || b.type === 'farm' || b.def.wall || b.def.gate) continue;
+      const d = rectEuclid(u.x, u.y, b);
+      if (d < bestD) { bestD = d; best = b; }
+    }
+    return best;
+  }
+
+  /**
+   * Düşman ve yaratık hedef önceliği: önce SURLAR/KAPILAR, sonra ASKERLER, sonra KÖYLÜLER, en son diğer BİNALAR.
+   * Her sınıfta en yakın olan seçilir (koçbaşı bu kuralın dışındadır: yalnızca binalara gider).
+   */
+  _findByPriority(u, radius, includeBuildings) {
+    const melee = (u.def.range ?? 0) <= 0;
+    let wall = null, wd = radius;
+    for (const b of this.buildings) {
+      if (b.owner === u.owner || !(b.def.wall || b.def.gate)) continue;
+      if (Math.abs(b.i - u.x) > radius + 1 || Math.abs(b.j - u.y) > radius + 1) continue;
+      const d = rectEuclid(u.x, u.y, b);
+      if (d < wd) { wd = d; wall = b; }
+    }
+    if (wall) return wall;
+    let sol = null, sd = radius, vil = null, vd = radius;
+    this.grid.each(u.x, u.y, radius, (o) => {
+      if (o.owner === u.owner || o.dead || (melee && o.naval)) return;
+      const d = Math.hypot(o.x - u.x, o.y - u.y);
+      if (o.isMilitary) { if (d < sd) { sd = d; sol = o; } } else if (d < vd) { vd = d; vil = o; }
+    });
+    if (sol || vil || !includeBuildings) return sol ?? vil;
+    let best = null, bestD = radius;
     for (const b of this.buildings) {
       if (b.owner === u.owner || b.type === 'farm' || b.def.wall || b.def.gate) continue;
       const d = rectEuclid(u.x, u.y, b);

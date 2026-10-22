@@ -5,44 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arzu'nun Köyü</title>
   <!-- build:begin (tools/stamp.py üretir, elle düzenlemeyin) -->
-  <link rel="stylesheet" href="css/style.css?v=f0fb9d62c0" />
+  <link rel="stylesheet" href="css/style.css?v=765c5c4d46" />
   <script type="importmap">
   {
     "imports": {
-      "./assets/manifest.js": "./assets/manifest.js?v=81dcdfa44f",
+      "./assets/manifest.js": "./assets/manifest.js?v=8f1960d141",
       "./js/audio/AudioManager.js": "./js/audio/AudioManager.js?v=a20ea13270",
-      "./js/build.js": "./js/build.js?v=cbc77365f1",
+      "./js/build.js": "./js/build.js?v=596f5dce86",
       "./js/config.js": "./js/config.js?v=6dcae93f5b",
-      "./js/core/Game.js": "./js/core/Game.js?v=cd912d444b",
+      "./js/core/Game.js": "./js/core/Game.js?v=228be25262",
       "./js/core/InputHandler.js": "./js/core/InputHandler.js?v=9dff24a4c6",
-      "./js/data/animData.js": "./js/data/animData.js?v=a0c7039f34",
-      "./js/data/gameData.js": "./js/data/gameData.js?v=5f4842ca5b",
-      "./js/entities/Boat.js": "./js/entities/Boat.js?v=f2ad4b963d",
-      "./js/entities/Building.js": "./js/entities/Building.js?v=7dd9784499",
+      "./js/data/animData.js": "./js/data/animData.js?v=2a234384ec",
+      "./js/data/gameData.js": "./js/data/gameData.js?v=778ff8935c",
+      "./js/entities/Boat.js": "./js/entities/Boat.js?v=12b4f81e0f",
+      "./js/entities/Building.js": "./js/entities/Building.js?v=cdf9779c48",
       "./js/entities/Soldier.js": "./js/entities/Soldier.js?v=1bd5bc894f",
       "./js/entities/Unit.js": "./js/entities/Unit.js?v=eeed07f94c",
-      "./js/entities/Villager.js": "./js/entities/Villager.js?v=f77f41bd89",
+      "./js/entities/Villager.js": "./js/entities/Villager.js?v=5ef8dc35f4",
+      "./js/entities/Yeti.js": "./js/entities/Yeti.js?v=687fe14289",
       "./js/main.js": "./js/main.js?v=ff9ec1d558",
       "./js/render/Ambient.js": "./js/render/Ambient.js?v=9d4d732ec9",
       "./js/render/AssetLoader.js": "./js/render/AssetLoader.js?v=adde969dc0",
       "./js/render/Camera.js": "./js/render/Camera.js?v=96721eda65",
-      "./js/render/Renderer.js": "./js/render/Renderer.js?v=5b6fc39bcf",
-      "./js/render/SpriteFactory.js": "./js/render/SpriteFactory.js?v=0c96a63852",
+      "./js/render/Renderer.js": "./js/render/Renderer.js?v=b1fba2dc84",
+      "./js/render/SpriteFactory.js": "./js/render/SpriteFactory.js?v=699eb69b21",
       "./js/render/WaterRenderer.js": "./js/render/WaterRenderer.js?v=2c2b4ad7ea",
       "./js/render/iso.js": "./js/render/iso.js?v=af52f3ac64",
       "./js/systems/DayNight.js": "./js/systems/DayNight.js?v=8257c0d856",
-      "./js/systems/EnemyAI.js": "./js/systems/EnemyAI.js?v=b9b6a12fe3",
+      "./js/systems/EnemyAI.js": "./js/systems/EnemyAI.js?v=edb9c215b7",
       "./js/systems/Fog.js": "./js/systems/Fog.js?v=0e987fa363",
       "./js/systems/Pathfinder.js": "./js/systems/Pathfinder.js?v=849beaf034",
       "./js/systems/Player.js": "./js/systems/Player.js?v=337dc746ef",
-      "./js/systems/SaveGame.js": "./js/systems/SaveGame.js?v=cf5371fc40",
+      "./js/systems/SaveGame.js": "./js/systems/SaveGame.js?v=5006352a6a",
       "./js/systems/Settings.js": "./js/systems/Settings.js?v=391123bf83",
       "./js/systems/SpatialGrid.js": "./js/systems/SpatialGrid.js?v=e0aff388bc",
-      "./js/systems/Weather.js": "./js/systems/Weather.js?v=35e9b046bc",
-      "./js/systems/World.js": "./js/systems/World.js?v=3aff680ff5",
-      "./js/ui/Menu.js": "./js/ui/Menu.js?v=d2a9c0b1eb",
-      "./js/ui/Minimap.js": "./js/ui/Minimap.js?v=a91757f652",
-      "./js/ui/UIManager.js": "./js/ui/UIManager.js?v=debdf7223e",
+      "./js/systems/Weather.js": "./js/systems/Weather.js?v=5f0024f8d3",
+      "./js/systems/Wild.js": "./js/systems/Wild.js?v=23257f4050",
+      "./js/systems/World.js": "./js/systems/World.js?v=ed2c2cc4cd",
+      "./js/ui/Menu.js": "./js/ui/Menu.js?v=67e64f862a",
+      "./js/ui/Minimap.js": "./js/ui/Minimap.js?v=59446287e6",
+      "./js/ui/UIManager.js": "./js/ui/UIManager.js?v=b0ed44d6ba",
       "./js/world/GameMap.js": "./js/world/GameMap.js?v=4d9d509ca3",
       "./js/world/Noise.js": "./js/world/Noise.js?v=8d5c455941",
       "./js/world/TileTypes.js": "./js/world/TileTypes.js?v=4af0f3c864"
@@ -63,10 +65,10 @@
 
   <!-- Üst kaynak barı -->
   <header id="topbar" class="hud">
-    <div class="res" id="res-wood" title="Odun"><img src="assets/icons/wood.webp" alt="" /><b>0</b></div>
-    <div class="res" id="res-food" title="Yiyecek"><img src="assets/icons/food.webp" alt="" /><b>0</b></div>
-    <div class="res" id="res-gold" title="Altın"><img src="assets/icons/gold.webp" alt="" /><b>0</b></div>
-    <div class="res" id="res-stone" title="Taş"><img src="assets/icons/stone.webp" alt="" /><b>0</b></div>
+    <div class="res" id="res-wood" data-res="wood"><img src="assets/icons/wood.webp" alt="" /><b>0</b></div>
+    <div class="res" id="res-food" data-res="food"><img src="assets/icons/food.webp" alt="" /><b>0</b></div>
+    <div class="res" id="res-gold" data-res="gold"><img src="assets/icons/gold.webp" alt="" /><b>0</b></div>
+    <div class="res" id="res-stone" data-res="stone"><img src="assets/icons/stone.webp" alt="" /><b>0</b></div>
     <div class="res" id="res-pop" title="Nüfus / Sınır"><img src="assets/icons/pop.webp" alt="" /><b>0/0</b></div>
     <div class="spacer"></div>
     <div class="wave hidden" id="waveBox" title="Düşman saldırısına kalan süre"><img src="assets/icons/horn.webp" alt="" /><b>0:00</b></div>
@@ -91,7 +93,21 @@
     </button>
     <button id="helpBtn" title="Kontroller (X)" aria-label="Kontroller penceresi">?</button>
     <button id="menuBtn" title="Menü (Esc / F10)" aria-label="Oyun menüsü"><span></span><span></span><span></span></button>
-    <button id="idleBtn" title="Boşta köylüyü seç (.)"><img src="assets/sprites/vil_idle.webp" alt="" /><b>0</b></button>
+    <div id="idleWrap">
+      <button id="idleBtn" title="Boşta köylüyü seç (.)"><img src="assets/sprites/vil_idle.webp" alt="" /><b>0</b></button>
+      <!-- Üzerine gelince açılan köylü seçim ikonları (yazısız; açıklama fare ile üzerine gelince) -->
+      <div id="idleMenu" role="group" aria-label="Köylü seçimi">
+        <button data-vsel="idleAll" data-tip="Boştaki tüm köylüleri seç" aria-label="Boştaki tüm köylüleri seç">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="8" cy="7" r="3" fill="currentColor"/><path d="M3 18c0-3.5 2.2-6 5-6s5 2.5 5 6z" fill="currentColor"/><circle cx="16" cy="7" r="3" fill="currentColor" opacity=".7"/><path d="M14 12.3c.6-.2 1.3-.3 2-.3 2.8 0 5 2.5 5 6h-5" fill="currentColor" opacity=".7"/><text x="17" y="23" font-size="9" font-weight="700" fill="#ffd36b" font-family="Georgia,serif">z</text></svg>
+        </button>
+        <button data-vsel="all" data-tip="Tüm köylüleri seç" aria-label="Tüm köylüleri seç">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="5.5" cy="8" r="2.5" fill="currentColor"/><circle cx="12" cy="6.5" r="2.8" fill="currentColor"/><circle cx="18.5" cy="8" r="2.5" fill="currentColor"/><path d="M1.5 18c0-3 1.8-5 4-5s4 2 4 5zM7.5 18c0-3.6 2-6 4.5-6s4.5 2.4 4.5 6zM14.5 18c0-3 1.8-5 4-5s4 2 4 5z" fill="currentColor"/></svg>
+        </button>
+        <button data-vsel="nextIdle" data-tip="Boştaki bir köylüyü seç ve kamerayı ona götür (.)" aria-label="Boştaki bir köylüyü seç">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="10" cy="7" r="3.2" fill="currentColor"/><path d="M4 19c0-4 2.7-7 6-7s6 3 6 7z" fill="currentColor"/><path d="M17 9l4 3-4 3z" fill="#ffd36b"/></svg>
+        </button>
+      </div>
+    </div>
     <div class="age" id="ageBox" title="Mevcut çağ">
       <img src="assets/icons/age.webp" alt="" />
       <div><span id="ageName">Karanlık Çağ</span><div class="ageprog"><i id="ageProg"></i></div></div>
@@ -111,7 +127,7 @@
 
   <!-- Bekleyen inşaatlar (sağ üst) -->
   <aside id="pending" class="hud hidden" aria-label="Bekleyen inşaatlar">
-    <div class="ph"><img src="assets/icons/build.webp" alt="" /><b>İnşaatlar</b><span id="pendingCount">0</span></div>
+    <div class="ph"><img src="assets/icons/build.webp" alt="" /><b>İnşaatlar</b><span id="pendingCount">0</span><button id="pendingToggle" title="Listeyi gizle" aria-label="İnşaat listesini gizle veya göster"></button></div>
     <ul id="pendingList"></ul>
   </aside>
 

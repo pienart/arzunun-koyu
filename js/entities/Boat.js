@@ -45,7 +45,7 @@ export class Boat extends Unit {
       }
       if (this.followPath(dt, world)) {
         if (world.isAtDock(this, this.dropTarget)) {
-          me.add('food', this.carry);
+          me.add('food', this.carry * world.levelMul(this.dropTarget));
           this.carry = 0;
           world.sound('net', this.x, this.y, 0.35);
           if (node && world.isAlive(node)) { this.phase = 'toNode'; world.moveToTarget(this, node); }

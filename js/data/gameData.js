@@ -7,9 +7,10 @@
 export const RESOURCE_TYPES = ['food', 'wood', 'gold', 'stone'];
 export const RESOURCE_NAMES = { food: 'Yiyecek', wood: 'Odun', gold: 'Altın', stone: 'Taş' };
 
-/** Oyuncular: 1 = siz (mavi), 2 = düşman (kırmızı) */
+/** Oyuncular: 1 = siz (mavi), 2 = düşman (kırmızı), 3 = vahşi doğa (mağaradaki yaratık; herkese saldırır) */
 export const PLAYER = 1;
 export const ENEMY = 2;
+export const WILD = 3;
 
 /** Çağlar. tier → binaların hangi görsel setle çizileceği (0: ahşap/saz, 1: taş+ahşap, 2: büyük taş). */
 export const AGES = [
@@ -31,6 +32,9 @@ export const AGES = [
  *  wall/gate  : sürüklenerek çizilen çit / kendi birimlerinin geçebildiği kapı (düşman kırarak geçer)
  *  garrison   : "Köylüleri Çağır" ile içeri sığınabilecek köylü sayısı; her 3 köylü binaya +1 ok ekler
  *  armor      : { melee, pierce } — binalar oklara karşı çok dayanıklıdır
+ *  levels     : üretim binası yükseltilebilir (en fazla MAX_LEVEL); her seviye üretimi artırır (LEVELS)
+ *  tiers      : çağa göre ad/can/zırh/maliyet (çit → taş sur → kale suru); görsel `${sprite}_${tier}`
+ *  light      : gece yanan ateş (ateş çukuru): çevresini geniş bir ışık halkasıyla aydınlatır
  */
 export const BUILDINGS = {
   townCenter: {
@@ -46,26 +50,26 @@ export const BUILDINGS = {
   },
   lumberCamp: {
     name: 'Kereste Kampı', size: 2, hp: 600, cost: { wood: 100 }, buildTime: 18, age: 0, dropsite: ['wood'],
-    techs: ['doubleAxe', 'bowSaw'], sprite: 'lumberCamp', autoGather: 'wood', armor: { melee: 0, pierce: 7 },
+    techs: ['doubleAxe', 'bowSaw'], sprite: 'lumberCamp', autoGather: 'wood', armor: { melee: 0, pierce: 7 }, levels: true,
     desc: 'Odun bırakma noktası. Ormanın yanına kurun.',
   },
   mill: {
     name: 'Değirmen', size: 2, hp: 600, cost: { wood: 100 }, buildTime: 18, age: 0, dropsite: ['food'],
-    techs: ['horseCollar'], sprite: 'mill', autoGather: 'food', armor: { melee: 0, pierce: 7 },
+    techs: ['horseCollar'], sprite: 'mill', autoGather: 'food', armor: { melee: 0, pierce: 7 }, levels: true,
     desc: 'Yiyecek bırakma noktası. Çiftlikleri açar.',
   },
   miningCamp: {
     name: 'Maden Kampı', size: 2, hp: 600, cost: { wood: 100 }, buildTime: 18, age: 0, dropsite: ['gold', 'stone'],
-    techs: ['goldMining', 'stoneMining'], sprite: 'miningCamp', autoGather: 'gold', armor: { melee: 0, pierce: 7 },
+    techs: ['goldMining', 'stoneMining'], sprite: 'miningCamp', autoGather: 'gold', armor: { melee: 0, pierce: 7 }, levels: true,
     desc: 'Altın ve taş bırakma noktası.',
   },
   farm: {
     name: 'Çiftlik', size: 3, hp: 480, cost: { wood: 60 }, buildTime: 10, age: 0, requires: ['mill'],
-    walkable: true, farmFood: 300, armor: { melee: 0, pierce: 0 }, desc: 'Köylüler üzerinde çalışarak yiyecek üretir (300 yiyecek).',
+    walkable: true, farmFood: 300, armor: { melee: 0, pierce: 0 }, levels: true, desc: 'Köylüler üzerinde çalışarak yiyecek üretir (300 yiyecek).',
   },
   dock: {
     name: 'Tersane', size: 3, hp: 1500, cost: { wood: 150 }, buildTime: 35, age: 0, coastal: true,
-    dropsite: ['food', 'wood'], trains: ['fishingBoat'], techs: ['fishNets'], sprite: 'dock', armor: { melee: 0, pierce: 7 },
+    dropsite: ['food', 'wood'], trains: ['fishingBoat'], techs: ['fishNets'], sprite: 'dock', armor: { melee: 0, pierce: 7 }, levels: true,
     desc: 'Yalnızca köylüler su kenarına kurabilir. Balıkçı teknesi üretir; tekneler balık sürülerinden yiyecek toplar. Odun ve yiyecek bırakma noktasıdır.',
   },
   barracks: {
@@ -85,11 +89,25 @@ export const BUILDINGS = {
   },
   wall: {
     name: 'Ahşap Çit', size: 1, hp: 300, cost: { wood: 3 }, buildTime: 4, age: 0, wall: true, sprite: 'palisade',
-    armor: { melee: 2, pierce: 6 }, desc: 'Sürükleyerek çizin. Düşmanı yavaşlatır; düşman ancak kırarak geçebilir.',
+    armor: { melee: 2, pierce: 6 }, desc: 'Sürükleyerek çizin. Düşmanı yavaşlatır; düşman ancak kırarak geçebilir. Çağ atladıkça taş sura, sonra kale suruna dönüşür.',
+    tiers: [
+      { name: 'Ahşap Çit', hp: 300, armor: { melee: 2, pierce: 6 }, cost: { wood: 3 } },
+      { name: 'Taş Sur', hp: 1100, armor: { melee: 6, pierce: 10 }, cost: { stone: 5 } },
+      { name: 'Kale Suru', hp: 2600, armor: { melee: 10, pierce: 14 }, cost: { stone: 8 } },
+    ],
   },
   gate: {
     name: 'Kapı', size: 1, hp: 700, cost: { wood: 25 }, buildTime: 12, age: 0, gate: true, sprite: 'gate',
-    armor: { melee: 2, pierce: 6 }, desc: 'Çitin içine konur. Kendi birimleriniz geçer, düşman geçemez.',
+    armor: { melee: 2, pierce: 6 }, desc: 'Surun içine konur. Kendi birimleriniz geçer, düşman geçemez. Çağla birlikte güçlenir.',
+    tiers: [
+      { name: 'Ahşap Kapı', hp: 700, armor: { melee: 2, pierce: 6 }, cost: { wood: 25 } },
+      { name: 'Taş Kapı', hp: 1800, armor: { melee: 6, pierce: 10 }, cost: { stone: 30 } },
+      { name: 'Kale Kapısı', hp: 3600, armor: { melee: 10, pierce: 14 }, cost: { stone: 45 } },
+    ],
+  },
+  firePit: {
+    name: 'Ateş Çukuru', size: 1, hp: 150, cost: { wood: 30, stone: 10 }, buildTime: 6, age: 0, sprite: 'campfire', light: true,
+    armor: { melee: 0, pierce: 4 }, desc: 'Köylüler gece kamp ateşi yakar: çevresi geceleri diğer yerlerden daha aydınlık olur, başında köylüler ısınır.',
   },
   archeryRange: {
     name: 'Okçuluk Alanı', size: 3, hp: 1200, cost: { wood: 175 }, buildTime: 30, age: 1, requires: ['barracks'],
@@ -113,7 +131,7 @@ export const BUILDINGS = {
 };
 
 /** Köylünün inşa menüsündeki sıra */
-export const BUILD_MENU = ['house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 'dock', 'wall', 'gate', 'barracks', 'archeryRange', 'stable', 'watchTower', 'siegeWorkshop', 'market', 'wonder'];
+export const BUILD_MENU = ['house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 'dock', 'wall', 'gate', 'firePit', 'barracks', 'archeryRange', 'stable', 'watchTower', 'siegeWorkshop', 'market', 'wonder'];
 
 /**
  * Birimler.
@@ -141,6 +159,12 @@ export const UNITS = {
   fishingBoat: {
     name: 'Balıkçı Teknesi', cost: { wood: 75 }, trainTime: 15, pop: 1, hp: 60, speed: 2.0, carry: 15,
     attack: 0, armor: { melee: 0, pierce: 4 }, range: 0, reload: 2, los: 6, bldgMul: 0, naval: true,
+  },
+  // Mağaradaki yaratık (Koca Ayak): yalnızca kışın çıkar, herkese saldırır. Surları hızla yıkar (wallMul),
+  // binalara karşı yavaştır (bldgMul < 1).
+  yeti: {
+    name: 'Koca Ayak', cost: {}, trainTime: 0, pop: 0, hp: 1500, speed: 1.25,
+    attack: 30, armor: { melee: 1, pierce: 3 }, range: 0, reload: 2.6, los: 7, bldgMul: 0.45, wallMul: 4.5, monster: true,
   },
   archer: {
     name: 'Okçu', cost: { wood: 25, gold: 45 }, trainTime: 14, pop: 1, hp: 30, speed: 1.7,
@@ -179,6 +203,16 @@ export const TECHS = {
   fletching:   { name: 'Talimli Okçular',   icon: 'quiver',      building: 'archeryRange', age: 1, cost: { food: 100, wood: 50 }, time: 20, bonus: { archer: { attack: 1, range: 1 }, tower: { attack: 1, range: 1 } }, desc: 'Okçular ve kuleler: +1 saldırı, +1 menzil.' },
 };
 
+/**
+ * Üretim binası seviyeleri (1 → MAX_LEVEL). Seviye başına üretim +%25:
+ *   kamp/değirmen: bırakılan kaynak · çiftlik: toplama hızı ve yiyecek kapasitesi · tersane: balıkçı geliri ve bırakılan balık
+ * Yükseltme bedeli = bina maliyeti × costMul × mevcut seviye + altın; süresi time × seviye.
+ */
+export const LEVELS = { MAX_LEVEL: 3, bonus: 0.25, costMul: 1.5, gold: 60, time: 20 };
+
+/** Mağara ve yaratık: kış başladıktan `delay` sn sonra çıkar; `huntTime` sn sonra diğer tarafa yönelir */
+export const WILD_DEF = { delay: 25, huntTime: 140, reward: { food: 400, gold: 200 } };
+
 /** Tamir: köylü başına saniyede onarılan can = maxHp / buildTime × HP_RATE; bedel = bina maliyeti × COST oranında */
 export const REPAIR = { HP_RATE: 0.6, COST: 0.5 };
 
@@ -204,13 +238,15 @@ export const ENEMY_AI = {
  * Başlangıç kaynakları her zorlukta aynıdır (START).
  */
 export const DIFFICULTY = {
-  easy:   { name: 'Kolay', firstWave: 720, interval: 280, waveMul: 0.65, enemyGather: 0.7, enemyVillagers: 4 },
-  normal: { name: 'Normal', firstWave: 510, interval: 220, waveMul: 1, enemyGather: 1, enemyVillagers: 6 },
-  hard:   { name: 'Zor', firstWave: 360, interval: 170, waveMul: 1.4, enemyGather: 1.35, enemyVillagers: 9 },
+  // firstWave: ilk saldırının en erken zamanı (sn; asla 20 dakikadan önce değil) — üstüne 0–5 dk rastgele eklenir.
+  // interval : dalgalar arası ORTALAMA süre; her seferinde %60–%150 arası rastgele (saldırı zamanı tahmin edilemez).
+  easy:   { name: 'Kolay', firstWave: 1500, interval: 300, waveMul: 0.65, enemyGather: 0.7, enemyVillagers: 4 },
+  normal: { name: 'Normal', firstWave: 1200, interval: 240, waveMul: 1, enemyGather: 1, enemyVillagers: 6 },
+  hard:   { name: 'Zor', firstWave: 1200, interval: 180, waveMul: 1.4, enemyGather: 1.35, enemyVillagers: 9 },
 };
 
 export const START = {
-  resources: { food: 1000, wood: 1000, gold: 500, stone: 1000 }, // eski değerlerin 5 katı
+  resources: { food: 5000, wood: 5000, gold: 5000, stone: 5000 },
   villagers: 3,
   popMax: 200,
 };

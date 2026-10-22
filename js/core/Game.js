@@ -305,7 +305,7 @@ export class Game {
       const boats = units.filter((u) => u.naval);
       const soldiers = units.filter((u) => u.type !== 'villager' && !u.naval);
       let color = 'rgba(120,255,120,0.9)';
-      if (ent && ent.owner === ENEMY) {
+      if (ent && ent.owner && ent.owner !== PLAYER) { // düşman veya yaratık
         // Düşmana sağ tık → tüm seçili savaşanlar saldırır
         world.commandAttack(units, ent);
         color = 'rgba(255,70,60,0.95)';
@@ -350,6 +350,13 @@ export class Game {
     const u = idle[this._idleIndex++ % idle.length];
     this.select([u]);
     this.camera.centerOn((u.x - u.y) * HW, (u.x + u.y) * HH + 40);
+  }
+
+  /** Köylü butonu menüsü: 'idleAll' boştaki tüm köylüler · 'all' tüm köylüler (kamera yerinde kalır) */
+  selectVillagers(onlyIdle) {
+    const list = this.world.units.filter((u) => u.owner === PLAYER && u.type === 'villager' && !u.garrisoned && (!onlyIdle || u.state === 'idle'));
+    if (!list.length) { this.ui.toast(onlyIdle ? 'Boşta köylü yok.' : 'Köylü yok.', 'info'); return; }
+    this.select(list);
   }
 
   // ═════════════════════ KONTROL GRUPLARI ═════════════════════

@@ -52,6 +52,9 @@ export class Minimap {
     const map = this.map, W = map.width, H = map.height;
     const ctx = this.grid.getContext('2d');
     const img = ctx.createImageData(W, H);
+    // Kışın kara (su hariç) beyaza yakın: örtü oranında karıştırılır
+    const snow = this.game.world.weather.snowCover > 0.5 ? 0.72 : 0;
+    this._snow = snow > 0;
     for (let j = 0; j < H; j++) {
       for (let i = 0; i < W; i++) {
         let c = this.colors[map.terrain[j][i]];
@@ -63,7 +66,9 @@ export class Minimap {
           else if (o.kind === 'berry') c = [200, 60, 70];
           else if (o.kind === 'mountain') c = [96, 92, 86];
           else if (o.kind === 'fish') c = [120, 200, 235];
+          else if (o.kind === 'cave') c = [70, 66, 62];
         }
+        if (snow && map.terrain[j][i] !== TileId.WATER && o?.kind !== 'gold' && o?.kind !== 'berry') c = [c[0] + (232 - c[0]) * snow, c[1] + (238 - c[1]) * snow, c[2] + (248 - c[2]) * snow];
         const k = (j * W + i) * 4;
         img.data[k] = c[0]; img.data[k + 1] = c[1]; img.data[k + 2] = c[2]; img.data[k + 3] = 255;
       }
@@ -77,7 +82,8 @@ export class Minimap {
     const r = this.canvas.getBoundingClientRect();
     if (r.width > 10 && (Math.abs(r.width - this.cssW) > 1 || Math.abs(r.height - this.cssH) > 1)) this.resize();
     // Statik kısım (arazi + kaynaklar) en fazla saniyede bir yeniden üretilir
-    if (this.map.version !== this._builtVersion && time - this._builtAt > 1) {
+    const snowNow = this.game.world.weather.snowCover > 0.5;
+    if ((this.map.version !== this._builtVersion || snowNow !== this._snow) && time - this._builtAt > 1) {
       this._rebuild();
       this._builtAt = time;
     }
@@ -93,13 +99,13 @@ export class Minimap {
     // Savaş sisi: keşfedilmemiş siyah, görüş dışı yarı karanlık (aynı sis görüntüsü)
     if (fog?.enabled) { ctx.imageSmoothingEnabled = true; ctx.drawImage(fog.canvas, 0, 0); ctx.imageSmoothingEnabled = false; }
     for (const b of world.buildings) {
-      if (b.owner === 2 && fog && !fog.knowsObject(b)) continue;
+      if (b.owner !== 1 && fog && !fog.knowsObject(b)) continue;
       ctx.fillStyle = b.owner === 2 ? '#d8352a' : '#2f6fd6';
       ctx.fillRect(b.originI, b.originJ, b.size, b.size);
     }
     for (const u of world.units) {
-      if (u.owner === 2 && fog && !fog.isVisible(u.x, u.y)) continue;
-      ctx.fillStyle = u.owner === 2 ? '#ff6a5c' : '#9fd0ff';
+      if (u.owner !== 1 && fog && !fog.isVisible(u.x, u.y)) continue;
+      ctx.fillStyle = u.owner === 3 ? '#f4f8ff' : u.owner === 2 ? '#ff6a5c' : '#9fd0ff'; // 3: yaratık
       ctx.fillRect(u.x - 0.2, u.y - 0.2, 1.4, 1.4); // karo merkezi = piksel merkezi (+0.5)
     }
     // Saldırı uyarısı: 3 saniye boyunca büyüyüp sönen kırmızı halka

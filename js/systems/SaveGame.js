@@ -3,6 +3,7 @@ import { Building } from '../entities/Building.js';
 import { Villager } from '../entities/Villager.js';
 import { Soldier } from '../entities/Soldier.js';
 import { Boat } from '../entities/Boat.js';
+import { Yeti } from '../entities/Yeti.js';
 import { UNITS, PLAYER, ENEMY } from '../data/gameData.js';
 
 /**
@@ -82,11 +83,11 @@ export const SaveGame = {
         campfire: w.campfire ? [w.campfire.i, w.campfire.j] : null,
         buildings: w.buildings.map((b) => ({
           id: b.id, type: b.type, oi: b.originI, oj: b.originJ, owner: b.owner, progress: b.progress, hp: b.hp,
-          queue: b.queue, food: b.food, rally: b.rally ? (b.rally.target ? { t: ref(b.rally.target) } : { i: b.rally.i, j: b.rally.j }) : null,
+          queue: b.queue, food: b.food, level: b.level, tier: b.tier, maxHp: b.maxHp, cost: b.cost, rally: b.rally ? (b.rally.target ? { t: ref(b.rally.target) } : { i: b.rally.i, j: b.rally.j }) : null,
           garrison: b.garrison.map(unit),
         })),
         units: w.units.map(unit),
-        players, enemy: w.enemyAI.serialize(), weather: w.weather.serialize(), explored: game.fog.serialize(),
+        players, enemy: w.enemyAI.serialize(), wild: w.wild.serialize(), weather: w.weather.serialize(), explored: game.fog.serialize(),
         townCenter: w.townCenter?.id ?? null,
       },
     };
@@ -133,6 +134,10 @@ export const SaveGame = {
     const byId = new Map();
     for (const s of d.buildings) {
       const b = world.addBuilding(s.type, s.oi, s.oj, s.owner, s.progress >= 1);
+      if (s.tier !== undefined) world.applyTier(b, s.tier);
+      if (s.maxHp) b.maxHp = s.maxHp;
+      if (s.cost) b.cost = s.cost;
+      b.level = s.level ?? 1;
       b.progress = s.progress; b.hp = s.hp; b.food = s.food ?? b.food; b.queue = s.queue ?? [];
       b._visualStep = Math.floor(b.progress * 10);
       byId.set(s.id, b);
@@ -143,7 +148,7 @@ export const SaveGame = {
     // Birimler
     const make = (s) => {
       const def = UNITS[s.type];
-      const u = s.type === 'villager' ? new Villager(s.x, s.y, s.owner) : def?.naval ? new Boat(s.x, s.y, s.owner) : new Soldier(s.type, s.x, s.y, s.owner);
+      const u = s.type === 'yeti' ? new Yeti(s.x, s.y) : s.type === 'villager' ? new Villager(s.x, s.y, s.owner) : def?.naval ? new Boat(s.x, s.y, s.owner) : new Soldier(s.type, s.x, s.y, s.owner);
       u.maxHp = s.maxHp; u.hp = s.hp; u.dir = s.dir ?? 0;
       if ('carry' in u) { u.carry = s.carry; if (s.carryType) u.carryType = s.carryType; }
       u.lastKind = s.lastKind; u.lastPos = s.lastPos;
@@ -159,13 +164,15 @@ export const SaveGame = {
     }
     world.enemyAI.restore(d.enemy, byId);
     world.weather.restore(d.weather);
+    world.wild.restore(d.wild); // mağara (eski kayıtta yoksa yeni bir yere konur)
     world.time = d.time;
 
     // Görevleri yeniden ver
     for (const [u, s] of orders) {
       const t = target(s.task);
       try {
-        if (s.state === 'gather' && t && world.isAlive(t)) world.assignGather(u, t, true);
+        if (u.type === 'yeti') world.wild.attach(u);
+        else if (s.state === 'gather' && t && world.isAlive(t)) world.assignGather(u, t, true);
         else if (s.state === 'build' && t && world.isAlive(t)) world.commandBuild([u], t);
         else if (s.state === 'repair' && t && world.isAlive(t)) world.commandRepair([u], t);
         else if (s.state === 'fish' && t && world.isAlive(t)) world.commandFish([u], t);

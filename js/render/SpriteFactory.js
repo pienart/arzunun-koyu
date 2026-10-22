@@ -137,7 +137,11 @@ export class SpriteFactory {
       militia: (CONFIG.VILLAGER_HEIGHT * 1.08) / manifest.sprites.mil_idle.h,
       archer: (CONFIG.VILLAGER_HEIGHT * 1.08) / manifest.sprites.mil_idle.h, // aynı sayfa → aynı ölçek
       cavalry: manifest.sprites.cav_idle ? (CONFIG.VILLAGER_HEIGHT * 1.55) / manifest.sprites.cav_idle.h : 1,
+      // Koca Ayak: insandan ~2,4 kat iri
+      yeti: manifest.sprites.yeti_idle ? (CONFIG.VILLAGER_HEIGHT * 2.4) / manifest.sprites.yeti_idle.h : 1,
     };
+    this._snow = new WeakMap();
+    this.snowCanvas = this._makeSnow();
     this.villagerScale = this.unitScale.villager;
     // Düşman (kırmızı) sürümleri: sabit görseller açılışta hazırlanır; animasyon kareleri (600+) açılışı
     // uzatmasın diye oyun başladıktan sonra arka planda küçük parçalar halinde (prewarm). Hazır olmayan kare
@@ -247,8 +251,84 @@ export class SpriteFactory {
     let key = null;
     for (let t = tier; t >= 0 && !key; t--) if (this.sprites[`${type}_${t}`]) key = `${type}_${t}`;
     for (let t = tier + 1; t <= 3 && !key; t++) if (this.sprites[`${type}_${t}`]) key = `${type}_${t}`;
+    if (!key && this.sprites[type]) key = type; // tek görselli bina (ateş çukuru → kamp ateşi)
     if (!key) return this.sprites.foundation;
     return owner === ENEMY ? this.recolored(key) : this.sprites[key];
+  }
+
+  /**
+   * KARLI SÜRÜM (kış): yukarı bakan yüzeylere (her sütunda opak bölgenin ilk birkaç pikseli: çatı, ağaç tepesi,
+   * kaya sırtı) kar yığılır, aydınlık yüzeylere kar serpintisi düşer, renkler biraz soğur. Sonuç önbelleğe alınır.
+   */
+  snowy(s) {
+    if (!s) return s;
+    let out = this._snow.get(s);
+    if (out) return out;
+    const img = s.levels[0], W = img.width, H = img.height;
+    const c = makeCanvas(W, H), ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    out = s;
+    try {
+      const data = ctx.getImageData(0, 0, W, H), d = data.data;
+      const cap = Math.max(3, Math.round(H * 0.04));
+      const run = new Int32Array(W);
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const k = (y * W + x) * 4;
+          if (d[k + 3] < 60) { run[x] = 0; continue; }
+          run[x]++;
+          const r = d[k], g = d[k + 1], b = d[k + 2];
+          const lum = (r * 0.3 + g * 0.59 + b * 0.11) / 255;
+          let snow = run[x] <= cap ? 0.95 - ((run[x] - 1) / cap) * 0.3 : 0;
+          // serpinti: aydınlık yüzeylerde 2×2'lik benekler
+          let h = Math.imul((x >> 1) * 374761393 + (y >> 1) * 668265263, 1274126177);
+          h = ((h ^ (h >>> 15)) >>> 0) / 4294967296;
+          if (lum > 0.38 && h > 0.58) snow = Math.max(snow, 0.35 + 0.5 * (lum - 0.38));
+          const grey = lum * 255;
+          let R = r * 0.78 + grey * 0.22, G = g * 0.78 + grey * 0.22, B = b * 0.78 + grey * 0.22 + 10;
+          R += (236 - R) * snow; G += (243 - G) * snow; B += (252 - B) * snow;
+          d[k] = R; d[k + 1] = G; d[k + 2] = B;
+        }
+      }
+      ctx.putImageData(data, 0, 0);
+      out = new Sprite(c, { anchorX: s.anchorX, baseW: s.baseRatio * W });
+    } catch { /* tainted: karsız kullan */ }
+    this._snow.set(s, out);
+    return out;
+  }
+
+  /** Kış yaklaşırken doğa ve bina görsellerinin karlı sürümlerini arka planda hazırla */
+  prewarmSnow() {
+    if (this._snowWarm) return;
+    this._snowWarm = true;
+    const list = Object.keys(this.manifest.sprites).filter((k) => !/^(vil|mil|arc|cav|boat|ram|yeti)_/.test(k));
+    const step = () => {
+      const t0 = performance.now();
+      while (list.length && performance.now() - t0 < 6) {
+        const key = list.pop(), s = this.sprites[key];
+        this.snowy(s);
+        if (TEAM.test(key)) this.snowy(this.recolored(key));
+      }
+      if (list.length) setTimeout(step, 30);
+    };
+    setTimeout(step, 50);
+  }
+
+  /** Karla kaplı zemin dokusu (kış örtüsü): hafif mavi gölgeli beyaz, yumuşak benekler */
+  _makeSnow() {
+    const size = 256, c = makeCanvas(size, size), ctx = c.getContext('2d');
+    const img = ctx.createImageData(size, size);
+    const n = new ValueNoise2D(777, 8);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const v = n.fbm((x / size) * 8, (y / size) * 8, 4);
+        const k = (y * size + x) * 4;
+        const sparkle = Math.random() < 0.004 ? 14 : 0;
+        img.data[k] = 226 + v * 22 + sparkle; img.data[k + 1] = 233 + v * 18 + sparkle; img.data[k + 2] = 246 + v * 9; img.data[k + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return c;
   }
 
   /** Ağaç: sonbahar ve kışın meşeler kızıl yapraklı görünür (mevsim değişince statik katman yenilenir) */

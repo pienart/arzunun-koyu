@@ -58,6 +58,9 @@ SPECS['cav_walk'] = ('cav_idle', 16, 0.9, (24, 44))
 for _d in ['_s', '_n', '_se', '_ne']:
     SPECS['cav_walk' + _d] = ('cav_idle', 16, 0.9, (24, 44))
 SPECS['cav_attack'] = ('cav_idle', 14, 1.0, (20, 60))
+# Koca Ayak (mağara yaratığı): ağır yürüyüş ve iki yumrukla ezme
+SPECS['yeti_walk'] = ('yeti_idle', 16, 1.0, (24, 60))
+SPECS['yeti_attack'] = ('yeti_idle', 14, 1.0, (30, 72))
 # Yel değirmeni kanatları (bina): kaynak sprite'ın kare içindeki yeri "ref" olarak kaydedilir
 for _t in range(3):
     SPECS[f'mill_{_t}'] = (f'mill_{_t}', 12, 2.0, (12, 72))

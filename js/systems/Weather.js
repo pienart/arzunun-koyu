@@ -1,8 +1,8 @@
 /**
  * MEVSİMLER ve HAVA DURUMU (oyun zamanına bağlı; sunucu saatinden bağımsız)
  *
- *  Mevsim: İlkbahar → Yaz → Sonbahar → Kış, her biri SEASON_LEN saniye. Etkileri:
- *    • Görünüm: renk tonu (Renderer), sonbaharda meşeler kızıla döner, kışın kar örtüsü tonu
+ *  Mevsim: İlkbahar → Yaz → Sonbahar → Kış, her biri SEASON_LEN (7,5 dk) saniye. Etkileri:
+ *    • Görünüm: renk tonu (Renderer), sonbaharda meşeler kızıla döner; kışın zemin, ağaçlar, dağlar ve çatılar karla örtülür
  *    • Oynanış: kışın çiftlikler %25 yavaş, ilkbaharda %10 hızlı (farmMul)
  *  Hava: her mevsimin kendi olasılıkları; 50–110 sn sürer, yoğunluk yumuşakça artıp azalır.
  *    rain (yağmur) · snow (kar) · fog (sis) · clear (açık)
@@ -11,10 +11,11 @@ export const SEASONS = [
   { id: 'spring', name: 'İlkbahar', farmMul: 1.1, weather: { clear: 0.55, rain: 0.35, fog: 0.1 } },
   { id: 'summer', name: 'Yaz', farmMul: 1.0, weather: { clear: 0.85, rain: 0.1, fog: 0.05 } },
   { id: 'autumn', name: 'Sonbahar', farmMul: 1.0, weather: { clear: 0.45, rain: 0.35, fog: 0.2 } },
-  { id: 'winter', name: 'Kış', farmMul: 0.75, weather: { clear: 0.45, snow: 0.45, fog: 0.1 } },
+  { id: 'winter', name: 'Kış', farmMul: 0.75, weather: { clear: 0.3, snow: 0.6, fog: 0.1 } },
 ];
 export const WEATHER_NAMES = { clear: 'Açık', rain: 'Yağmur', snow: 'Kar', fog: 'Sis' };
-const SEASON_LEN = 360;
+// 7,5 dk × 4 mevsim = 30 dk: kış (ve mağaradaki yaratık) 30 dakikada bir gelir
+export const SEASON_LEN = 450;
 
 export class Weather {
   constructor(seed = 1) {
@@ -26,6 +27,7 @@ export class Weather {
     this.intensity = 0;             // 0..1 (ekranda yumuşakça hedefe yaklaşır)
     this.timer = 70;                // bu hava ne kadar sürecek
     this.version = 0;               // mevsim değişti → ağaç görünümü (statik katman) yenilenir
+    this.snowCover = 0;             // 0..1: kışın zemin ~40 sn'de karla kaplanır, ilkbaharda aynı hızla erir
     this._r = seed >>> 0 || 1;
   }
 
@@ -49,6 +51,8 @@ export class Weather {
       if (!(this.kind in this.season.weather)) this.target = 0;
       this.changed = this.season.name;
     }
+    const goalSnow = this.season.id === 'winter' ? 1 : 0;
+    this.snowCover += Math.sign(goalSnow - this.snowCover) * Math.min(Math.abs(goalSnow - this.snowCover), dt / 40);
     this.timer -= dt;
     if (this.timer <= 0) this._roll();
     // Hava değişirken önce eski hava diner, sonra yenisi bastırır
@@ -73,6 +77,7 @@ export class Weather {
     if (!s) return;
     Object.assign(this, s);
     this.intensity = s.target;
+    this.snowCover = this.season.id === 'winter' ? 1 : 0;
     this.version++;
   }
 }

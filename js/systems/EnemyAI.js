@@ -16,7 +16,8 @@ export class EnemyAI {
   constructor(world) {
     this.world = world;
     this.player = world.players[ENEMY];
-    this.waveTimer = world.diff.firstWave;
+    // İlk saldırı: en erken 20 dk (zorluk) + 0–5 dk rastgele; sonrakiler rastgele aralıklarla
+    this.waveTimer = Math.max(1200, world.diff.firstWave) + Math.random() * 300;
     this.wave = 0;
     this.econT = 6;           // ekonomi kararları (köylü üret, boşta olana iş ver) aralığı
     this.trainT = 25;         // sonraki köylü üretimi
@@ -117,7 +118,7 @@ export class EnemyAI {
     this._economy(dt);
     this.waveTimer -= dt;
     if (this.waveTimer <= 0) {
-      this.waveTimer = w.diff.interval;
+      this.waveTimer = w.diff.interval * (0.6 + Math.random() * 0.9);
       this.launchWave();
     }
   }

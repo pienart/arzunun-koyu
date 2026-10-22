@@ -29,11 +29,15 @@ export class Building extends StaticObject {
     this.repairers = 0;   // bu tick'te tamir eden köylü sayısı
     this.garrison = [];   // içeri sığınmış köylüler (haritadan kalkarlar, ok atışını güçlendirirler)
     this.atkCd = Math.random();
+    this.level = 1;       // üretim binası seviyesi (LEVELS)
+    this.tier = 0;        // sur/kapı: inşa edildiği/yükseltildiği çağ görünümü (World.applyTier)
     this._visualStep = complete ? 10 : 0;
   }
 
   get complete() { return this.progress >= 1; }
-  get name() { return this.def.name; }
+  get name() { return this.def.tiers?.[this.tier]?.name ?? this.def.name; }
+  /** Zırh: sur/kapıda çağ kademesinin değeri */
+  get armor() { return this.def.tiers?.[this.tier]?.armor ?? this.def.armor ?? { melee: 0, pierce: 0 }; }
   /** Ayak izi merkezi (grid, kesirli) */
   get centerI() { return this.originI + (this.size - 1) / 2; }
   get centerJ() { return this.originJ + (this.size - 1) / 2; }

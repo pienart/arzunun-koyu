@@ -109,7 +109,7 @@ export class Menu {
   _hint() {
     const d = DIFFICULTY[this.choice.difficulty];
     this.root.querySelector('[data-hint="difficulty"]').textContent =
-      `İlk saldırı ${Math.round(d.firstWave / 60 * 10) / 10} dk sonra, dalgalar ${Math.round(d.interval / 6) / 10} dk arayla; düşman ${d.enemyVillagers} köylüyle başlar.`;
+      `İlk 20 dakika saldırı yok; sonra saldırılar rastgele zamanlarda (ortalama ${Math.round(d.interval / 6) / 10} dk arayla) gelir. Düşman ${d.enemyVillagers} köylüyle başlar.`;
   }
 
   _show(view) {

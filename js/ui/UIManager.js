@@ -1,12 +1,12 @@
 import { MANIFEST } from '../../assets/manifest.js';
 import { HW, HH } from '../render/iso.js';
 import { Settings } from '../systems/Settings.js';
-import { BUILDINGS, BUILD_MENU, TECHS, UNITS, RESOURCE_NAMES, RESOURCE_TYPES, MARKET, PLAYER, ENEMY } from '../data/gameData.js';
+import { BUILDINGS, BUILD_MENU, TECHS, UNITS, RESOURCE_NAMES, RESOURCE_TYPES, MARKET, PLAYER, LEVELS } from '../data/gameData.js';
 
 const $ = (sel) => document.querySelector(sel);
 const spriteFile = (key) => MANIFEST.sprites[key]?.file;
 const iconFile = (key) => MANIFEST.icons[key]?.file;
-const UNIT_PORTRAIT = { villager: 'vil_idle', militia: 'mil_idle', archer: 'arc_idle', cavalry: 'cav_idle', ram: 'ram_e', fishingBoat: 'boat_e' };
+const UNIT_PORTRAIT = { villager: 'vil_idle', militia: 'mil_idle', archer: 'arc_idle', cavalry: 'cav_idle', ram: 'ram_e', fishingBoat: 'boat_e', yeti: 'yeti_idle' };
 /** Komut butonlarına sırayla atanan kısayollar (WASD kamera, H/G/L/M/N/B/X/P başka işlere ayrılı) */
 const HOTKEYS = ['KeyQ', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyF', 'KeyC', 'KeyV', 'KeyZ', 'KeyJ', 'KeyK'];
 const UNIT_DESC = { villager: 'Kaynak toplar, bina inşa eder ve tamir eder.', fishingBoat: 'Balık sürülerinden yiyecek toplar ve tersaneye getirir.' };
@@ -16,7 +16,7 @@ function buildingFile(type, tier) {
   type = BUILDINGS[type]?.sprite ?? type;
   for (let t = tier; t >= 0; t--) if (MANIFEST.sprites[`${type}_${t}`]) return MANIFEST.sprites[`${type}_${t}`].file;
   for (let t = tier + 1; t <= 3; t++) if (MANIFEST.sprites[`${type}_${t}`]) return MANIFEST.sprites[`${type}_${t}`].file;
-  return spriteFile('foundation');
+  return spriteFile(type) ?? spriteFile('foundation');
 }
 
 const ICON = (k, cls = 'ri') => `<img class="${cls}" src="${iconFile(k)}" alt="">`;
@@ -36,7 +36,7 @@ function buildingKey(type, tier) {
   type = BUILDINGS[type]?.sprite ?? type;
   for (let t = tier; t >= 0; t--) if (MANIFEST.sprites[`${type}_${t}`]) return `${type}_${t}`;
   for (let t = tier + 1; t <= 3; t++) if (MANIFEST.sprites[`${type}_${t}`]) return `${type}_${t}`;
-  return 'foundation';
+  return MANIFEST.sprites[type] ? type : 'foundation';
 }
 // localStorage gizli pencerede hata fırlatabilir → tercih yalnızca hatırlanmaz
 const readPref = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -91,6 +91,38 @@ export class UIManager {
     this._buttons = [];
     this._refs = {};
     this.el.idleBtn.addEventListener('click', () => { game.click(); game.selectNextIdle(); });
+    // Köylü butonunun altındaki ikonlar: yazı yok, açıklama fare üzerine gelince ipucunda
+    const vsel = $('#idleMenu');
+    vsel.addEventListener('click', (e) => {
+      const k = e.target.closest('button[data-vsel]')?.dataset.vsel;
+      if (!k) return;
+      game.click();
+      if (k === 'nextIdle') game.selectNextIdle(); else game.selectVillagers(k === 'idleAll');
+    });
+    vsel.addEventListener('mousemove', (e) => {
+      const b = e.target.closest('button[data-vsel]');
+      if (b) this._tip(`<b>${b.dataset.tip}</b>${b.dataset.vsel === 'idleAll' ? `<div>${this._idleN ?? 0} köylü boşta</div>` : ''}`, e, true);
+      else this._hideTip();
+    });
+    vsel.addEventListener('mouseleave', () => this._hideTip());
+    // İnşaat listesi: başlıktaki ok ile katla/aç (tercih hatırlanır)
+    this.el.pendingToggle = $('#pendingToggle');
+    this.pendingFolded = readPref('mi_pending_fold') === '1';
+    this._renderPendingFold();
+    this.el.pendingToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      game.click();
+      this.pendingFolded = !this.pendingFolded;
+      writePref('mi_pending_fold', this.pendingFolded ? '1' : '0');
+      this._renderPendingFold();
+    });
+    // Kaynaklar: üzerine gelince saatlik verim
+    this._rateHist = [];
+    for (const r of RESOURCE_TYPES) {
+      const box = $(`#res-${r}`);
+      box.addEventListener('mousemove', (e) => { this._resHover = r; this._showRate(r, e); });
+      box.addEventListener('mouseleave', () => { this._resHover = null; this._hideTip(); });
+    }
     this.el.ambBtn.addEventListener('click', () => this.toggleAmbient());
     this.el.musicBtn.addEventListener('click', () => this.toggleMusic());
     this.el.menuBtn.addEventListener('click', () => { game.click(); game.menu?.openPause(); });
@@ -131,6 +163,66 @@ export class UIManager {
     document.body.classList.toggle('panel-collapsed', !open);
     if (!open) this.el.tooltip.style.display = 'none';
   }
+
+  _renderPendingFold() {
+    this.el.pending.classList.toggle('folded', this.pendingFolded);
+    const t = this.pendingFolded ? 'Listeyi göster' : 'Listeyi gizle';
+    this.el.pendingToggle.title = t;
+    this.el.pendingToggle.setAttribute('aria-expanded', String(!this.pendingFolded));
+  }
+
+  // ───────────── Kaynak verimi (saatlik) ─────────────
+  /** Toplanan kaynak geçmişinden 10 sn'lik örnekler: son 5 dk'nın ortalaması saatliğe çevrilir */
+  _sampleRates() {
+    const w = this.game.world, t = w.time, h = this._rateHist;
+    if (h.length && t - h[h.length - 1].t < 10) return;
+    if (h.length && t < h[h.length - 1].t) h.length = 0; // kayıt yüklendi → geçmiş geçersiz
+    h.push({ t, g: { ...w.player.stats.gathered } });
+    while (h.length > 2 && t - h[1].t >= 300) h.shift();
+  }
+
+  /** Kaynak türü başına saatlik toplama hızı (oyun saati) ve o kaynakta çalışan sayısı */
+  rates() {
+    const w = this.game.world, h = this._rateHist, now = { t: w.time, g: w.player.stats.gathered };
+    const from = h[0], dt = from ? now.t - from.t : 0;
+    const out = {};
+    for (const r of RESOURCE_TYPES) out[r] = { perHour: dt >= 5 ? (now.g[r] - from.g[r]) / dt * 3600 : 0, workers: 0 };
+    for (const u of w.units) {
+      if (u.owner !== PLAYER || u.dead || u.garrisoned) continue;
+      const tg = u.task?.target;
+      if (u.type === 'villager' && u.state === 'gather' && tg) out[tg.isBuilding ? 'food' : tg.resType] && out[tg.isBuilding ? 'food' : tg.resType].workers++;
+      else if (u.naval && u.state !== 'idle') out.food.workers++;
+    }
+    let passive = 0;
+    for (const b of w.buildings) if (b.owner === PLAYER && b.complete && b.def.income?.food) passive += b.def.income.food * (w.player.modifiers.fish ?? 1) * (w.levelMul?.(b) ?? 1);
+    out.food.passive = passive * 3600;
+    out.window = dt;
+    return out;
+  }
+
+  _showRate(r, e) {
+    const x = this.rates()[r], w = this.game.world;
+    const fmt = (v) => Math.round(v).toLocaleString('tr-TR');
+    const win = x && this._rateHist.length ? Math.round(Math.min(300, w.time - this._rateHist[0].t) / 60 * 10) / 10 : 0;
+    this._tip(`<b>${RESOURCE_NAMES[r]}</b>
+      <div class="rate"><span>Saatlik çıkarım</span><span>${fmt(x.perHour)} / saat</span>
+      <span>Dakikalık</span><span>${fmt(x.perHour / 60)} / dk</span>
+      <span>Toplayan</span><span>${x.workers} ${r === 'food' ? 'köylü/tekne' : 'köylü'}</span>
+      ${r === 'food' && x.passive ? `<span>Tersane geliri</span><span>${fmt(x.passive)} / saat</span>` : ''}
+      <span>Toplam toplanan</span><span>${fmt(w.player.stats.gathered[r])}</span></div>
+      <div class="sub">${win >= 0.2 ? `Son ${win} dakikanın ortalaması (oyun süresi)` : 'Hesaplanıyor… birkaç saniye bekleyin'}</div>`, e);
+  }
+
+  /** Ortak ipucu kutusu; below: imlecin altında aç (üst bar için) */
+  _tip(html, e, below = true) {
+    const tip = this.el.tooltip;
+    tip.innerHTML = html;
+    tip.style.display = 'block';
+    const r = tip.getBoundingClientRect();
+    tip.style.left = `${Math.max(8, Math.min(window.innerWidth - r.width - 8, e.clientX + 14))}px`;
+    tip.style.top = below ? `${e.clientY + 18}px` : `${e.clientY - r.height - 14}px`;
+  }
+  _hideTip() { this.el.tooltip.style.display = 'none'; }
 
   // ───────────── Ses (iki kanal) ─────────────
   /** M: olay sesleri */
@@ -184,13 +276,14 @@ export class UIManager {
 
     // Düşman dalga sayacı
     const ai = w.enemyAI;
-    if (ai.enabled && w.isAlive(ai.tc)) {
+    if (false) { // saldırılar rastgele: geri sayım gösterilmez (yalnızca saldırı başlayınca boru ve uyarı)
       this.el.waveBox.classList.remove('hidden');
       this.el.waveText.textContent = ai.wave === 0 ? `İlk saldırı ${fmtTime(ai.countdown)}` : `Dalga ${ai.wave + 1}: ${fmtTime(ai.countdown)}`;
       this.el.waveBox.classList.toggle('soon', ai.countdown < 30);
     } else this.el.waveBox.classList.add('hidden');
 
-    const idle = w.units.filter((u) => u.owner === PLAYER && u.type === 'villager' && u.state === 'idle').length;
+    const idle = this._idleN = w.units.filter((u) => u.owner === PLAYER && u.type === 'villager' && u.state === 'idle' && !u.garrisoned).length;
+    this._sampleRates();
     this.el.idleCount.textContent = idle;
     this.el.idleBtn.classList.toggle('has', idle > 0);
 
@@ -265,10 +358,10 @@ export class UIManager {
       return;
     }
     const a = sel[0];
-    const enemy = a.owner === ENEMY;
+    const enemy = !!a.owner && a.owner !== PLAYER; // düşman veya yaratık
     let img, title;
     if (a.isUnit) {
-      img = enemy ? enemyPortrait(g.sprites, UNIT_PORTRAIT[a.type]) : spriteFile(UNIT_PORTRAIT[a.type]);
+      img = a.type === 'yeti' ? spriteFile('yeti_idle') : enemy ? enemyPortrait(g.sprites, UNIT_PORTRAIT[a.type]) : spriteFile(UNIT_PORTRAIT[a.type]);
       const same = sel.every((u) => u.type === a.type);
       title = sel.length > 1 ? `${same ? a.name : 'Birlik'} × ${sel.length}` : a.name;
     } else if (a.isBuilding) {
@@ -283,7 +376,7 @@ export class UIManager {
     info.innerHTML = `
       <div class="portrait ${farm ? 'farm' : ''} ${enemy ? 'enemy' : ''}"><img src="${img}" alt=""></div>
       <div class="details">
-        <div class="title">${title}${enemy ? ' <span class="foe">Düşman</span>' : ''}</div>
+        <div class="title">${title}${enemy ? ` <span class="foe">${a.type === 'yeti' ? 'Yaratık' : 'Düşman'}</span>` : ''}${a.isBuilding && a.def.levels && a.complete ? ` <span class="lvl">Sv. ${a.level}</span>` : ''}</div>
         <div class="hp ${a.isResource ? 'res' : ''} ${enemy ? 'foe' : ''}"><i></i><span></span></div>
         <div class="line l1"></div>
         <div class="line l2"></div>
@@ -295,7 +388,7 @@ export class UIManager {
     };
     if (a.isBuilding && a.queue.length && !enemy) {
       this._refs.queue.innerHTML = a.queue.map((q, k) => {
-        const icon = q.kind === 'unit' ? spriteFile(UNIT_PORTRAIT[q.id]) : q.kind === 'age' ? iconFile('age') : iconFile(TECHS[q.id].icon);
+        const icon = q.kind === 'unit' ? spriteFile(UNIT_PORTRAIT[q.id]) : q.kind === 'age' ? iconFile('age') : q.kind === 'level' ? iconFile('build') : iconFile(TECHS[q.id].icon);
         return `<button class="qi ${k === 0 ? 'active' : ''}" data-k="${k}" title="İptal et"><img src="${icon}" alt=""><i></i></button>`;
       }).join('');
       this._refs.queue.querySelectorAll('.qi').forEach((btn) => btn.addEventListener('click', () => {
@@ -323,7 +416,8 @@ export class UIManager {
       frac = hp / max; text = `${Math.ceil(hp)}/${max}`;
       if (sel.length === 1) {
         l1 = a.activity;
-        if (a.carry > 0.5) l2 = `${ICON(a.carryType)} Taşıyor: ${Math.floor(a.carry)} ${RESOURCE_NAMES[a.carryType].toLowerCase()}`;
+        if (a.type === 'yeti') l2 = 'Surları kolayca yıkar; binalara karşı yavaştır. Yalnızca kışın mağarasından çıkar.';
+        else if (a.carry > 0.5) l2 = `${ICON(a.carryType)} Taşıyor: ${Math.floor(a.carry)} ${RESOURCE_NAMES[a.carryType].toLowerCase()}`;
         else l2 = this._unitStats(a);
       } else {
         const busy = sel.filter((u) => u.state !== 'idle').length;
@@ -335,16 +429,18 @@ export class UIManager {
       if (a.complete && a.def.garrison && a.owner === PLAYER) l2 = `İçeride: ${a.garrison.length}/${a.def.garrison} köylü${a.repairers ? ` · ${a.repairers} köylü tamir ediyor` : ''}`;
       else if (a.repairers) l2 = `${a.repairers} köylü tamir ediyor`;
       if (!a.complete) l1 = `İnşa ediliyor: %${Math.floor(a.progress * 100)}${a.builders ? ` · ${a.builders} işçi` : ' · işçi yok'}`;
-      else if (a.type === 'farm') l1 = `${ICON('food')} Kalan yiyecek: ${Math.ceil(a.food)}`;
+      else if (a.type === 'farm') l1 = `${ICON('food')} Kalan yiyecek: ${Math.ceil(a.food)}${a.level > 1 ? ` · ürün +%${Math.round((g.world.levelMul(a) - 1) * 100)}` : ''}`;
       else if (a.def.attack) l1 = `<span class="st">${ICON('swords')}${a.def.attack.damage}</span><span class="st">${ICON('quiver')}${a.def.attack.range}</span> Menzildeki düşmana ok atar`;
       else if (a.def.income) {
         const m = g.world.players[a.owner].modifiers.fish ?? 1;
-        l1 = `${ICON('food')} Balıkçılar: +${Math.round(a.def.income.food * m * 60)} yiyecek/dk · Kabul eder: ${a.def.dropsite.map((x) => ICON(x)).join(' ')}`;
-      } else if (a.def.dropsite) l1 = `Kabul eder: ${a.def.dropsite.map((x) => ICON(x)).join(' ')}`;
+        l1 = `${ICON('food')} Balıkçılar: +${Math.round(a.def.income.food * m * g.world.levelMul(a) * 60)} yiyecek/dk · Kabul eder: ${a.def.dropsite.map((x) => ICON(x)).join(' ')}`;
+      } else if (a.def.dropsite) l1 = `Kabul eder: ${a.def.dropsite.map((x) => ICON(x)).join(' ')}${a.level > 1 ? ` · bırakılan +%${Math.round((g.world.levelMul(a) - 1) * 100)}` : ''}`;
+      else if (a.def.light) l1 = 'Geceleri köylüler ateşi yakar; çevresi daha aydınlık olur.';
+      else if (a.def.tiers) l1 = `<span class="st">${ICON('shield')}${a.armor.melee}/${a.armor.pierce}</span> Çağ atladıkça kalınlaşır ve güçlenir`;
       else if (a.def.popProvided) l1 = `${ICON('pop')} Nüfus +${a.def.popProvided}`;
       const q = a.owner === PLAYER ? a.queue[0] : null;
       if (q) {
-        const name = q.kind === 'unit' ? UNITS[q.id].name : q.kind === 'age' ? g.world.player.nextAge?.name ?? '' : TECHS[q.id].name;
+        const name = q.kind === 'unit' ? UNITS[q.id].name : q.kind === 'age' ? g.world.player.nextAge?.name ?? '' : q.kind === 'level' ? `Seviye ${q.id}` : TECHS[q.id].name;
         l2 = q.kind === 'unit' && !q.started ? `${name}: nüfus bekleniyor` : `${name}: %${Math.floor((1 - q.remaining / q.total) * 100)}`;
         if (r.qbar) r.qbar.style.height = `${(1 - q.remaining / q.total) * 100}%`;
       }
@@ -371,8 +467,8 @@ export class UIManager {
         for (const type of BUILD_MENU) {
           const def = BUILDINGS[type];
           specs.push({
-            img: buildingFile(type, tier), cls: type === 'farm' ? 'farm' : '', label: def.name, title: def.name,
-            cost: def.cost, time: def.buildTime, desc: def.desc,
+            img: buildingFile(type, tier), cls: type === 'farm' ? 'farm' : '', label: def.tiers?.[Math.min(def.tiers.length - 1, tier)].name ?? def.name, title: def.tiers?.[Math.min(def.tiers.length - 1, tier)].name ?? def.name,
+            cost: w.costOf(type), time: def.buildTime, desc: def.desc,
             check: () => w.checkBuildable(type), onClick: () => g.startPlacement(type),
           });
         }
@@ -419,6 +515,15 @@ export class UIManager {
           check: () => (a.garrison.length ? null : 'İçeride kimse yok'), onClick: () => w.ungarrison(a),
         });
       }
+      if (def.levels) {
+        const max = a.level >= LEVELS.MAX_LEVEL;
+        specs.push({
+          img: iconFile('build'), label: max ? 'En Yüksek' : `Seviye ${a.level + 1}`, title: max ? 'En yüksek seviye' : `Yükselt: Seviye ${a.level + 1}`,
+          cost: max ? null : w.upgradeCost(a), time: max ? null : LEVELS.time * a.level,
+          desc: `Seviye ${a.level}/${LEVELS.MAX_LEVEL}. Her seviye üretimi %${LEVELS.bonus * 100} artırır (${a.type === 'farm' ? 'çiftlik daha hızlı ürün verir ve yiyeceği tazelenir' : a.type === 'dock' ? 'balıkçı geliri ve tekne avı artar' : 'bu binaya bırakılan kaynak artar'}).`,
+          check: () => w.checkQueue(a, 'level'), onClick: () => w.enqueue(a, 'level'),
+        });
+      }
       if (w.needsRepair(a)) {
         specs.push({
           img: iconFile('build'), label: 'Tamir Ettir', title: 'Tamir Ettir',
@@ -440,11 +545,19 @@ export class UIManager {
           });
         }
       }
+    } else if (a?.isBuilding && !a.complete && mine) {
+      const half = Object.entries(a.cost ?? a.def.cost).map(([k, v]) => [k, Math.floor(v / 2)]);
+      specs.push({
+        img: iconFile('build'), label: 'İnşaatı Yık', title: 'Yarım inşaatı yık',
+        desc: `İnşaat iptal edilir ve kaynağın YARISI geri verilir: ${half.map(([k, v]) => `${ICON(k)}${v}`).join(' ')}`,
+        check: () => null, onClick: () => { w.demolishSite(a); g.select([]); },
+      });
     }
     this.el.cmds.innerHTML = '';
     if (!specs.length && a) {
       let hint = '';
-      if (a.owner === ENEMY) hint = 'Düşman birimi. Askerlerinizi seçip sağ tıklayarak saldırın.';
+      if (a.type === 'yeti') hint = 'Mağaranın yaratığı Koca Ayak! Kış boyunca hem size hem düşmana saldırır. Askerlerinizi toplayıp sağ tıklayarak saldırın; öldürene ödül var.';
+      else if (a.owner !== PLAYER && a.owner) hint = 'Düşman birimi. Askerlerinizi seçip sağ tıklayarak saldırın.';
       else if (a.isBuilding && !a.complete) hint = 'İnşaat sürüyor. Köylüleri seçip temele sağ tıklayarak hızlandırın.';
       else if (a.isBuilding) hint = a.def.desc ?? '';
       else if (a.isResource) hint = 'Köylüleri seçip bu kaynağa sağ tıklayarak toplatın.';

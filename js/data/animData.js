@@ -22,9 +22,11 @@ export const ANIMS = {
   arc_shoot:  { hit: 0.05 },
   cav_walk:   { stride: 2.2 },
   cav_attack: { hit: 0.42 },
+  yeti_walk:  { stride: 1.6 },
+  yeti_attack: { hit: 0.55 },
 };
 
-export const UNIT_PREFIX = { villager: 'vil', militia: 'mil', archer: 'arc', cavalry: 'cav', ram: 'ram', fishingBoat: 'boat' };
+export const UNIT_PREFIX = { villager: 'vil', militia: 'mil', archer: 'arc', cavalry: 'cav', ram: 'ram', fishingBoat: 'boat', yeti: 'yeti' };
 
 /** Yönlü SABİT görselli birimler (araç/tekne): dünya birimi cinsinden boy; kare yok, Renderer sallar/iter */
 export const VEHICLE_HEIGHT = { ram: 56, fishingBoat: 64 };

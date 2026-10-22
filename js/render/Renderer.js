@@ -6,6 +6,7 @@ import { BUILDINGS, PLAYER, ENEMY } from '../data/gameData.js';
 import { UNIT_PREFIX } from '../data/animData.js';
 import { Ambient } from './Ambient.js';
 import { Settings } from '../systems/Settings.js';
+import { SEASON_LEN } from '../systems/Weather.js';
 
 const TW = CONFIG.TILE_WIDTH;
 /** Zemin çizim sırası: sonra çizilen, öncekinin üzerine "taşar" (çimen toprağı, kaya çimeni örter) */
@@ -26,6 +27,17 @@ function hash3(a, b, c) {
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
+
+/**
+ * Yumuşak 1B gürültü (0..1): komşu tam sayılardaki karma değerler arasında smoothstep geçişi.
+ * Alevlerin "mum gibi" titremesi için: sinüsün düzenli nabzı yerine yavaş, rastgele inip çıkan bir parlaklık.
+ */
+function cnoise(x) {
+  const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f);
+  return hash3(i, 17, 3) * (1 - u) + hash3(i + 1, 17, 3) * u;
+}
+/** Mum alevi: çoğunlukla sakin, arada yavaşça sönükleşip parlayan değer (yaklaşık 0.75..1.05) */
+const candle = (t, seed) => 0.78 + 0.2 * cnoise(t * 1.6 + seed) + 0.07 * cnoise(t * 4.1 + seed * 1.7);
 
 // Leke şekli: 7 köşeli çokgen (önceden hesaplanmış birim çember noktaları).
 // Neden elips değil? Binlerce eğri içeren yolu doldurmak (özellikle yazılımsal çizimde) çok pahalı;
@@ -238,6 +250,12 @@ export class Renderer {
    */
   render(frame) {
     this._lights.length = 0;
+    // Kış: karlı nesne görselleri örtü yarıyı geçince devreye girer (statik katman bir kez yenilenir);
+    // sonbaharın son 100 sn'sinde karlı sürümler arka planda hazırlanır (kış başında takılma olmasın)
+    const wthr = this.world.weather;
+    const snowy = wthr.snowCover > 0.5;
+    if (snowy !== this._snowy) { this._snowy = snowy; this.map.version++; }
+    if (snowy || (wthr.season.id === 'autumn' && wthr.seasonTime > SEASON_LEN - 100)) this.sprites.prewarmSnow();
     const cam = this.camera, s = cam.zoom * this.dpr, M = this.M;
     const zooming = cam.zoom !== cam.targetZoom;
     if (!this.st || this._dirty) {
@@ -280,6 +298,7 @@ export class Renderer {
     const ctx = this.ctx;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     this._blitLayer(ctx, this.groundLayer, blit);
+    this._drawSnowGround(ctx);
 
     let t0 = performance.now();
     this.water.render(ctx, frame.time, { s, e: -cam.x * s, f: -cam.y * s }, blit, this._viewRect(0));
@@ -710,21 +729,29 @@ export class Renderer {
     return list.length;
   }
 
-  /** Bir nesnenin ekrandaki sprite dikdörtgeni (dünya birimi) ve gölgesi */
+  /** Bir nesnenin ekrandaki sprite dikdörtgeni (dünya birimi) ve gölgesi; kışın karlı görsel */
   layout(obj) {
+    const L = this._layout(obj);
+    if (L && this._snowy) L.s = this.sprites.snowy(L.s);
+    return L;
+  }
+
+  _layout(obj) {
     const sp = this.sprites;
     const cx = (obj.i - obj.j + obj.offX - obj.offY) * HW;
     const cy = (obj.i + obj.j + obj.offX + obj.offY) * HH;
     if (obj.isBuilding) {
       const owner = obj.owner ?? PLAYER;
-      const s = obj.progress !== undefined && obj.progress < 1 ? sp.get('foundation') : sp.building(obj.type, this.world.players[owner].tier, owner);
+      // Sur/kapı kendi kademesiyle (taş sur, kale suru), diğer binalar sahibinin çağıyla çizilir
+      const tier = obj.def?.tiers ? obj.tier : this.world.players[owner].tier;
+      const s = obj.progress !== undefined && obj.progress < 1 ? sp.get('foundation') : sp.building(obj.type, tier, owner);
       const baseW = obj.size * TW * CONFIG.BUILDING_FIT;
       const w = baseW / s.baseRatio, h = w * s.aspect;
       // Taban merkezi = ayak izi merkezi (x), görselin alt kenarı = ayak izinin ön köşesi (y)
       const x = cx - s.anchorX * w, y = cy + HH - h + 2;
       const fcY = cy + HH - obj.size * HH; // ayak izi merkezinin y'si
       // Animasyonlu bina (yel değirmeni): sprite anahtarına ait kare dizisi varsa
-      const bkey = obj.progress !== undefined && obj.progress >= 1 ? sp.buildingKey(obj.type, this.world.players[owner].tier) : null;
+      const bkey = obj.progress !== undefined && obj.progress >= 1 ? sp.buildingKey(obj.type, tier) : null;
       const anim = bkey && sp.anims[bkey] ? bkey : null;
       // İki katmanlı gölge: temas gölgesi (ambient occlusion) + güneşin sol-üstten düşürdüğü sağa uzanan gölge
       return { obj, s, x, y, w, h, cx, cy, baseW, flip: false, anim, shadows: [
@@ -757,6 +784,16 @@ export class Renderer {
       case 'stump':
         s = sp.get('stump'); w = TW * 0.42 * obj.scale; h = w * s.aspect; y = cy + HH * 0.35 - h;
         break;
+      case 'cave': {
+        // Mağara: 3×3 ayak izine oturur, ağzı ekranda öne (alta) bakar
+        s = sp.get('cave');
+        if (!s) return null;
+        const baseW = obj.size * TW * 1.08;
+        w = baseW / s.baseRatio; h = w * s.aspect; y = cy + HH - h + 4;
+        return { obj, s, x: cx - s.anchorX * w, y, w, h, cx, cy, flip: false, shadows: [
+          { x: cx + baseW * 0.2, y: cy + HH - obj.size * HH, rx: baseW * 0.6, ry: obj.size * HH * 1.0, a: 0.8 },
+        ] };
+      }
       case 'ruins': {
         // Yıkıntı: binanın ayak izine oturur (bina gibi ölçeklenir)
         s = sp.get('ruins');
@@ -792,7 +829,7 @@ export class Renderer {
     for (let k = this.pickList.length - 1; k >= 0; k--) {
       const L = this.pickList[k];
       if (wx < L.x || wy < L.y || wx > L.x + L.w || wy > L.y + L.h) continue;
-      if (L.obj.kind === 'mountain' || L.obj.kind === 'stump' || L.obj.kind === 'ruins' || L.obj.kind === 'campfire') continue;
+      if (L.obj.kind === 'mountain' || L.obj.kind === 'stump' || L.obj.kind === 'ruins' || L.obj.kind === 'campfire' || L.obj.kind === 'cave') continue;
       let u = (wx - L.x) / L.w;
       if (L.flip) u = 1 - u;
       if (L.s.hit(u, (wy - L.y) / L.h)) return L.obj;
@@ -861,7 +898,7 @@ export class Renderer {
     for (const it of items) { this._drawItemBase(ctx, it, selected, zoom); this._drawItemBody(ctx, it, px); }
 
     // 2) Örtücüler: birimi gerçekten örten (birim arkasında ve görseli çakışan) binalar/ağaçlar
-    const occluders = this.pickList.filter((L) => L.obj.isBuilding || L.obj.kind === 'tree' || L.obj.kind === 'mountain');
+    const occluders = this.pickList.filter((L) => L.obj.isBuilding || L.obj.kind === 'tree' || L.obj.kind === 'mountain' || L.obj.kind === 'cave');
     const covering = new Map(); // L → örttüğü öğeler
     for (const it of items) {
       for (const L of occluders) {
@@ -896,7 +933,7 @@ export class Renderer {
     for (const it of items) {
       const u = it.u;
       if (!u || !(selected.has(u) || u.hp < u.maxHp)) continue;
-      this._bar(ctx, it.bx, it.y - 4, 22 / Math.max(zoom, 0.7), u.hp / u.maxHp, u.owner === ENEMY ? '#e8483c' : '#4cd964');
+      this._bar(ctx, it.bx, it.y - 4, (u.type === 'yeti' ? 44 : 22) / Math.max(zoom, 0.7), u.hp / u.maxHp, u.owner !== PLAYER ? '#e8483c' : '#4cd964');
     }
   }
 
@@ -928,7 +965,7 @@ export class Renderer {
       it.gx = (it.wy / HH + it.wx / HW) / 2; it.gy = (it.wy / HH - it.wx / HW) / 2;
       if (it.draw) { it.w = 16; it.h = 16; it.x = it.wx - 8; it.y = it.wy - 14; }
       else {
-        const k = sp.unitScale.militia, s = it.s;
+        const k = it.k ?? sp.unitScale.militia, s = it.s;
         it.w = s.levels[0].width * k; it.h = s.levels[0].height * k;
         it.x = it.wx - (it.flip ? 1 - s.anchorX : s.anchorX) * it.w; it.y = it.wy - it.h + 1.5;
       }
@@ -969,13 +1006,13 @@ export class Renderer {
     if (it.deco) return;
     const u = it.u, sp = this.sprites;
     if (it.wake) this._drawWake(ctx, u, it.bx, it.by, this._lastFrameT);
-    const big = u.type === 'cavalry' || it.veh ? 1.7 : 1;
+    const big = u.type === 'yeti' ? 2.6 : u.type === 'cavalry' || it.veh ? 1.7 : 1;
     if (!u.naval) ctx.drawImage(sp.shadow, it.bx - 10 * big, it.by - 5 * big, 24 * big, 10 * big); // temas gölgesi
     if (selected.has(u)) {
       ctx.beginPath();
       ctx.ellipse(it.bx, it.by, 10 * big, 5 * big, 0, 0, Math.PI * 2);
       ctx.lineWidth = 1.6 / zoom;
-      ctx.strokeStyle = u.owner === ENEMY ? 'rgba(255,90,80,0.95)' : 'rgba(255,255,255,0.95)';
+      ctx.strokeStyle = u.owner !== PLAYER ? 'rgba(255,90,80,0.95)' : 'rgba(255,255,255,0.95)';
       ctx.stroke();
     }
   }
@@ -1031,6 +1068,26 @@ export class Renderer {
     ctx.transform(HW, HH, -HW, HH, 0, -HH);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(fog.canvas, 0, 0);
+    ctx.restore();
+  }
+
+  /**
+   * KAR ÖRTÜSÜ: zemin katmanının üstüne, suyun ALTINA dünya koordinatına sabit kar dokusu (kaydırınca kaymaz).
+   * Örtü weather.snowCover ile ~40 sn'de gelir/erir. Su her karede üstüne çizildiğinden göller açık kalır;
+   * sığ kıyılarda hafifçe beyaz görünür (buz). Çiftlikler de karla örtülür.
+   */
+  _drawSnowGround(ctx) {
+    const cover = this.world.weather.snowCover;
+    if (cover < 0.01) return;
+    const pat = this._snowPat ?? (this._snowPat = ctx.createPattern(this.sprites.snowCanvas, 'repeat'));
+    const S = 256 / 5; // doku 5 karoda bir tekrar eder
+    pat.setTransform(new DOMMatrix([HW / S, HH / S, -HW / S, HH / S, 0, 0]));
+    ctx.save();
+    this._applyCamera(ctx);
+    ctx.globalAlpha = 0.86 * cover;
+    ctx.fillStyle = pat;
+    const v = this._viewRect(4);
+    ctx.fillRect(v.l, v.t, v.r - v.l, v.b - v.t);
     ctx.restore();
   }
 
@@ -1111,13 +1168,25 @@ export class Renderer {
    * Kamp ateşi alevleri. Gündüz söndürülmüş odunlardan ince bir duman yükselir; gece büyük, titrek alevler,
    * kıvılcımlar ve geniş sıcak bir ışık halkası.
    */
+  /** Ateşler: Kasaba Merkezi yanındaki kamp ateşi + köylülerin kurduğu ateş çukurları (big: daha geniş ışık) */
+  _fireList() {
+    const out = [];
+    if (this.world.campfire) out.push({ obj: this.world.campfire, big: false, seed: 1 });
+    for (const b of this.world.buildings) if (b.def.light && b.complete && b.owner === PLAYER) out.push({ obj: b, big: true, seed: b.id * 3.7 });
+    return out;
+  }
+
   _drawCampfire(ctx, frame) {
-    const cf = this.world.campfire, d = frame.darkness ?? 0;
-    if (!cf) return;
-    const L = this.layout(cf);
-    if (!L) return;
-    const v = this._viewRect(200);
-    if (L.cx < v.l || L.cx > v.r || L.cy < v.t || L.cy > v.b) return;
+    const v = this._viewRect(260);
+    for (const f of this._fireList()) {
+      const L = this.layout(f.obj);
+      if (!L || L.cx < v.l || L.cx > v.r || L.cy < v.t || L.cy > v.b) continue;
+      this._drawCampfireAt(ctx, frame, L, f.big, f.seed);
+    }
+  }
+
+  _drawCampfireAt(ctx, frame, L, big, seed) {
+    const d = frame.darkness ?? 0;
     const x = L.cx, y = L.y + L.h * 0.55, t = frame.time, fx = this.fx;
     const lit = Math.min(1, d * 1.6); // akşam olurken yakılır
     // duman: gündüz ince, gece daha yoğun
@@ -1132,9 +1201,10 @@ export class Renderer {
     ctx.globalAlpha = 0.55 * lit;
     ctx.drawImage(fx.glow, x - 34, y - 26, 68, 46);
     for (let k = 0; k < 5; k++) {
-      const fl = 0.75 + 0.25 * Math.sin(t * 11 + k * 2.1) + 0.12 * Math.sin(t * 27 + k);
+      // Mum alevi gibi: yavaş ve düzensiz büyüyüp küçülür, hafifçe salınır
+      const fl = candle(t, seed + k * 7.3);
       const h = (16 + 6 * hash3(k, 3, 7)) * fl * lit, w = 9 + 3 * hash3(k, 5, 1);
-      const ox = (k - 2) * 3.2, sway = Math.sin(t * 5 + k) * 2.5;
+      const ox = (k - 2) * 3.2, sway = (cnoise(t * 0.9 + seed + k * 5.1) - 0.5) * 5;
       ctx.globalAlpha = 0.9;
       ctx.save();
       ctx.translate(x + ox, y + 3);
@@ -1151,16 +1221,32 @@ export class Renderer {
     }
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
-    this._lights.push({ x, y: y - 6, r: 190, warm: true, flicker: 0.9 + 0.1 * Math.sin(t * 13), strength: lit });
+    const glowF = 0.94 + 0.08 * cnoise(t * 1.2 + seed);
+    this._lights.push({ x, y: y - 6, r: big ? 250 : 190, warm: true, flicker: glowF, strength: lit * (big ? 1.1 : 1) });
+    // Ateş çukuru: merkezde ikinci, daha parlak bir halka → çevresi diğer yerlerden belirgin şekilde aydınlık
+    if (big) this._lights.push({ x, y: y - 4, r: 120, warm: true, flicker: glowF, strength: lit });
   }
 
   /** Ateşin başındaki askerler (yalnızca gece): kupalarından içki içer, ateşe bakarlar */
   _campfireCrew(frame) {
     const cf = this.world.campfire, d = frame.darkness ?? 0;
-    if (!cf || d < 0.35) return [];
+    if (d < 0.35) return [];
+    const out = [];
+    // Ateş çukurlarının başında ısınan iki köylü
+    const vil = this.sprites.sprites.vil_idle, vk = this.sprites.villagerScale;
+    for (const b of this.world.buildings) {
+      if (!b.def.light || !b.complete || b.owner !== PLAYER) continue;
+      const fireX = (b.i - b.j) * HW;
+      for (const [di, dj] of [[-0.95, 0.55], [0.6, -0.95]]) {
+        const gi = b.i + di, gj = b.j + dj;
+        if (!this.map.isWalkable(Math.round(gi), Math.round(gj))) continue;
+        const wx = (gi - gj) * HW, wy = (gi + gj) * HH;
+        out.push({ deco: true, s: vil, k: vk, wx, wy, flip: fireX < wx, alpha: Math.min(1, (d - 0.35) / 0.3) });
+      }
+    }
+    if (!cf) return out;
     const frames = this.sprites.anims.mil_drink;
     const spots = [[-1.25, 0.15, 0.0], [0.2, -1.3, 0.37], [1.15, 0.85, 0.71]];
-    const out = [];
     for (const [di, dj, ph] of spots) {
       const gi = cf.i + di, gj = cf.j + dj;
       const wx = (gi - gj) * HW, wy = (gi + gj) * HH;
@@ -1176,7 +1262,7 @@ export class Renderer {
   }
 
   _drawDeco(ctx, it, px) {
-    const s = it.s, k = this.sprites.unitScale.militia;
+    const s = it.s, k = it.k ?? this.sprites.unitScale.militia;
     const w = s.levels[0].width * k, h = s.levels[0].height * k;
     const ax = it.flip ? 1 - s.anchorX : s.anchorX;
     ctx.globalAlpha = it.alpha;
@@ -1201,7 +1287,7 @@ export class Renderer {
       if (!b.complete || b.type === 'farm' || b.owner !== PLAYER) continue;
       const cx = (b.centerI - b.centerJ) * HW, cy = (b.centerI + b.centerJ) * HH;
       if (cx < v.l || cx > v.r || cy < v.t || cy > v.b) continue;
-      this._lights.push({ x: cx, y: cy - b.size * 6, r: 40 + b.size * 26, warm: true, flicker: 0.95 + 0.05 * Math.sin(t * 3 + b.id), strength: 0.55 });
+      this._lights.push({ x: cx, y: cy - b.size * 6, r: 40 + b.size * 26, warm: true, flicker: 0.95 + 0.05 * cnoise(t * 0.8 + b.id), strength: 0.55 });
     }
 
     const W = this.pixelW, H = this.pixelH, k = 0.5;
@@ -1384,7 +1470,7 @@ export class Renderer {
 
   _drawFire(ctx, b, L, time) {
     const frac = b.hp / b.maxHp;
-    if (!L || !b.complete || frac >= 0.92) return;
+    if (!L || !b.complete || frac >= 0.92 || b.def.light) return; // ateş çukuru zaten ateş
     const pts = this._firePoints(b, L);
     const n = Math.min(pts.length, 1 + Math.floor(((0.92 - frac) / 0.92) * 7));
     const fx = this.fx, base = L.w * 0.085;
@@ -1402,12 +1488,12 @@ export class Renderer {
     ctx.globalCompositeOperation = 'lighter';
     for (let k = 0; k < n; k++) {
       const p = pts[k], x = L.x + L.w * p.u, y = L.y + L.h * p.v, r = base * p.k;
-      const fl = 0.8 + 0.2 * Math.sin(time * 13 + p.ph * 7) + 0.12 * Math.sin(time * 23 + p.ph * 3);
+      const fl = candle(time, p.ph * 7 + b.id); // yavaş, rastgele (mum alevi gibi)
       ctx.globalAlpha = 0.5;
       ctx.drawImage(fx.glow, x - r * 2.2, y - r * 2.2, r * 4.4, r * 3.6);
       for (let q = 0; q < 2; q++) {
         const h = r * 3.1 * fl * (q ? 0.7 : 1), w = r * 1.15 * (q ? 0.8 : 1);
-        const sway = Math.sin(time * 6 + p.ph + q * 2) * r * 0.25;
+        const sway = (cnoise(time * 1.1 + p.ph + q * 2.3) - 0.5) * r * 0.5;
         ctx.globalAlpha = q ? 1 : 0.85;
         ctx.save();
         ctx.translate(x + (q ? r * 0.35 : 0), y + r * 0.35);
@@ -1436,7 +1522,7 @@ export class Renderer {
         for (let k = 1; k < 4; k++) ctx.lineTo(P[k][0], P[k][1]);
         ctx.closePath();
         ctx.lineWidth = 2 / zoom;
-        ctx.strokeStyle = b.owner === ENEMY ? 'rgba(255,100,90,0.9)' : 'rgba(255,255,255,0.85)';
+        ctx.strokeStyle = b.owner !== PLAYER ? 'rgba(255,100,90,0.9)' : 'rgba(255,255,255,0.85)';
         ctx.setLineDash([8 / zoom, 5 / zoom]);
         ctx.stroke();
         ctx.setLineDash([]);
