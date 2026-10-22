@@ -9,7 +9,9 @@ import { PLAYER } from '../data/gameData.js';
  * piksellik bir görüntüye yazılır; Renderer bunu izometrik dönüşümle ve yumuşatarak çizer → kenarlar
  * yumuşak geçişli bir sis olur, karo karo merdiven görünmez.
  */
-const UNSEEN = 255, EXPLORED = 120; // görüntüdeki karanlık (alfa) seviyeleri
+// Görüntüdeki karanlık (alfa): keşfedilmemiş tam karanlık; keşfedilmiş alan açık kalır, yalnızca hafifçe
+// gölgelenir (arazi ve binalar görünür, ama oradan geçen düşman birimleri görünmez)
+const UNSEEN = 255, EXPLORED = 55;
 
 export class Fog {
   constructor(map, enabled = true) {
@@ -75,13 +77,14 @@ export class Fog {
         }
       }
     };
-    for (const u of world.units) if (u.owner === PLAYER) stamp(u.x, u.y, (u.def.los + 1.5) * k);
+    // Geniş görüş: birim görüşü × 1,5 + 3 karo; binalar da çevrelerini geniş aydınlatır
+    for (const u of world.units) if (u.owner === PLAYER) stamp(u.x, u.y, (u.def.los * 1.5 + 3) * k);
     for (const b of world.buildings) {
       if (b.owner !== PLAYER) continue;
-      const r = b.complete ? (b.type === 'townCenter' ? 9 : b.def.attack ? 8 : b.size + 3) : b.size + 1.5;
+      const r = b.complete ? (b.type === 'townCenter' ? 15 : b.def.attack ? 12 : b.def.wall || b.def.gate ? 4 : b.size + 6) : b.size + 3;
       stamp(b.centerI, b.centerJ, r);
     }
-    if (world.campfire) stamp(world.campfire.i, world.campfire.j, 4);
+    if (world.campfire) stamp(world.campfire.i, world.campfire.j, 6);
     this._paint();
   }
 

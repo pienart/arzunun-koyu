@@ -70,11 +70,11 @@ img { -webkit-user-drag: none; }
 
 /* ───────── Alt panel ───────── */
 #bottombar {
-  position: fixed; left: 0; right: 0; bottom: 0; height: 158px; z-index: 5;
-  display: grid; grid-template-columns: 340px 1fr 300px; gap: 8px; padding: 8px;
-  border-width: 2px 0 0 0;
+  position: fixed; left: 0; right: 320px; bottom: 0; height: 158px; z-index: 5;
+  display: grid; grid-template-columns: 340px 1fr; gap: 8px; padding: 8px;
+  border-width: 2px 2px 0 0; border-top-right-radius: 8px;
 }
-#selinfo, #commands, #mapbox { background: rgba(0, 0, 0, 0.35); border: 1px solid var(--gold-dim); border-radius: 6px; }
+#selinfo, #commands { background: rgba(0, 0, 0, 0.35); border: 1px solid var(--gold-dim); border-radius: 6px; }
 #selinfo { display: flex; gap: 10px; padding: 8px; overflow: hidden; }
 #selinfo .empty { display: flex; flex-direction: column; gap: 6px; font-size: 13px; opacity: 0.85; }
 #selinfo .empty span { font-size: 12px; line-height: 1.5; }
@@ -116,7 +116,8 @@ img { -webkit-user-drag: none; }
 .cmd.locked { filter: grayscale(1) brightness(0.55); }
 
 #commands .hint { grid-column: 1 / -1; padding: 6px 4px; font-size: 13px; line-height: 1.5; opacity: 0.85; font-style: italic; }
-#mapbox { padding: 4px; display: flex; }
+/* Mini harita: sağ altta ayrı kutu (alt menü açık/kapalı fark etmez) */
+#mapbox { position: fixed; right: 10px; bottom: 10px; z-index: 7; width: 300px; height: 158px; padding: 5px; display: flex; border-radius: 8px; }
 #minimap { width: 100%; height: 100%; display: block; cursor: crosshair; }
 
 /* ───────── İpucu & bildirimler ───────── */
@@ -210,7 +211,7 @@ img { -webkit-user-drag: none; }
 #bottombar { transition: transform 0.25s ease; }
 body.panel-collapsed #bottombar { transform: translateY(100%); }
 #panelToggle {
-  position: fixed; right: 18px; bottom: 158px; z-index: 6; width: 54px; height: 20px; padding: 0; cursor: pointer;
+  position: fixed; right: 338px; bottom: 158px; z-index: 6; width: 54px; height: 20px; padding: 0; cursor: pointer;
   background: linear-gradient(180deg, var(--wood-hi), var(--wood-lo)); border: 2px solid #8a6a32; border-bottom: none;
   border-radius: 8px 8px 0 0; transition: bottom 0.25s ease;
 }
@@ -221,6 +222,7 @@ body.panel-collapsed #bottombar { transform: translateY(100%); }
 }
 body.panel-collapsed #panelToggle { bottom: 0; }
 body.panel-collapsed #panelToggle span { border-top: none; border-bottom: 7px solid var(--ink); }
+body.panel-pinned #panelToggle { border-color: #ffd36b; box-shadow: 0 0 6px rgba(255, 211, 107, 0.6); }
 
 /* Düşman seçimi ve istatistikler */
 .portrait.enemy { border-color: #d8352a; box-shadow: inset 0 0 18px rgba(216, 53, 42, 0.45); }
@@ -307,7 +309,15 @@ body.paused #pauseBadge { display: block; }
 
 /* Ana menüdeyken (oyun henüz kurulmadı) oyun arayüzü gizli */
 body:not(.ingame) #topbar, body:not(.ingame) #bottombar, body:not(.ingame) #panelToggle,
-body:not(.ingame) #help, body:not(.ingame) #pending, body:not(.ingame) #fps { display: none !important; }
+body:not(.ingame) #help, body:not(.ingame) #pending, body:not(.ingame) #fps, body:not(.ingame) #mapbox { display: none !important; }
 
 .wave b { white-space: nowrap; }
-@media (max-width: 1100px) { .res { min-width: 0; padding-right: 8px; } #dayBtn span i { display: none; } }
+/* Dar ekran: kaynak kutuları sayıyı kırpmasın (küçülmez), simgeler biraz küçülür, boşluk daralır */
+.res { flex-shrink: 0; }
+@media (max-width: 1100px) {
+  #topbar { gap: 5px; padding: 0 6px; }
+  .res { min-width: 0; padding-right: 7px; gap: 3px; font-size: 14px; }
+  .res img { width: 22px; height: 22px; }
+  #dayBtn span i { display: none; }
+  .age { min-width: 0; }
+}

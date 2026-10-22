@@ -220,6 +220,7 @@ export class Game {
       box: this.placement ? null : this.input.box,
       cmdMarker: this.cmdMarker,
       darkness: this.dayNight.darkness,
+      moon: this.dayNight.moonProgress(this.time),
     });
   }
 
@@ -227,6 +228,7 @@ export class Game {
   select(list) {
     this.selection = list;
     this.selectedSet = new Set(list);
+    this.ui?._syncPanel(); // alt menü seçimle anında açılır/kapanır
   }
 
   /** Arayüz tıklama sesi */

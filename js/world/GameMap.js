@@ -215,15 +215,18 @@ export class GameMap {
       }
     }
 
-    // 6) Başlangıç kaynakları (AoE'deki gibi garanti): meyve, altın, taş, yakında bir koru
-    this._placeCluster('berry', sc, 6, 8, 6);
-    this._placeCluster('gold', sc, 10, 14, 7);
-    this._placeCluster('stone', sc, 11, 15, 5);
-    this._placeCluster('tree', sc, 8, 11, 9);
-    // Haritaya dağınık ek kaynaklar
-    for (let k = 0; k < 6; k++) this._placeCluster('gold', null, 0, 0, 5 + ((rand() * 3) | 0));
-    for (let k = 0; k < 5; k++) this._placeCluster('stone', null, 0, 0, 4 + ((rand() * 2) | 0));
-    for (let k = 0; k < 6; k++) this._placeCluster('berry', null, 0, 0, 5);
+    // 6) Başlangıç kaynakları (AoE'deki gibi garanti): üsse yakın ama FARKLI YÖNLERDE (hepsi aynı yere yığılmasın)
+    this._clusters = [];
+    const a0 = rand() * Math.PI * 2;
+    this._placeCluster('berry', sc, 7, 10, 6, a0);
+    this._placeCluster('tree', sc, 9, 12, 9, a0 + 1.6);
+    this._placeCluster('gold', sc, 11, 16, 7, a0 + 3.1);
+    this._placeCluster('stone', sc, 12, 17, 5, a0 + 4.6);
+    // Haritaya dağınık ek kaynaklar: sayı harita alanıyla orantılı, kümeler birbirinden uzak
+    const area = (W * H) / (128 * 128);
+    for (let k = 0; k < Math.round(8 * area); k++) this._placeCluster('gold', null, 0, 0, 4 + ((rand() * 3) | 0));
+    for (let k = 0; k < Math.round(7 * area); k++) this._placeCluster('stone', null, 0, 0, 3 + ((rand() * 3) | 0));
+    for (let k = 0; k < Math.round(8 * area); k++) this._placeCluster('berry', null, 0, 0, 4 + ((rand() * 2) | 0));
 
     this._analyzeWater();
     this._placeFish();
@@ -242,7 +245,7 @@ export class GameMap {
       }
     }
     if (!cand.length) return;
-    const target = Math.max(6, Math.min(24, Math.round(cand.length / 90)));
+    const target = Math.max(6, Math.min(34, Math.round(cand.length / 90)));
     const placed = [];
     const ok = (i, j) => placed.every(([a, b]) => Math.hypot(a - i, b - j) >= 7);
     const s = this.spawn;
@@ -281,21 +284,31 @@ export class GameMap {
     }
   }
 
-  /** Belirli bir mesafe halkasında (veya rastgele) küme halinde kaynak yerleştirir. */
-  _placeCluster(kind, center, rMin, rMax, count) {
+  /**
+   * Belirli bir mesafe halkasında (veya rastgele) küme halinde kaynak yerleştirir.
+   *  angle : başlangıç kaynakları için tercih edilen yön (±25°); verilmezse rastgele
+   * Kümeler birbirine yaklaşamaz: aynı tür 22, farklı tür 8 karo (başlangıç kümeleri arasında 6).
+   */
+  _placeCluster(kind, center, rMin, rMax, count, angle = null) {
     const rand = this.rand;
-    for (let attempt = 0; attempt < 80; attempt++) {
+    for (let attempt = 0; attempt < 120; attempt++) {
       let ci, cj;
       if (center) {
-        const a = rand() * Math.PI * 2, r = rMin + rand() * (rMax - rMin);
+        const spread = attempt < 40 ? 0.45 : Math.PI; // önce tercih edilen yön, olmazsa her yön
+        const a = angle !== null ? angle + (rand() - 0.5) * 2 * spread : rand() * Math.PI * 2, r = rMin + rand() * (rMax - rMin);
         ci = Math.round(center.i + Math.cos(a) * r);
         cj = Math.round(center.j + Math.sin(a) * r);
       } else {
         ci = 10 + ((rand() * (this.width - 20)) | 0);
         cj = 10 + ((rand() * (this.height - 20)) | 0);
-        if (Math.hypot(ci - this.spawn.i, cj - this.spawn.j) < 20) continue;
+        if (Math.hypot(ci - this.spawn.i, cj - this.spawn.j) < 22) continue;
       }
       if (!this._freeLand(ci, cj)) continue;
+      const tooClose = (this._clusters ?? []).some((c) => {
+        const d = Math.hypot(c.i - ci, c.j - cj);
+        return center ? d < 6 : d < (c.kind === kind ? 22 : 8);
+      });
+      if (tooClose && attempt < 100) continue;
       // Kümeyi rastgele büyüt (komşu boş karolara yayıl)
       const cells = [[ci, cj]];
       const seen = new Set([`${ci},${cj}`]);
@@ -307,6 +320,7 @@ export class GameMap {
         seen.add(key);
         cells.push([ni, nj]);
       }
+      (this._clusters ??= []).push({ i: ci, j: cj, kind });
       for (const [i, j] of cells) {
         this.addObject(new ResourceNode(kind, i, j, {
           variant: kind === 'tree' ? ((rand() * 3) | 0) : 0,

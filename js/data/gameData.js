@@ -196,7 +196,7 @@ export const ENEMY_AI = {
   defenders: { militia: 4, archer: 2 },
   maxWave: 16,
   ageAt: [0, 480, 960],
-  minDistance: 55,
+  minDistance: 72,
 };
 
 /**
@@ -204,9 +204,9 @@ export const ENEMY_AI = {
  * Başlangıç kaynakları her zorlukta aynıdır (START).
  */
 export const DIFFICULTY = {
-  easy:   { name: 'Kolay', firstWave: 480, interval: 210, waveMul: 0.65, enemyGather: 0.7, enemyVillagers: 4 },
-  normal: { name: 'Normal', firstWave: 300, interval: 150, waveMul: 1, enemyGather: 1, enemyVillagers: 6 },
-  hard:   { name: 'Zor', firstWave: 210, interval: 115, waveMul: 1.4, enemyGather: 1.35, enemyVillagers: 9 },
+  easy:   { name: 'Kolay', firstWave: 720, interval: 280, waveMul: 0.65, enemyGather: 0.7, enemyVillagers: 4 },
+  normal: { name: 'Normal', firstWave: 510, interval: 220, waveMul: 1, enemyGather: 1, enemyVillagers: 6 },
+  hard:   { name: 'Zor', firstWave: 360, interval: 170, waveMul: 1.4, enemyGather: 1.35, enemyVillagers: 9 },
 };
 
 export const START = {

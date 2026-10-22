@@ -4,7 +4,52 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Arzu'nun Köyü</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <!-- build:begin (tools/stamp.py üretir, elle düzenlemeyin) -->
+  <link rel="stylesheet" href="css/style.css?v=f0fb9d62c0" />
+  <script type="importmap">
+  {
+    "imports": {
+      "./assets/manifest.js": "./assets/manifest.js?v=81dcdfa44f",
+      "./js/audio/AudioManager.js": "./js/audio/AudioManager.js?v=a20ea13270",
+      "./js/build.js": "./js/build.js?v=e13e1e2bff",
+      "./js/config.js": "./js/config.js?v=6dcae93f5b",
+      "./js/core/Game.js": "./js/core/Game.js?v=cd912d444b",
+      "./js/core/InputHandler.js": "./js/core/InputHandler.js?v=9dff24a4c6",
+      "./js/data/animData.js": "./js/data/animData.js?v=a0c7039f34",
+      "./js/data/gameData.js": "./js/data/gameData.js?v=5f4842ca5b",
+      "./js/entities/Boat.js": "./js/entities/Boat.js?v=f2ad4b963d",
+      "./js/entities/Building.js": "./js/entities/Building.js?v=7dd9784499",
+      "./js/entities/Soldier.js": "./js/entities/Soldier.js?v=1bd5bc894f",
+      "./js/entities/Unit.js": "./js/entities/Unit.js?v=eeed07f94c",
+      "./js/entities/Villager.js": "./js/entities/Villager.js?v=f77f41bd89",
+      "./js/main.js": "./js/main.js?v=e0ea3652cb",
+      "./js/render/Ambient.js": "./js/render/Ambient.js?v=9d4d732ec9",
+      "./js/render/AssetLoader.js": "./js/render/AssetLoader.js?v=adde969dc0",
+      "./js/render/Camera.js": "./js/render/Camera.js?v=96721eda65",
+      "./js/render/Renderer.js": "./js/render/Renderer.js?v=5b6fc39bcf",
+      "./js/render/SpriteFactory.js": "./js/render/SpriteFactory.js?v=0c96a63852",
+      "./js/render/WaterRenderer.js": "./js/render/WaterRenderer.js?v=2c2b4ad7ea",
+      "./js/render/iso.js": "./js/render/iso.js?v=af52f3ac64",
+      "./js/systems/DayNight.js": "./js/systems/DayNight.js?v=8257c0d856",
+      "./js/systems/EnemyAI.js": "./js/systems/EnemyAI.js?v=ef448c8c06",
+      "./js/systems/Fog.js": "./js/systems/Fog.js?v=0e987fa363",
+      "./js/systems/Pathfinder.js": "./js/systems/Pathfinder.js?v=849beaf034",
+      "./js/systems/Player.js": "./js/systems/Player.js?v=337dc746ef",
+      "./js/systems/SaveGame.js": "./js/systems/SaveGame.js?v=cf5371fc40",
+      "./js/systems/Settings.js": "./js/systems/Settings.js?v=391123bf83",
+      "./js/systems/SpatialGrid.js": "./js/systems/SpatialGrid.js?v=e0aff388bc",
+      "./js/systems/Weather.js": "./js/systems/Weather.js?v=35e9b046bc",
+      "./js/systems/World.js": "./js/systems/World.js?v=3aff680ff5",
+      "./js/ui/Menu.js": "./js/ui/Menu.js?v=d2a9c0b1eb",
+      "./js/ui/Minimap.js": "./js/ui/Minimap.js?v=8df73ede84",
+      "./js/ui/UIManager.js": "./js/ui/UIManager.js?v=debdf7223e",
+      "./js/world/GameMap.js": "./js/world/GameMap.js?v=4d9d509ca3",
+      "./js/world/Noise.js": "./js/world/Noise.js?v=8d5c455941",
+      "./js/world/TileTypes.js": "./js/world/TileTypes.js?v=4af0f3c864"
+    }
+  }
+  </script>
+  <!-- build:end -->
 </head>
 <body>
   <div id="loading">
@@ -53,13 +98,16 @@
     </div>
   </header>
 
-  <!-- Alt panel: seçim bilgisi · komutlar · minimap (sağ üstteki sekmeyle gizlenebilir) -->
-  <button id="panelToggle" title="Menüyü gizle (F2)" aria-label="Alt menüyü gizle veya göster"><span></span></button>
+  <!-- Alt panel: seçim bilgisi · komutlar. Bir şey seçilince kendiliğinden açılır, seçim kalkınca kapanır;
+       sekme (veya F2) ile sabit açık tutulabilir. -->
+  <button id="panelToggle" title="Menüyü sabit aç (F2)" aria-label="Alt menüyü sabitle"><span></span></button>
   <footer id="bottombar" class="hud">
     <section id="selinfo"></section>
     <section id="commands"></section>
-    <section id="mapbox"><canvas id="minimap"></canvas></section>
   </footer>
+
+  <!-- Mini harita: alt menüden bağımsız, hep görünür -->
+  <aside id="mapbox" class="hud"><canvas id="minimap"></canvas></aside>
 
   <!-- Bekleyen inşaatlar (sağ üst) -->
   <aside id="pending" class="hud hidden" aria-label="Bekleyen inşaatlar">
@@ -111,6 +159,6 @@
   </div>
 
   <!-- type="module": ES6 modülleri → yerel sunucu gerekir (file:// çalışmaz) -->
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=e0ea3652cb"></script>
 </body>
 </html>

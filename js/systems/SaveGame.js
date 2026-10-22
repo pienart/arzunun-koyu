@@ -16,23 +16,27 @@ import { UNITS, PLAYER, ENEMY } from '../data/gameData.js';
  * Birimlerin görevi (topla / inşa et / tamir / nöbet / saldırı yürüyüşü) hedef kimlikleriyle saklanır ve
  * yüklemede komut olarak yeniden verilir. Ceset, ok ve seçim kaydedilmez.
  */
-const KEY = 'mi_save', AUTO = 'mi_autosave', VERSION = 2;
+// Sürüm 3: 160×160 harita. Daha eski kayıtlar (128×128) bu haritaya uymaz → yüklenmez, menüde görünmez.
+const KEY = 'mi_save', AUTO = 'mi_autosave', VERSION = 3;
 
 const b64 = (u8) => { let s = ''; for (let k = 0; k < u8.length; k += 8192) s += String.fromCharCode.apply(null, u8.subarray(k, k + 8192)); return btoa(s); };
 const unb64 = (str) => Uint8Array.from(atob(str), (c) => c.charCodeAt(0));
 
 export const SaveGame = {
-  has(auto = false) { try { return !!localStorage.getItem(auto ? AUTO : KEY); } catch { return false; } },
+  has(auto = false) { return !!this.meta(auto); },
 
   meta(auto = false) {
     try {
       const s = JSON.parse(localStorage.getItem(auto ? AUTO : KEY) ?? 'null');
-      return s ? { date: s.date, time: s.world.time, difficulty: s.difficulty } : null;
+      return s && s.v === VERSION ? { date: s.date, time: s.world.time, difficulty: s.difficulty } : null;
     } catch { return null; }
   },
 
   load(auto = false) {
-    try { return JSON.parse(localStorage.getItem(auto ? AUTO : KEY) ?? 'null'); } catch { return null; }
+    try {
+      const s = JSON.parse(localStorage.getItem(auto ? AUTO : KEY) ?? 'null');
+      return s && s.v === VERSION ? s : null;
+    } catch { return null; }
   },
 
   /** @returns {boolean} başarılı mı (bellek dolu / gizli pencere → false) */

@@ -71,6 +71,17 @@ export class DayNight {
 
   get isNight() { return this.darkness > 0.5; }
 
+  /**
+   * Ayın gökteki ilerleyişi (0 = doğuş, 1 = batış). Gerçek saatte gece 16:00'dan 07:30'a kadar sürer;
+   * saat gece dışındayken (sabit gece modu) ay 10 dakikada bir turunu oyun zamanıyla tamamlar.
+   */
+  moonProgress(gameTime) {
+    const h = this.hour, len = 24 - DUSK_START + DAWN_END;
+    const into = (h - DUSK_START + 24) % 24;
+    if (into <= len && this.clockDarkness(h) > 0) return into / len;
+    return (gameTime / 600) % 1;
+  }
+
   get label() {
     const d = this.now;
     const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;

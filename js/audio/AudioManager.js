@@ -1,5 +1,6 @@
 import { HW, HH } from '../render/iso.js';
 import { Settings } from '../systems/Settings.js';
+import { BUILD } from '../build.js';
 
 /** Ses başına ayarlar: minGap = aynı sesin iki çalınışı arası en kısa süre, voices = aynı anda en fazla kopya */
 const RULES = {
@@ -63,7 +64,7 @@ export class AudioManager {
     } catch { this.ctx = null; return; }
     await Promise.all(Object.entries(this.defs).map(async ([name, def]) => {
       try {
-        const res = await fetch(def.file);
+        const res = await fetch(`${def.file}?v=${BUILD}`);
         if (!res.ok) return;
         this.buffers[name] = await this.ctx.decodeAudioData(await res.arrayBuffer());
       } catch { /* tek bir ses eksikse diğerleri çalışmaya devam eder */ }

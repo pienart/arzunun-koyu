@@ -8,12 +8,14 @@ rem 1) Python
 where python >nul 2>nul
 if %errorlevel%==0 (
   start "" cmd /c "timeout /t 2 >nul & start http://localhost:8080/"
+  python tools\stamp.py
   python tools\server.py 8080
   goto :eof
 )
 where py >nul 2>nul
 if %errorlevel%==0 (
   start "" cmd /c "timeout /t 2 >nul & start http://localhost:8080/"
+  py tools\stamp.py
   py tools\server.py 8080
   goto :eof
 )

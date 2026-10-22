@@ -1,3 +1,5 @@
+import { BUILD } from '../build.js';
+
 /**
  * AssetLoader: manifest'teki tüm görselleri paralel yükler, ilerlemeyi bildirir.
  * Oyun, tüm görseller hazır olmadan başlamaz (yarım çizilmiş kare görünmesin).
@@ -22,7 +24,7 @@ export async function loadAssets(manifest, onProgress = () => {}) {
   });
   try {
     await Promise.all(jobs.map(async (j) => {
-      const img = await load(j.file);
+      const img = await load(`${j.file}?v=${BUILD}`); // sürüm: güncellenen görsel önbellekten gelmesin
       // decode(): görüntüyü ana iş parçacığı dışında çözer → ilk çizimde takılma olmaz.
       // Bazı tarayıcılarda sekme arka plandayken hiç sonuçlanmayabilir → en fazla 1,5 sn beklenir.
       if (img.decode) await Promise.race([img.decode().catch(() => {}), new Promise((r) => setTimeout(r, 1500))]);

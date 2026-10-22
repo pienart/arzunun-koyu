@@ -142,7 +142,7 @@ const makeSpans = (rows) => ({ jMin: 0, jMax: -1, i0: new Int32Array(rows), i1: 
  * açılışta bir kez OV_SCALE çözünürlüğünde çizilir; ölçek OV_MAX_S'nin altındayken yeniden çizim yalnızca
  * bu görüntüden bir kopyalamadır. Çiftlikler ve grid değişebildiği için her seferinde üstüne çizilir.
  */
-const OV_SCALE = 0.55;  // genel bakış görüntüsünün çözünürlüğü (cihaz pikseli / dünya birimi)
+const OV_SCALE = 0.45;  // genel bakış görüntüsünün çözünürlüğü (cihaz pikseli / dünya birimi; 160×160 harita ≈ 56 MB)
 const OV_MAX_S = 0.8;   // bu ölçeğin altında genel bakış kullanılır (en fazla ~1,45 kat büyütme)
 const OV_PAD = 500;     // harita çevresindeki okyanus payı (dünya birimi)
 
@@ -827,95 +827,195 @@ export class Renderer {
     return { wx: (gx - gy) * HW, wy: (gx + gy) * HH, facing };
   }
 
+  /**
+   * Birimler ve süsler (tavuk, ateş başındaki askerler) — binalar/ağaçlar doğru şekilde ÖNDE kalır.
+   *
+   * Statik katman birimlerden önce çizildiği için arkada kalan birim normalde binanın üstüne binerdi.
+   * Çözüm (yalnızca gerekli nesneler için): tüm birimler çizildikten sonra, bir birimi örten her bina/ağaç
+   * yeniden basılır ve o nesnenin ÖNÜNDE kalan birimler tekrar çizilir. "Önde" kuralı ayak izine göredir:
+   * birim, binanın ön kenarlarından (+i veya +j yüzü) birinin ötesindeyse öndedir — merkez derinliği karşılaştırmasının
+   * binanın yanında duran birimde yaptığı titremeyi önler. Örtülen KENDİ birimleriniz soluk siluetle görünür
+   * (kaybolmasın); düşman ve süsler tamamen gizlenir. Can çubukları en sonda, her şeyin üstünde çizilir.
+   */
   _drawUnits(ctx, frame) {
     const { alpha, time, selected } = frame;
     const sp = this.sprites;
     const v = this._viewRect(40);
-    const list = [];
+    const items = [];
     const fog = this.world.fog;
     for (const u of this.world.units) {
       if (u.owner !== PLAYER && fog && !fog.isVisible(u.x, u.y)) continue; // sisin içindeki düşman görünmez
       const P = this._unitPos(u, alpha, time);
       if (P.wx < v.l || P.wx > v.r || P.wy < v.t || P.wy > v.b + 40) continue;
-      list.push({ u, ...P });
+      items.push({ u, ...P });
     }
-    for (const d of this._campfireCrew(frame)) list.push(d);
-    if (Settings.data.life) for (const d of this.ambient.chickenItems(frame)) list.push(d);
-    list.sort((a, b) => a.wy - b.wy);
+    for (const d of this._campfireCrew(frame)) items.push(d);
+    if (Settings.data.life) for (const d of this.ambient.chickenItems(frame)) items.push(d);
+    items.sort((a, b) => a.wy - b.wy);
 
     const zoom = this.camera.zoom, px = zoom * this.dpr;
-    // Örtücüler: binalar ve ağaçlar (statik katmanda oldukları için birimler hep üstte çizilir;
-    // arkada kalan birimi AoE'deki gibi yarı saydam "siluet" olarak gösteriyoruz)
-    const occluders = this.pickList.filter((L) => L.obj.isBuilding || L.obj.kind === 'tree');
     this.unitRects = [];
-    for (const it of list) {
-      if (it.deco) { if (it.draw) it.draw(ctx); else this._drawDeco(ctx, it, px); continue; }
-      const { u } = it;
-      let { wx, wy } = it;
-      const st = u.animState;
-      let s, w, h, flip;
-      const veh = u.naval || u.def.siege ? sp.vehicle(u) : null;
-      if (veh) {
-        // Tekne/koçbaşı: yönlü sabit görsel. Tekne dalgada sallanır, koçbaşı tekerlek üstünde yalpalar ve vururken öne atılır
-        s = veh.s; flip = veh.flip; h = veh.h; w = h / s.aspect;
-        if (u.naval) {
-          wy += Math.sin(time * 2.1 + u.id) * 1.3 + 6;
-          if (u.moving) this._drawWake(ctx, u, wx, wy, time);
-        } else {
-          if (u.moving) wy -= Math.abs(Math.sin(u.walkDist * 6)) * 1.2;
-          if (u.engaged) { const ph = Math.max(0, Math.sin(((u.def.reload - Math.max(0, u.cooldown)) / u.def.reload) * Math.PI)); wx += u.hx * ph * 9; wy += u.hy * ph * 9; }
-        }
-      } else {
-        s = sp.unitSprite(u, st);
-        const k = sp.unitScale[u.type] ?? sp.villagerScale;
-        w = s.levels[0].width * k; h = s.levels[0].height * k;
-        // Yürürken yön dilimi aynalamayı belirler (batı = doğunun aynası); dururken hedefe bakış (facing)
-        flip = st?.flip !== undefined ? st.flip : it.facing < 0;
-      }
-      const ax = flip ? 1 - s.anchorX : s.anchorX;
-      const x = wx - ax * w, y = wy - h + (veh && u.naval ? h * 0.18 : 1.5);
-      const bodyY = wy - h * 0.45, depthU = u.x + u.y;
-      let hidden = false;
+    for (const it of items) this._prepareItem(it, time, px);
+
+    // 1) Herkes (gölge + seçim halkası + gövde)
+    for (const it of items) { this._drawItemBase(ctx, it, selected, zoom); this._drawItemBody(ctx, it, px); }
+
+    // 2) Örtücüler: birimi gerçekten örten (birim arkasında ve görseli çakışan) binalar/ağaçlar
+    const occluders = this.pickList.filter((L) => L.obj.isBuilding || L.obj.kind === 'tree' || L.obj.kind === 'mountain');
+    const covering = new Map(); // L → örttüğü öğeler
+    for (const it of items) {
       for (const L of occluders) {
-        if (wx < L.x || wx > L.x + L.w || bodyY < L.y || bodyY > L.y + L.h) continue;
-        if (L.obj.depth <= depthU + 0.5) continue; // nesne birimin arkasında → örtmez
-        let uu = (wx - L.x) / L.w;
-        if (L.flip) uu = 1 - uu;
-        if (L.s.hit(uu, (bodyY - L.y) / L.h)) { hidden = true; break; }
+        if (it.x + it.w < L.x || it.x > L.x + L.w || it.y + it.h < L.y || it.y > L.y + L.h) continue;
+        if (!this._behind(it, L.obj)) continue;
+        if (!this._spriteOverlap(it, L)) continue;
+        let arr = covering.get(L);
+        if (!arr) covering.set(L, arr = []);
+        arr.push(it);
+        it.hidden = true;
       }
-      const big = u.type === 'cavalry' || veh ? 1.7 : 1;
-      if (!u.naval) ctx.drawImage(sp.shadow, wx - 10 * big, wy - 5 * big, 24 * big, 10 * big); // temas gölgesi
-      const sel = selected.has(u);
-      if (sel) {
-        ctx.beginPath();
-        ctx.ellipse(wx, wy, 10 * big, 5 * big, 0, 0, Math.PI * 2);
-        ctx.lineWidth = 1.6 / zoom;
-        ctx.strokeStyle = u.owner === ENEMY ? 'rgba(255,90,80,0.95)' : 'rgba(255,255,255,0.95)';
-        ctx.stroke();
-      }
-      if (hidden) ctx.globalAlpha = 0.5;
-      this._blit(ctx, s, x, y, w, h, flip, px);
-      ctx.globalAlpha = 1;
-      // Can çubuğu: seçiliyse veya hasar almışsa
-      if (sel || u.hp < u.maxHp) {
-        this._bar(ctx, wx, y - 4, 22 / Math.max(zoom, 0.7), u.hp / u.maxHp, u.owner === ENEMY ? '#e8483c' : '#4cd964');
-      }
-      this.unitRects.push({ u, x, y, w, h });
     }
+    if (covering.size) {
+      const list = [...covering.keys()].sort((a, b) => (a.obj.depth - b.obj.depth) || (a.x - b.x));
+      for (const L of list) {
+        if (L.anim) this._drawAnimatedBuilding(ctx, L, frame, px);
+        else if (L.obj.isBuilding && !L.obj.complete) this._drawFoundation(ctx, L, px);
+        else this._blit(ctx, L.s, L.x, L.y, L.w, L.h, L.flip, px);
+        // Bu nesnenin önünde kalıp görseliyle çakışan öğeler yeniden çizilir
+        for (const it of items) {
+          if (it.x + it.w < L.x || it.x > L.x + L.w || it.y + it.h < L.y || it.y > L.y + L.h) continue;
+          if (!this._behind(it, L.obj)) this._drawItemBody(ctx, it, px);
+        }
+      }
+      // 3) Örtülen kendi birimleriniz: soluk siluet
+      ctx.globalAlpha = 0.32;
+      for (const it of items) if (it.hidden && it.u && it.u.owner === PLAYER) this._drawItemBody(ctx, it, px);
+      ctx.globalAlpha = 1;
+    }
+
+    // 4) Can çubukları (seçili veya hasarlı)
+    for (const it of items) {
+      const u = it.u;
+      if (!u || !(selected.has(u) || u.hp < u.maxHp)) continue;
+      this._bar(ctx, it.bx, it.y - 4, 22 / Math.max(zoom, 0.7), u.hp / u.maxHp, u.owner === ENEMY ? '#e8483c' : '#4cd964');
+    }
+  }
+
+  /** Birim/süs ayak izi binanın arkasında mı? (ön kenarlardan birinin ötesindeyse önde sayılır) */
+  _behind(it, o) {
+    const gx = it.gx, gy = it.gy;
+    if (gx === undefined) return false;
+    if (o.isBuilding) return gx < o.i + 0.45 && gy < o.j + 0.45;
+    // Ağaç/dağ (tek karo, ofsetli): kendi karosunun ön köşesi
+    return gx + gy < o.i + o.j + o.offX + o.offY - 0.15;
+  }
+
+  /** Öğenin gövde noktası örtücünün dolu pikseline denk geliyor mu (ağacın boşluğundan görünüyorsa örtülmez) */
+  _spriteOverlap(it, L) {
+    for (const fy of [0.3, 0.6, 0.85]) {
+      const px = it.bx, py = it.y + it.h * fy;
+      if (px < L.x || px > L.x + L.w || py < L.y || py > L.y + L.h) continue;
+      let u = (px - L.x) / L.w;
+      if (L.flip) u = 1 - u;
+      if (L.s.hit(u, (py - L.y) / L.h)) return true;
+    }
+    return false;
+  }
+
+  /** Öğenin çizim bilgisini bir kez hesapla: sprite, dikdörtgen, ızgara konumu */
+  _prepareItem(it, time, px) {
+    const sp = this.sprites;
+    if (it.deco) {
+      it.gx = (it.wy / HH + it.wx / HW) / 2; it.gy = (it.wy / HH - it.wx / HW) / 2;
+      if (it.draw) { it.w = 16; it.h = 16; it.x = it.wx - 8; it.y = it.wy - 14; }
+      else {
+        const k = sp.unitScale.militia, s = it.s;
+        it.w = s.levels[0].width * k; it.h = s.levels[0].height * k;
+        it.x = it.wx - (it.flip ? 1 - s.anchorX : s.anchorX) * it.w; it.y = it.wy - it.h + 1.5;
+      }
+      it.bx = it.wx;
+      return;
+    }
+    const u = it.u;
+    let { wx, wy } = it;
+    const st = u.animState;
+    let s, w, h, flip;
+    const veh = u.naval || u.def.siege ? sp.vehicle(u) : null;
+    it.rot = 0;
+    if (veh) {
+      // Tekne: dalgada iner-kalkar ve yalpalar (balık tutarken de); koçbaşı yalpalar, vururken öne atılır
+      s = veh.s; flip = veh.flip; h = veh.h; w = h / s.aspect;
+      if (u.naval) {
+        wy += Math.sin(time * 2.1 + u.id) * 2 + 6;
+        it.rot = Math.sin(time * 1.4 + u.id * 1.7) * 0.05;
+        it.wake = u.moving;
+      } else {
+        if (u.moving) wy -= Math.abs(Math.sin(u.walkDist * 6)) * 1.2;
+        if (u.engaged) { const ph = Math.max(0, Math.sin(((u.def.reload - Math.max(0, u.cooldown)) / u.def.reload) * Math.PI)); wx += u.hx * ph * 9; wy += u.hy * ph * 9; }
+      }
+    } else {
+      s = sp.unitSprite(u, st);
+      const k = sp.unitScale[u.type] ?? sp.villagerScale;
+      w = s.levels[0].width * k; h = s.levels[0].height * k;
+      // Yürürken yön dilimi aynalamayı belirler (batı = doğunun aynası); dururken hedefe bakış (facing)
+      flip = st?.flip !== undefined ? st.flip : it.facing < 0;
+    }
+    const ax = flip ? 1 - s.anchorX : s.anchorX;
+    Object.assign(it, { s, w, h, flip, veh: !!veh, bx: wx, by: wy, x: wx - ax * w, y: wy - h + (veh && u.naval ? h * 0.18 : 1.5) });
+    it.gx = u.x; it.gy = u.y;
+    this.unitRects.push({ u, x: it.x, y: it.y, w, h });
+  }
+
+  _drawItemBase(ctx, it, selected, zoom) {
+    if (it.deco) return;
+    const u = it.u, sp = this.sprites;
+    if (it.wake) this._drawWake(ctx, u, it.bx, it.by, this._lastFrameT);
+    const big = u.type === 'cavalry' || it.veh ? 1.7 : 1;
+    if (!u.naval) ctx.drawImage(sp.shadow, it.bx - 10 * big, it.by - 5 * big, 24 * big, 10 * big); // temas gölgesi
+    if (selected.has(u)) {
+      ctx.beginPath();
+      ctx.ellipse(it.bx, it.by, 10 * big, 5 * big, 0, 0, Math.PI * 2);
+      ctx.lineWidth = 1.6 / zoom;
+      ctx.strokeStyle = u.owner === ENEMY ? 'rgba(255,90,80,0.95)' : 'rgba(255,255,255,0.95)';
+      ctx.stroke();
+    }
+  }
+
+  _drawItemBody(ctx, it, px) {
+    if (it.deco) { if (it.draw) it.draw(ctx); else this._drawDeco(ctx, it, px); return; }
+    if (it.rot) {
+      ctx.save();
+      ctx.translate(it.bx, it.by);
+      ctx.rotate(it.rot);
+      ctx.translate(-it.bx, -it.by);
+      this._blit(ctx, it.s, it.x, it.y, it.w, it.h, it.flip, px);
+      ctx.restore();
+    } else this._blit(ctx, it.s, it.x, it.y, it.w, it.h, it.flip, px);
+  }
+
+  /** İnşaat iskelesi (statik katmandaki ile aynı) */
+  _drawFoundation(ctx, L, px) {
+    const f = this.sprites.get('foundation');
+    const fw = L.baseW / f.baseRatio, fh = fw * f.aspect;
+    this._blit(ctx, f, L.cx - f.anchorX * fw, L.cy + HH - fh + 2, fw, fh, false, px);
   }
 
   /** Kanatları dönen yel değirmenleri (kareler kaynak sprite'ın dikdörtgenine oturtulur: meta.ref) */
   _drawAnimatedBuildings(ctx, frame) {
-    const sp = this.sprites, px = this.camera.zoom * this.dpr, v = this._viewRect(80);
+    const px = this.camera.zoom * this.dpr, v = this._viewRect(80);
     for (const L of this.pickList) {
       if (!L.anim) continue;
       if (L.x > v.r || L.x + L.w < v.l || L.y > v.b || L.y + L.h < v.t) continue;
-      const frames = sp.anims[L.anim], meta = sp.animMeta[L.anim], ref = meta.ref ?? [0, 0, 1, 1];
-      const key = frames[Math.floor(((frame.time / 2.2) % 1) * frames.length) % frames.length];
-      const s = L.obj.owner === ENEMY ? sp.recolored(key) : sp.sprites[key];
-      const W = L.w / ref[2], H = L.h / ref[3];
-      this._blit(ctx, s, L.x - ref[0] * W, L.y - ref[1] * H, W, H, false, px);
+      this._drawAnimatedBuilding(ctx, L, frame, px);
     }
+  }
+
+  _drawAnimatedBuilding(ctx, L, frame, px) {
+    const sp = this.sprites;
+    const frames = sp.anims[L.anim], meta = sp.animMeta[L.anim], ref = meta.ref ?? [0, 0, 1, 1];
+    const key = frames[Math.floor(((frame.time / 2.2) % 1) * frames.length) % frames.length];
+    const s = L.obj.owner === ENEMY ? sp.recolored(key) : sp.sprites[key];
+    const W = L.w / ref[2], H = L.h / ref[3];
+    this._blit(ctx, s, L.x - ref[0] * W, L.y - ref[1] * H, W, H, false, px);
   }
 
   /**
@@ -1139,9 +1239,10 @@ export class Renderer {
       ctx.drawImage(this.fx.glow, x / k - r / k * 0.7, y / k - r / k * 0.45, r / k * 1.4, r / k * 0.9);
     }
     ctx.globalCompositeOperation = 'source-over';
-    // Dolunay (ekranın sol üst gökyüzü köşesi) — hâle + hafif kraterli yüz
-    const mx = W * 0.2, my = 120 * this.dpr, mr = 26 * this.dpr;
-    ctx.globalAlpha = Math.min(1, d * 1.2);
+    // Dolunay: gökyüzünün en tepesinde, gece boyunca soldan sağa yay çizerek ilerler; gün ağarınca solar
+    const p = frame.moon ?? 0.3, top = (this.uiTop ?? 46) * this.dpr;
+    const mx = W * (0.06 + 0.88 * p), my = top + (30 + (1 - Math.sin(Math.PI * p)) * 46) * this.dpr, mr = 24 * this.dpr;
+    ctx.globalAlpha = Math.max(0, Math.min(1, (d - 0.15) * 1.4));
     const halo = ctx.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 4.5);
     halo.addColorStop(0, 'rgba(200,215,255,0.35)');
     halo.addColorStop(1, 'rgba(200,215,255,0)');

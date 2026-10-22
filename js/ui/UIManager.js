@@ -103,21 +103,33 @@ export class UIManager {
     this.toggleHelp(readPref('mi_help') !== 'closed');
     this.el.cmds.addEventListener('mousemove', (e) => this._hoverCmd(e));
     this.el.cmds.addEventListener('mouseleave', () => { this.el.tooltip.style.display = 'none'; });
-    this._applyPanelState(localStorage.getItem('mi_panel') === 'collapsed');
+    // Alt menü: seçim varken açık (otomatik); sekme/F2 ile sabit açık tutulabilir
+    this.pinned = readPref('mi_panel_pin') === '1';
+    this._panelOpen = null;
+    this._syncPanel();
     this._renderSoundBtn();
   }
 
   // ───────────── Alt panel gizle/göster ─────────────
+  /** F2 / sekme: alt menüyü sabit açık tut ya da otomatiğe döndür */
   togglePanel() {
     this.game.click();
-    this._applyPanelState(!document.body.classList.contains('panel-collapsed'));
+    this.pinned = !this.pinned;
+    writePref('mi_panel_pin', this.pinned ? '1' : '0');
+    this.toast(this.pinned ? 'Alt menü sabit açık' : 'Alt menü otomatik (seçim yapınca açılır)', 'info');
+    this._syncPanel();
   }
 
-  _applyPanelState(collapsed) {
-    document.body.classList.toggle('panel-collapsed', collapsed);
-    this.el.panelToggle.title = collapsed ? 'Menüyü göster (F2)' : 'Menüyü gizle (F2)';
-    localStorage.setItem('mi_panel', collapsed ? 'collapsed' : 'open');
-    this.el.tooltip.style.display = 'none';
+  /** Seçim (veya yerleştirme) varsa ya da sabitlenmişse açık; yoksa kapalı */
+  _syncPanel() {
+    const g = this.game;
+    const open = this.pinned || g.selection?.length > 0 || !!g.placement;
+    document.body.classList.toggle('panel-pinned', this.pinned);
+    this.el.panelToggle.title = this.pinned ? 'Sabitlemeyi kaldır: menü seçimle açılıp kapansın (F2)' : 'Menüyü sabit aç (F2)';
+    if (open === this._panelOpen) return;
+    this._panelOpen = open;
+    document.body.classList.toggle('panel-collapsed', !open);
+    if (!open) this.el.tooltip.style.display = 'none';
   }
 
   // ───────────── Ses (iki kanal) ─────────────
@@ -184,6 +196,7 @@ export class UIManager {
 
     this._updatePending();
     this._renderDayNight();
+    this._syncPanel();
 
     const sig = this._signature();
     if (sig !== this._sig) {
