@@ -61,6 +61,10 @@ SPECS['cav_attack'] = ('cav_idle', 14, 1.0, (20, 60))
 # Koca Ayak (mağara yaratığı): ağır yürüyüş ve iki yumrukla ezme
 SPECS['yeti_walk'] = ('yeti_idle', 16, 1.0, (24, 60))
 SPECS['yeti_attack'] = ('yeti_idle', 14, 1.0, (30, 72))
+# Hayvan çiftliği (bina: sağım, kuyruk sallama) ve mimar
+SPECS['animalFarm_0'] = ('animalFarm_0', 12, 1.0, (24, 72))
+SPECS['arch_walk'] = ('arch_idle', 16, 1.0, (24, 60))
+SPECS['arch_build'] = ('arch_idle', 14, 1.0, (30, 72))
 # Yel değirmeni kanatları (bina): kaynak sprite'ın kare içindeki yeri "ref" olarak kaydedilir
 for _t in range(3):
     SPECS[f'mill_{_t}'] = (f'mill_{_t}', 12, 2.0, (12, 72))
@@ -71,7 +75,7 @@ ONESHOT = {k for k in SPECS if k.endswith('_death')}
 # Ölüm videosunun kullanılacak aralığı (kare): üretilen videoların bazılarında düşüş geç başlıyor
 ONESHOT_RANGE = {'vil_death': (27, 58), 'arc_death': (38, 72)}
 # Büyük animasyonlar küçültülür (bellek): en fazla bu yükseklikte kare
-MAXH = {'mill_0': 300, 'mill_1': 300, 'mill_2': 300}
+MAXH = {'mill_0': 300, 'mill_1': 300, 'mill_2': 300, 'animalFarm_0': 320}
 
 
 def load_manifest_sprites():

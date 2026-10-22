@@ -4,7 +4,8 @@ import { Villager } from '../entities/Villager.js';
 import { Soldier } from '../entities/Soldier.js';
 import { Boat } from '../entities/Boat.js';
 import { Yeti } from '../entities/Yeti.js';
-import { UNITS, PLAYER, ENEMY } from '../data/gameData.js';
+import { Architect, Cart } from '../entities/Workers.js';
+import { UNITS, PLAYER, ENEMY, RESOURCE_NODES } from '../data/gameData.js';
 
 /**
  * KAYIT / YÜKLEME (tarayıcı belleğinde tek yuva + otomatik kayıt yuvası)
@@ -17,8 +18,8 @@ import { UNITS, PLAYER, ENEMY } from '../data/gameData.js';
  * Birimlerin görevi (topla / inşa et / tamir / nöbet / saldırı yürüyüşü) hedef kimlikleriyle saklanır ve
  * yüklemede komut olarak yeniden verilir. Ceset, ok ve seçim kaydedilmez.
  */
-// Sürüm 3: 160×160 harita. Daha eski kayıtlar (128×128) bu haritaya uymaz → yüklenmez, menüde görünmez.
-const KEY = 'mi_save', AUTO = 'mi_autosave', VERSION = 3;
+// Sürüm 4: 224×224 harita. Daha eski kayıtlar (160×160) bu haritaya uymaz → yüklenmez, menüde görünmez.
+const KEY = 'mi_save', AUTO = 'mi_autosave', VERSION = 4;
 
 const b64 = (u8) => { let s = ''; for (let k = 0; k < u8.length; k += 8192) s += String.fromCharCode.apply(null, u8.subarray(k, k + 8192)); return btoa(s); };
 const unb64 = (str) => Uint8Array.from(atob(str), (c) => c.charCodeAt(0));
@@ -73,7 +74,7 @@ export const SaveGame = {
     });
     const players = {};
     for (const [id, p] of Object.entries(w.players)) {
-      players[id] = { resources: p.resources, age: p.age, techs: [...p.techs], modifiers: p.modifiers, bonus: p.bonus, stats: p.stats };
+      players[id] = { resources: p.resources, age: p.age, techs: [...p.techs], modifiers: p.modifiers, bonus: p.bonus, stats: p.stats, items: p.items, tools: [...p.tools], effects: p.effects };
     }
     return {
       v: VERSION, date: Date.now(), seed: w.seed, difficulty: w.difficulty, fog: game.fog.enabled,
@@ -115,7 +116,7 @@ export const SaveGame = {
     }
     for (const [k, amount] of keep) { // üretimde olmayan düğüm (olmamalı) → yine de ekle
       const [kind, i, j] = k.split(':');
-      map.addObject(new ResourceNode(kind, +i, +j, { amount, blocks: kind !== 'fish' }));
+      map.addObject(new ResourceNode(kind, +i, +j, { amount, blocks: kind !== 'fish', size: RESOURCE_NODES[kind]?.size ?? 1 }));
     }
     for (const [kind, i, j, size, scale, flip, offX, offY] of d.decor) {
       if (!map.objects[j][i]) map.addObject(new StaticObject(kind, i, j, { size, scale, flip: !!flip, offX, offY, blocks: false }));
@@ -128,6 +129,7 @@ export const SaveGame = {
       const p = world.players[id];
       Object.assign(p.resources, s.resources);
       p.age = s.age; p.techs = new Set(s.techs); Object.assign(p.modifiers, s.modifiers); p.bonus = s.bonus; p.stats = s.stats;
+      p.items = s.items ?? {}; p.tools = new Set(s.tools ?? []); p.effects = s.effects ?? {};
     }
 
     // Binalar (önce hepsi, sonra referanslar)
@@ -148,7 +150,7 @@ export const SaveGame = {
     // Birimler
     const make = (s) => {
       const def = UNITS[s.type];
-      const u = s.type === 'yeti' ? new Yeti(s.x, s.y) : s.type === 'villager' ? new Villager(s.x, s.y, s.owner) : def?.naval ? new Boat(s.x, s.y, s.owner) : new Soldier(s.type, s.x, s.y, s.owner);
+      const u = s.type === 'yeti' ? new Yeti(s.x, s.y) : s.type === 'architect' ? new Architect(s.x, s.y, s.owner) : s.type === 'cart' ? new Cart(s.x, s.y, s.owner) : s.type === 'villager' ? new Villager(s.x, s.y, s.owner) : def?.naval ? new Boat(s.x, s.y, s.owner) : new Soldier(s.type, s.x, s.y, s.owner);
       u.maxHp = s.maxHp; u.hp = s.hp; u.dir = s.dir ?? 0;
       if ('carry' in u) { u.carry = s.carry; if (s.carryType) u.carryType = s.carryType; }
       u.lastKind = s.lastKind; u.lastPos = s.lastPos;

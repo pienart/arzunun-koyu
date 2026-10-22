@@ -4,7 +4,7 @@
  * fark bir kez ölçülür (başlık yoksa tarayıcı saati kullanılır). Saat dilimi oyuncunun yerel saatidir.
  *
  *   16:00 → 17:15  alacakaranlık (kararma)        06:15 → 07:30  şafak (aydınlanma)
- *   17:15 → 06:15  gece: dolunay, kamp ateşi, evlerde ışık
+ *   17:15 → 06:15  gece: kamp ateşi, evlerde ışık
  *
  * Mod: 'auto' (saate göre) · 'night' · 'day'. Üst bardaki düğme veya L tuşu ile değişir; tercih hatırlanır.
  */

@@ -43,3 +43,24 @@ export function footprintCorners(oi, oj, size) {
   const i0 = oi - 0.5, j0 = oj - 0.5, i1 = oi + size - 0.5, j1 = oj + size - 0.5;
   return [P(i0, j0), P(i1, j0), P(i1, j1), P(i0, j1)];
 }
+
+/**
+ * Parçalı yol: Chromium'da tek bir Path2D'ye on binlerce alt şekil eklemek karesel yavaşlar
+ * (20 bin elmas ~0,8 sn, 40 bin ~3,2 sn). Bu sınıf aynı moveTo/lineTo/closePath arayüzüyle her `n` şekilde
+ * yeni bir Path2D'ye geçer; fillPath tüm parçaları doldurur. fresh(): sonraki şekiller yeni parçada başlasın
+ * (sarım kuralının aynı yolda olmasını gerektiren dikdörtgen + delik gibi bileşik şekiller için).
+ */
+export class ChunkedPath {
+  constructor(n = 600) { this.n = n; this.list = [new Path2D()]; this.c = 0; }
+  get cur() { return this.list[this.list.length - 1]; }
+  fresh() { if (this.c > 0) { this.list.push(new Path2D()); this.c = 0; } }
+  moveTo(x, y) { if (this.c >= this.n) this.fresh(); this.cur.moveTo(x, y); }
+  lineTo(x, y) { this.cur.lineTo(x, y); }
+  rect(x, y, w, h) { this.cur.rect(x, y, w, h); }
+  closePath() { this.cur.closePath(); this.c++; }
+}
+
+/** Path2D veya ChunkedPath doldur */
+export function fillPath(ctx, p) {
+  if (p.list) for (const x of p.list) ctx.fill(x); else ctx.fill(p);
+}

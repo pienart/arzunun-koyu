@@ -84,7 +84,7 @@ export class Unit {
   get tileI() { return Math.round(this.x); }
   get tileJ() { return Math.round(this.y); }
   get name() { return this.def.name; }
-  get isMilitary() { return this.type !== 'villager' && !this.def.naval; }
+  get isMilitary() { return !this.def.civil && !this.def.naval; }
 
   /** Bu karoya adım atılabilir mi? (kendi kapısı dahil; düşman çiti hayır — önce kırılmalı) */
   canWalk(world, i, j) { return world.passFor(this)(i, j) === 1 || this._canEnter(i, j); }
@@ -105,7 +105,11 @@ export class Unit {
 
   speed(world) {
     const p = world.players[this.owner];
-    return this.def.speed * (this.type === 'villager' ? p.modifiers.speed : 1);
+    let v = this.def.speed * (this.def.civil && !this.def.vehicle ? p.modifiers.speed : 1) + (p.bonus[this.type]?.speed ?? 0);
+    if ((p.effects?.swift ?? 0) > world.time) v *= 1.4;          // Rüzgâr İksiri
+    const o = world.map.occupancy[this.tileJ]?.[this.tileI];
+    if (o?.def?.ground && o.complete) v *= 1.35;                 // patika
+    return v;
   }
 
   /** Yolu takip eder; vardığında true döner. */

@@ -12,12 +12,18 @@ export const PLAYER = 1;
 export const ENEMY = 2;
 export const WILD = 3;
 
-/** Çağlar. tier → binaların hangi görsel setle çizileceği (0: ahşap/saz, 1: taş+ahşap, 2: büyük taş). */
+/**
+ * Çağlar. tier → binaların hangi görsel setle çizileceği (0: ahşap/saz, 1: taş+ahşap, 2: büyük taş).
+ * req: çağ atlamak için kaynak YETMEZ — en az `military` asker ve listedeki binalardan (tamamlanmış) bu kadar gerekir.
+ */
 export const AGES = [
   { id: 0, name: 'Karanlık Çağ',      short: 'I',   tier: 0 },
-  { id: 1, name: 'Feodal Çağ',        short: 'II',  tier: 1, cost: { food: 300 },             time: 25 },
-  { id: 2, name: 'Kale Çağı',         short: 'III', tier: 2, cost: { food: 500, gold: 200 },  time: 35 },
-  { id: 3, name: 'İmparatorluk Çağı', short: 'IV',  tier: 2, cost: { food: 800, gold: 500 },  time: 45 },
+  { id: 1, name: 'Feodal Çağ',        short: 'II',  tier: 1, cost: { food: 300 },             time: 25,
+    req: { military: 3, buildings: { house: 2, lumberCamp: 1, mill: 1, barracks: 1 } } },
+  { id: 2, name: 'Kale Çağı',         short: 'III', tier: 2, cost: { food: 500, gold: 200 },  time: 35,
+    req: { military: 8, buildings: { house: 5, scienceCenter: 1, archeryRange: 1, market: 1, watchTower: 1, animalFarm: 1 } } },
+  { id: 3, name: 'İmparatorluk Çağı', short: 'IV',  tier: 2, cost: { food: 800, gold: 500 },  time: 45,
+    req: { military: 15, buildings: { house: 8, stable: 1, siegeWorkshop: 1, university: 1, alchemyLab: 1 } } },
 ];
 
 /**
@@ -39,7 +45,7 @@ export const AGES = [
 export const BUILDINGS = {
   townCenter: {
     name: 'Kasaba Merkezi', size: 4, hp: 2400, cost: { wood: 275, stone: 100 }, buildTime: 60, age: 0,
-    popProvided: 5, dropsite: ['food', 'wood', 'gold', 'stone'], trains: ['villager'], techs: ['wheelbarrow'],
+    popProvided: 5, dropsite: ['food', 'wood', 'gold', 'stone'], trains: ['villager', 'cart'],
     canAdvanceAge: true, sprite: 'townCenter', buildable: false, armor: { melee: 2, pierce: 8 }, garrison: 15,
     attack: { damage: 5, range: 6, reload: 2 },
     desc: 'Köylü üretir, çağ atlatır, tüm kaynakları kabul eder ve yaklaşan düşmana ok atar.',
@@ -50,17 +56,17 @@ export const BUILDINGS = {
   },
   lumberCamp: {
     name: 'Kereste Kampı', size: 2, hp: 600, cost: { wood: 100 }, buildTime: 18, age: 0, dropsite: ['wood'],
-    techs: ['doubleAxe', 'bowSaw'], sprite: 'lumberCamp', autoGather: 'wood', armor: { melee: 0, pierce: 7 }, levels: true,
+    sprite: 'lumberCamp', autoGather: 'wood', armor: { melee: 0, pierce: 7 }, levels: true,
     desc: 'Odun bırakma noktası. Ormanın yanına kurun.',
   },
   mill: {
     name: 'Değirmen', size: 2, hp: 600, cost: { wood: 100 }, buildTime: 18, age: 0, dropsite: ['food'],
-    techs: ['horseCollar'], sprite: 'mill', autoGather: 'food', armor: { melee: 0, pierce: 7 }, levels: true,
+    sprite: 'mill', autoGather: 'food', armor: { melee: 0, pierce: 7 }, levels: true,
     desc: 'Yiyecek bırakma noktası. Çiftlikleri açar.',
   },
   miningCamp: {
     name: 'Maden Kampı', size: 2, hp: 600, cost: { wood: 100 }, buildTime: 18, age: 0, dropsite: ['gold', 'stone'],
-    techs: ['goldMining', 'stoneMining'], sprite: 'miningCamp', autoGather: 'gold', armor: { melee: 0, pierce: 7 }, levels: true,
+    sprite: 'miningCamp', autoGather: 'gold', armor: { melee: 0, pierce: 7 }, levels: true,
     desc: 'Altın ve taş bırakma noktası.',
   },
   farm: {
@@ -69,17 +75,17 @@ export const BUILDINGS = {
   },
   dock: {
     name: 'Tersane', size: 3, hp: 1500, cost: { wood: 150 }, buildTime: 35, age: 0, coastal: true,
-    dropsite: ['food', 'wood'], trains: ['fishingBoat'], techs: ['fishNets'], sprite: 'dock', armor: { melee: 0, pierce: 7 }, levels: true,
+    dropsite: ['food', 'wood'], trains: ['fishingBoat'], sprite: 'dock', incomeMod: 'fish', armor: { melee: 0, pierce: 7 }, levels: true,
     desc: 'Yalnızca köylüler su kenarına kurabilir. Balıkçı teknesi üretir; tekneler balık sürülerinden yiyecek toplar. Odun ve yiyecek bırakma noktasıdır.',
   },
   barracks: {
     name: 'Kışla', size: 3, hp: 1200, cost: { wood: 175 }, buildTime: 30, age: 0, trains: ['militia'],
-    techs: ['longSword', 'scaleArmor'], sprite: 'barracks', armor: { melee: 0, pierce: 7 },
+    sprite: 'barracks', armor: { melee: 0, pierce: 7 },
     desc: 'Milis piyadesi yetiştirir.',
   },
   stable: {
     name: 'Ahır', size: 3, hp: 1200, cost: { wood: 175 }, buildTime: 30, age: 1, requires: ['barracks'],
-    trains: ['cavalry'], techs: ['bloodlines'], sprite: 'stable', armor: { melee: 0, pierce: 7 },
+    trains: ['cavalry'], sprite: 'stable', armor: { melee: 0, pierce: 7 },
     desc: 'Hızlı atlı keşifçi yetiştirir. Önce Kışla gerekir.',
   },
   siegeWorkshop: {
@@ -111,7 +117,7 @@ export const BUILDINGS = {
   },
   archeryRange: {
     name: 'Okçuluk Alanı', size: 3, hp: 1200, cost: { wood: 175 }, buildTime: 30, age: 1, requires: ['barracks'],
-    trains: ['archer'], techs: ['fletching'], sprite: 'archeryRange', armor: { melee: 0, pierce: 7 },
+    trains: ['archer'], sprite: 'archeryRange', armor: { melee: 0, pierce: 7 },
     desc: 'Okçu yetiştirir. Önce Kışla gerekir.',
   },
   watchTower: {
@@ -123,6 +129,39 @@ export const BUILDINGS = {
     name: 'Pazar', size: 3, hp: 2100, cost: { wood: 175 }, buildTime: 30, age: 1, trade: true, sprite: 'market',
     armor: { melee: 0, pierce: 7 }, desc: 'Kaynak alım-satımı yapılır.',
   },
+  animalFarm: {
+    name: 'Hayvan Çiftliği', size: 3, hp: 1000, cost: { wood: 200, gold: 50 }, buildTime: 35, age: 1, sprite: 'animalFarm',
+    income: { food: 0.5 }, incomeMod: 'ranch', levels: true, dayNight: true, armor: { melee: 0, pierce: 7 },
+    desc: 'İnekler ve keçiler sağılır: kendiliğinden yiyecek üretir (dakikada 30, seviye ve Süt Ürünleri ile artar). Gündüz hayvanlar ağılda, gece ahırın içindedir.',
+  },
+  scienceCenter: {
+    name: 'Bilim Merkezi', size: 3, hp: 1600, cost: { wood: 200, stone: 100 }, buildTime: 40, age: 0, sprite: 'scienceCenter',
+    research: true, armor: { melee: 1, pierce: 8 },
+    desc: 'Tüm araştırmalar burada yapılır: Köy, Ordu, Sağlık ve Savunma başlıklarında araştırma ağacı.',
+  },
+  university: {
+    name: 'Üniversite', size: 3, hp: 1800, cost: { wood: 250, stone: 150, gold: 100 }, buildTime: 45, age: 2, sprite: 'university',
+    trains: ['architect'], armor: { melee: 1, pierce: 8 },
+    desc: 'Mimar yetiştirir. Mimarlar patika, çiçek tarhı ve süs ağacıyla şehri güzelleştirir.',
+  },
+  alchemyLab: {
+    name: 'Simya Atölyesi', size: 2, hp: 900, cost: { wood: 150, gold: 150 }, buildTime: 35, age: 2, sprite: 'alchemyLab',
+    alchemy: true, armor: { melee: 0, pierce: 7 },
+    desc: 'İksirler ve aletler üretir. İksirler envantere eklenir ve istediğiniz an kullanılır; aletler kalıcıdır.',
+  },
+  // Süslemeler: yalnızca MİMAR kurar (decor). Patika üzerinde birimler %35 hızlı yürür.
+  path: {
+    name: 'Patika', size: 1, hp: 200, cost: { stone: 2 }, buildTime: 2, age: 0, decor: true, line: true, walkable: true, ground: true,
+    armor: { melee: 5, pierce: 10 }, desc: 'Taş döşeli yürüme yolu: sürükleyerek çizin. Üzerinde birimler %35 daha hızlı yürür.',
+  },
+  flowerBed: {
+    name: 'Çiçek Tarhı', size: 1, hp: 100, cost: { wood: 10, food: 10 }, buildTime: 4, age: 0, decor: true, sprite: 'flowerBed',
+    armor: { melee: 0, pierce: 5 }, desc: 'Lale ve lavanta dolu taş kenarlı tarh: şehri güzelleştirir.',
+  },
+  cherryTree: {
+    name: 'Süs Ağacı', size: 1, hp: 150, cost: { wood: 20, food: 20 }, buildTime: 6, age: 0, decor: true, sprite: 'cherryTree',
+    armor: { melee: 0, pierce: 5 }, desc: 'Taş saksıda çiçek açmış kiraz ağacı: meydanları ve yolları süsler.',
+  },
   wonder: {
     name: 'Harika', size: 5, hp: 4800, cost: { wood: 1000, gold: 1000, stone: 1000 }, buildTime: 120, age: 3,
     sprite: 'wonder', armor: { melee: 2, pierce: 8 },
@@ -131,7 +170,9 @@ export const BUILDINGS = {
 };
 
 /** Köylünün inşa menüsündeki sıra */
-export const BUILD_MENU = ['house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 'dock', 'wall', 'gate', 'firePit', 'barracks', 'archeryRange', 'stable', 'watchTower', 'siegeWorkshop', 'market', 'wonder'];
+export const BUILD_MENU = ['house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 'animalFarm', 'dock', 'wall', 'gate', 'firePit', 'barracks', 'archeryRange', 'stable', 'watchTower', 'scienceCenter', 'market', 'siegeWorkshop', 'university', 'alchemyLab', 'wonder'];
+/** Mimarın süsleme menüsü */
+export const DECOR_MENU = ['path', 'flowerBed', 'cherryTree'];
 
 /**
  * Birimler.
@@ -142,7 +183,17 @@ export const BUILD_MENU = ['house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 
 export const UNITS = {
   villager: {
     name: 'Köylü', cost: { food: 50 }, trainTime: 10, pop: 1, hp: 25, speed: 1.8, carry: 10,
-    attack: 3, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 4, bldgMul: 1,
+    attack: 3, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 4, bldgMul: 1, gatherer: true, builder: true, civil: true,
+  },
+  // Mimar (Üniversite): yalnızca süsleme (patika, çiçek, süs ağacı) kurar, kaynak toplamaz
+  architect: {
+    name: 'Mimar', cost: { food: 60, gold: 60 }, trainTime: 15, pop: 1, hp: 30, speed: 1.9, carry: 0,
+    attack: 1, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 5, bldgMul: 1, decorBuilder: true, civil: true,
+  },
+  // Yük arabası (İmparatorluk Çağı, Kasaba Merkezi): kaynaktan çok yük alır, YALNIZCA Kasaba Merkezi'ne boşaltır
+  cart: {
+    name: 'Yük Arabası', cost: { wood: 150, gold: 80 }, trainTime: 25, pop: 1, hp: 140, speed: 2.3, carry: 60, age: 3,
+    attack: 0, armor: { melee: 1, pierce: 4 }, range: 0, reload: 2, los: 5, bldgMul: 0, gatherer: true, vehicle: true, civil: true, gatherMul: 1.6, dropTC: true,
   },
   militia: {
     name: 'Milis', cost: { food: 60, gold: 20 }, trainTime: 12, pop: 1, hp: 45, speed: 1.6,
@@ -163,8 +214,8 @@ export const UNITS = {
   // Mağaradaki yaratık (Koca Ayak): yalnızca kışın çıkar, herkese saldırır. Surları hızla yıkar (wallMul),
   // binalara karşı yavaştır (bldgMul < 1).
   yeti: {
-    name: 'Koca Ayak', cost: {}, trainTime: 0, pop: 0, hp: 1500, speed: 1.25,
-    attack: 30, armor: { melee: 1, pierce: 3 }, range: 0, reload: 2.6, los: 7, bldgMul: 0.45, wallMul: 4.5, monster: true,
+    name: 'Koca Ayak', cost: {}, trainTime: 0, pop: 0, hp: 2200, speed: 1.3,
+    attack: 48, armor: { melee: 2, pierce: 4 }, range: 0, reload: 2.4, los: 8, bldgMul: 1.1, wallMul: 5, monster: true,
   },
   archer: {
     name: 'Okçu', cost: { wood: 25, gold: 45 }, trainTime: 14, pop: 1, hp: 30, speed: 1.7,
@@ -182,6 +233,9 @@ export const RESOURCE_NODES = {
   gold:  { name: 'Altın Madeni',  resType: 'gold',  amount: 800 },
   stone: { name: 'Taş Ocağı',     resType: 'stone', amount: 350 },
   fish:  { name: 'Balık Sürüsü',  resType: 'food',  amount: 250 },
+  // Tesisler: haritanın birkaç yerinde, 3×3 büyük ve zengin kaynak alanları (birçok köylü aynı anda çalışır)
+  quarry:      { name: 'Taş Ocağı Tesisi', resType: 'stone', amount: 3000, size: 3 },
+  goldReserve: { name: 'Altın Rezervi',    resType: 'gold',  amount: 3000, size: 3 },
 };
 
 /**
@@ -189,18 +243,50 @@ export const RESOURCE_NODES = {
  *  effect: Player.modifiers üzerine ÇARPAN olarak uygulanır (toplama, taşıma, hız)
  *  bonus : birim türüne EKLENEN değerler  { militia: { attack: 2 } }
  */
+export const TECH_CATEGORIES = [
+  { id: 'village', name: 'Köy' }, { id: 'army', name: 'Ordu' }, { id: 'health', name: 'Sağlık' }, { id: 'defense', name: 'Savunma' },
+];
+/**
+ * Tüm araştırmalar Bilim Merkezi'nde. cat: başlık · requires: ağaçta önceki düğüm
+ *  effect: Player.modifiers çarpanı · add: modifiers'a eklenen değer · bonus: birim türüne eklenen değer
+ */
 export const TECHS = {
-  wheelbarrow: { name: 'El Arabası',        icon: 'wheelbarrow', building: 'townCenter', age: 1, cost: { food: 175, wood: 50 },  time: 20, effect: { carry: 1.3, speed: 1.1 }, desc: 'Köylüler %30 fazla taşır ve %10 hızlı yürür.' },
-  doubleAxe:   { name: 'Çift Balta',        icon: 'axe',         building: 'lumberCamp', age: 1, cost: { food: 100, wood: 50 },  time: 15, effect: { wood: 1.2 },  desc: 'Odun toplama +%20.' },
-  bowSaw:      { name: 'Yay Testere',       icon: 'build',       building: 'lumberCamp', age: 2, cost: { food: 150, wood: 100 }, time: 20, effect: { wood: 1.2 },  requires: 'doubleAxe', desc: 'Odun toplama +%20.' },
-  horseCollar: { name: 'At Koşumu',         icon: 'horseCollar', building: 'mill',       age: 1, cost: { food: 75, wood: 75 },   time: 15, effect: { farm: 1.25 }, desc: 'Çiftlik verimi +%25.' },
-  fishNets:    { name: 'Balık Ağları',      icon: 'food',        building: 'dock',       age: 1, cost: { food: 100, wood: 100 }, time: 20, effect: { fish: 1.5 }, desc: 'Balıkçı tekneleri %50 hızlı toplar.' },
-  bloodlines:  { name: 'Soy Atlar',         icon: 'horseCollar', building: 'stable',     age: 1, cost: { food: 150, gold: 100 }, time: 25, bonus: { cavalry: { hp: 20 } }, desc: 'Atlılar: +20 can.' },
-  goldMining:  { name: 'Altın Madenciliği', icon: 'pickaxe',     building: 'miningCamp', age: 1, cost: { food: 100, wood: 75 },  time: 15, effect: { gold: 1.15 }, desc: 'Altın toplama +%15.' },
-  stoneMining: { name: 'Taş Madenciliği',   icon: 'stone',       building: 'miningCamp', age: 1, cost: { food: 100, wood: 75 },  time: 15, effect: { stone: 1.15 }, desc: 'Taş toplama +%15.' },
-  longSword:   { name: 'Uzun Kılıç',        icon: 'swords',      building: 'barracks',   age: 1, cost: { food: 100, gold: 40 },  time: 20, bonus: { militia: { attack: 3, hp: 15 } }, desc: 'Milis: +3 saldırı, +15 can.' },
-  scaleArmor:  { name: 'Pul Zırh',          icon: 'shield',      building: 'barracks',   age: 2, cost: { food: 100, gold: 60 },  time: 25, bonus: { militia: { melee: 1, pierce: 1 }, archer: { melee: 1, pierce: 1 } }, desc: 'Askerler: +1 yakın dövüş ve +1 ok zırhı.' },
-  fletching:   { name: 'Talimli Okçular',   icon: 'quiver',      building: 'archeryRange', age: 1, cost: { food: 100, wood: 50 }, time: 20, bonus: { archer: { attack: 1, range: 1 }, tower: { attack: 1, range: 1 } }, desc: 'Okçular ve kuleler: +1 saldırı, +1 menzil.' },
+  // ── KÖY ──
+  wheelbarrow: { cat: 'village', name: 'El Arabası',     icon: 'wheelbarrow', age: 1, cost: { food: 175, wood: 50 },  time: 20, effect: { carry: 1.3, speed: 1.1 }, desc: 'Köylüler %30 fazla taşır ve %10 hızlı yürür.' },
+  handCart:    { cat: 'village', name: 'Kol Arabası',    icon: 'wheelbarrow', age: 2, cost: { food: 250, wood: 150 }, time: 30, effect: { carry: 1.3, speed: 1.1 }, requires: 'wheelbarrow', desc: 'Köylüler %30 daha fazla taşır, %10 daha hızlı yürür.' },
+  doubleAxe:   { cat: 'village', name: 'Çift Balta',     icon: 'axe',         age: 1, cost: { food: 100, wood: 50 },  time: 15, effect: { wood: 1.2 },  desc: 'Odun toplama +%20.' },
+  bowSaw:      { cat: 'village', name: 'Yay Testere',    icon: 'build',       age: 2, cost: { food: 150, wood: 100 }, time: 20, effect: { wood: 1.2 },  requires: 'doubleAxe', desc: 'Odun toplama +%20.' },
+  twoManSaw:   { cat: 'village', name: 'Çift Kişilik Testere', icon: 'build', age: 3, cost: { food: 300, wood: 100 }, time: 30, effect: { wood: 1.15 }, requires: 'bowSaw', desc: 'Odun toplama +%15.' },
+  goldMining:  { cat: 'village', name: 'Altın Madenciliği', icon: 'pickaxe',  age: 1, cost: { food: 100, wood: 75 },  time: 15, effect: { gold: 1.15 }, desc: 'Altın toplama +%15.' },
+  goldShaft:   { cat: 'village', name: 'Altın Kuyusu',   icon: 'pickaxe',     age: 2, cost: { food: 200, wood: 150 }, time: 25, effect: { gold: 1.15 }, requires: 'goldMining', desc: 'Altın toplama +%15.' },
+  stoneMining: { cat: 'village', name: 'Taş Madenciliği', icon: 'stone',      age: 1, cost: { food: 100, wood: 75 },  time: 15, effect: { stone: 1.15 }, desc: 'Taş toplama +%15.' },
+  stoneShaft:  { cat: 'village', name: 'Taş Kuyusu',     icon: 'stone',       age: 2, cost: { food: 200, wood: 150 }, time: 25, effect: { stone: 1.15 }, requires: 'stoneMining', desc: 'Taş toplama +%15.' },
+  horseCollar: { cat: 'village', name: 'At Koşumu',      icon: 'horseCollar', age: 1, cost: { food: 75, wood: 75 },   time: 15, effect: { farm: 1.25 }, desc: 'Çiftlik verimi +%25.' },
+  heavyPlow:   { cat: 'village', name: 'Ağır Saban',     icon: 'horseCollar', age: 2, cost: { food: 125, wood: 125 }, time: 25, effect: { farm: 1.2 }, requires: 'horseCollar', desc: 'Çiftlik verimi +%20.' },
+  cropRotation:{ cat: 'village', name: 'Münavebe',       icon: 'food',        age: 3, cost: { food: 250, wood: 250 }, time: 35, effect: { farm: 1.2 }, requires: 'heavyPlow', desc: 'Çiftlik verimi +%20.' },
+  fishNets:    { cat: 'village', name: 'Balık Ağları',   icon: 'food',        age: 1, cost: { food: 100, wood: 100 }, time: 20, effect: { fish: 1.5 }, desc: 'Balıkçı tekneleri %50 hızlı toplar.' },
+  bigNets:     { cat: 'village', name: 'Trol Ağları',    icon: 'food',        age: 2, cost: { food: 200, wood: 200 }, time: 30, effect: { fish: 1.3 }, requires: 'fishNets', desc: 'Balıkçılık +%30.' },
+  dairy:       { cat: 'village', name: 'Süt Ürünleri',   icon: 'food',        age: 2, cost: { food: 150, gold: 100 }, time: 25, effect: { ranch: 1.5 }, desc: 'Hayvan çiftliklerinin geliri +%50 (peynir ve tereyağı).' },
+  // ── ORDU ──
+  longSword:   { cat: 'army', name: 'Uzun Kılıç',        icon: 'swords',      age: 1, cost: { food: 100, gold: 40 },  time: 20, bonus: { militia: { attack: 3, hp: 15 } }, desc: 'Milis: +3 saldırı, +15 can.' },
+  twoHanded:   { cat: 'army', name: 'İki Elli Kılıç',    icon: 'swords',      age: 2, cost: { food: 200, gold: 100 }, time: 30, bonus: { militia: { attack: 3, hp: 10 } }, requires: 'longSword', desc: 'Milis: +3 saldırı, +10 can.' },
+  scaleArmor:  { cat: 'army', name: 'Pul Zırh',          icon: 'shield',      age: 1, cost: { food: 100, gold: 60 },  time: 25, bonus: { militia: { melee: 1, pierce: 1 }, archer: { melee: 1, pierce: 1 } }, desc: 'Piyade ve okçu: +1 / +1 zırh.' },
+  chainMail:   { cat: 'army', name: 'Zincir Zırh',       icon: 'shield',      age: 2, cost: { food: 200, gold: 100 }, time: 30, bonus: { militia: { melee: 1, pierce: 2 }, archer: { melee: 1, pierce: 1 }, cavalry: { melee: 1, pierce: 1 } }, requires: 'scaleArmor', desc: 'Tüm askerler: ek zırh.' },
+  fletching:   { cat: 'army', name: 'Talimli Okçular',   icon: 'quiver',      age: 1, cost: { food: 100, wood: 50 },  time: 20, bonus: { archer: { attack: 1, range: 1 }, tower: { attack: 1, range: 1 } }, desc: 'Okçular ve kuleler: +1 saldırı, +1 menzil.' },
+  bodkin:      { cat: 'army', name: 'Delici Ok Ucu',     icon: 'quiver',      age: 2, cost: { food: 200, gold: 100 }, time: 30, bonus: { archer: { attack: 1, range: 1 }, tower: { attack: 1, range: 1 } }, requires: 'fletching', desc: 'Okçular ve kuleler: +1 saldırı, +1 menzil.' },
+  bloodlines:  { cat: 'army', name: 'Soy Atlar',         icon: 'horseCollar', age: 1, cost: { food: 150, gold: 100 }, time: 25, bonus: { cavalry: { hp: 20 } }, desc: 'Atlılar: +20 can.' },
+  husbandry:   { cat: 'army', name: 'Hayvan Bakımı',     icon: 'horseCollar', age: 2, cost: { food: 150 },             time: 25, bonus: { cavalry: { speed: 0.35 } }, requires: 'bloodlines', desc: 'Atlılar %13 daha hızlı.' },
+  siegeEng:    { cat: 'army', name: 'Kuşatma Mühendisliği', icon: 'build',    age: 3, cost: { food: 300, wood: 200 }, time: 35, bonus: { ram: { attack: 2, hp: 60 } }, desc: 'Koçbaşı: +2 saldırı, +60 can.' },
+  // ── SAĞLIK ──
+  herbal:      { cat: 'health', name: 'Şifalı Otlar',    icon: 'food',        age: 0, cost: { food: 100, gold: 25 },  time: 20, add: { regen: 0.25 }, desc: 'Savaşmayan birimler yavaşça iyileşir (saniyede 0,25 can).' },
+  infirmary:   { cat: 'health', name: 'Şifahane',        icon: 'food',        age: 2, cost: { food: 200, gold: 100 }, time: 30, add: { regen: 0.5 }, requires: 'herbal', desc: 'İyileşme saniyede +0,5 can artar.' },
+  medicine:    { cat: 'health', name: 'Tıp Okulu',       icon: 'banner',      age: 3, cost: { food: 300, gold: 200 }, time: 40, bonus: { villager: { hp: 5 }, militia: { hp: 10 }, archer: { hp: 8 }, cavalry: { hp: 15 } }, requires: 'infirmary', desc: 'Tüm birimler: daha fazla can.' },
+  cleanWater:  { cat: 'health', name: 'Temiz Su',        icon: 'food',        age: 1, cost: { food: 100, wood: 50 },  time: 20, bonus: { villager: { hp: 10 } }, effect: { speed: 1.05 }, desc: 'Köylüler: +10 can, %5 hızlı.' },
+  nutrition:   { cat: 'health', name: 'Dengeli Beslenme', icon: 'food',       age: 2, cost: { food: 200, gold: 50 },  time: 25, effect: { food: 1.05, wood: 1.05, gold: 1.05, stone: 1.05, farm: 1.05 }, requires: 'cleanWater', desc: 'Tüm kaynak toplama +%5.' },
+  // ── SAVUNMA ──
+  masonry:     { cat: 'defense', name: 'Duvarcılık',     icon: 'stone',       age: 1, cost: { wood: 150, stone: 100 }, time: 30, effect: { bldgHp: 1.2 }, desc: 'Tüm binalar +%20 can.' },
+  architecture:{ cat: 'defense', name: 'Mimarlık',       icon: 'build',       age: 3, cost: { wood: 300, stone: 200 }, time: 40, effect: { bldgHp: 1.2 }, requires: 'masonry', desc: 'Tüm binalar +%20 can.' },
+  murderHoles: { cat: 'defense', name: 'Mazgal Delikleri', icon: 'quiver',    age: 2, cost: { food: 200, stone: 100 }, time: 30, bonus: { tower: { attack: 2 } }, desc: 'Kuleler ve Kasaba Merkezi: +2 ok hasarı.' },
 };
 
 /**
@@ -210,8 +296,24 @@ export const TECHS = {
  */
 export const LEVELS = { MAX_LEVEL: 3, bonus: 0.25, costMul: 1.5, gold: 60, time: 20 };
 
-/** Mağara ve yaratık: kış başladıktan `delay` sn sonra çıkar; `huntTime` sn sonra diğer tarafa yönelir */
-export const WILD_DEF = { delay: 25, huntTime: 140, reward: { food: 400, gold: 200 } };
+/** Mağara ve yaratık: kış başladıktan `delay` sn sonra çıkar; saldırdığı köyü yok edene kadar durmaz */
+export const WILD_DEF = { delay: 25, reward: { food: 500, gold: 300 } };
+
+/**
+ * SİMYA (Simya Atölyesi): iksirler envantere eklenir (kullanılınca etki eder), aletler kalıcıdır (bir kez üretilir).
+ *  dur: etki süresi (sn)
+ */
+export const ITEMS = {
+  stoneSkin:  { name: 'Taş Deri İksiri',   kind: 'potion', icon: 'it_shield',  cost: { gold: 150, food: 100 }, time: 25, dur: 60, desc: 'İçilince 1 dakika boyunca binalarınız hiç hasar almaz.' },
+  swift:      { name: 'Rüzgâr İksiri',     kind: 'potion', icon: 'it_swift',   cost: { gold: 100, food: 100 }, time: 20, dur: 60, desc: '1 dakika boyunca tüm birimleriniz %40 hızlı.' },
+  strength:   { name: 'Güç İksiri',        kind: 'potion', icon: 'it_power',   cost: { gold: 150, food: 80 },  time: 25, dur: 60, desc: '1 dakika boyunca askerlerinizin saldırısı +%50.' },
+  heal:       { name: 'Şifa İksiri',       kind: 'potion', icon: 'it_heal',    cost: { gold: 80, food: 120 },  time: 20, desc: 'Tüm birimleriniz anında tamamen iyileşir.' },
+  vision:     { name: 'Kartal Gözü İksiri', kind: 'potion', icon: 'it_vision', cost: { gold: 120 },            time: 20, desc: 'Haritanın tamamı keşfedilir (düşman üssü, tesisler, mağara).' },
+  fertilizer: { name: 'Bereket Tozu',      kind: 'potion', icon: 'it_dust',    cost: { gold: 60, wood: 60 },   time: 15, desc: 'Tüm çiftliklerinize anında +150 yiyecek.' },
+  basket:     { name: 'Hasır Sepet',       kind: 'tool',   icon: 'it_basket',  cost: { wood: 150, gold: 50 },  time: 30, effect: { carry: 1.25 }, desc: 'Kalıcı alet: köylüler %25 fazla taşır.' },
+  steelPick:  { name: 'Çelik Kazma',       kind: 'tool',   icon: 'it_pick',    cost: { gold: 100, stone: 100 }, time: 30, effect: { gold: 1.2, stone: 1.2 }, desc: 'Kalıcı alet: altın ve taş toplama +%20.' },
+  lightBoots: { name: 'Hafif Çizme',       kind: 'tool',   icon: 'it_swift',   cost: { food: 100, gold: 60 },  time: 25, effect: { speed: 1.1 }, desc: 'Kalıcı alet: köylüler %10 hızlı yürür.' },
+};
 
 /** Tamir: köylü başına saniyede onarılan can = maxHp / buildTime × HP_RATE; bedel = bina maliyeti × COST oranında */
 export const REPAIR = { HP_RATE: 0.6, COST: 0.5 };
@@ -230,7 +332,7 @@ export const ENEMY_AI = {
   defenders: { militia: 4, archer: 2 },
   maxWave: 16,
   ageAt: [0, 480, 960],
-  minDistance: 72,
+  minDistance: 100,
 };
 
 /**

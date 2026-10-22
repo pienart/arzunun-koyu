@@ -2,7 +2,6 @@ import { UNITS, GATHER_RATES, PLAYER } from '../data/gameData.js';
 import { Unit } from './Unit.js';
 import { ANIMS } from '../data/animData.js';
 
-const DEF = UNITS.villager;
 const WORK_SOUND = { wood: 'chop', gold: 'mine', stone: 'mine' };
 const WORK_ANIM = { wood: 'vil_chop', gold: 'vil_mine', stone: 'vil_mine', food: 'vil_gather' };
 
@@ -15,8 +14,8 @@ const WORK_ANIM = { wood: 'vil_chop', gold: 'vil_mine', stone: 'vil_mine', food:
  *   attack: hedefe yürü ve vur (zayıf; saldırıya uğrayınca boştaysa karşılık verir)
  */
 export class Villager extends Unit {
-  constructor(i, j, owner = PLAYER) {
-    super('villager', i, j, owner);
+  constructor(i, j, owner = PLAYER, type = 'villager') {
+    super(type, i, j, owner);
     this.dropTarget = null;
     this.carryType = null;
     this.carry = 0;
@@ -154,11 +153,11 @@ export class Villager extends Unit {
     if (this.carryType !== type) { this.carryType = type; this.carry = 0; }
     const rateKey = node.isBuilding ? 'farm' : type;
     const mods = me.modifiers;
-    const cap = DEF.carry * mods.carry;
+    const cap = this.def.carry * mods.carry;
     const season = rateKey === 'farm' ? world.weather.farmMul : 1;
     const diff = this.owner !== PLAYER ? world.diff.enemyGather : 1;
     const lvl = node.isBuilding ? world.levelMul(node) : 1; // yükseltilmiş çiftlik daha hızlı ürün verir
-    const want = Math.min(GATHER_RATES[rateKey] * mods[rateKey] * season * diff * lvl * dt, cap - this.carry);
+    const want = Math.min(GATHER_RATES[rateKey] * mods[rateKey] * season * diff * lvl * (this.def.gatherMul ?? 1) * dt, cap - this.carry);
     const got = world.takeFromNode(node, want);
     this.carry += got;
     this.lastKind = node.isBuilding ? 'farm' : node.kind;

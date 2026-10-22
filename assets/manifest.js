@@ -518,6 +518,118 @@ export const MANIFEST = {
       "h": 300,
       "anchorX": 0.4979,
       "baseW": 234.0
+    },
+    "animalFarm_0": {
+      "file": "assets/sprites/animalFarm_0.webp",
+      "w": 640,
+      "h": 591,
+      "anchorX": 0.5,
+      "baseW": 639.0
+    },
+    "quarry": {
+      "file": "assets/sprites/quarry.webp",
+      "w": 560,
+      "h": 450,
+      "anchorX": 0.4991,
+      "baseW": 514.0
+    },
+    "goldReserve": {
+      "file": "assets/sprites/goldReserve.webp",
+      "w": 560,
+      "h": 476,
+      "anchorX": 0.4991,
+      "baseW": 560.0
+    },
+    "scienceCenter_0": {
+      "file": "assets/sprites/scienceCenter_0.webp",
+      "w": 526,
+      "h": 640,
+      "anchorX": 0.5019,
+      "baseW": 501.0
+    },
+    "university_0": {
+      "file": "assets/sprites/university_0.webp",
+      "w": 640,
+      "h": 569,
+      "anchorX": 0.4992,
+      "baseW": 640.0
+    },
+    "alchemyLab_0": {
+      "file": "assets/sprites/alchemyLab_0.webp",
+      "w": 444,
+      "h": 560,
+      "anchorX": 0.4966,
+      "baseW": 440.0
+    },
+    "arch_idle": {
+      "file": "assets/sprites/arch_idle.webp",
+      "w": 75,
+      "h": 160,
+      "anchorX": 0.4933,
+      "baseW": 73.0
+    },
+    "cart_e": {
+      "file": "assets/sprites/cart_e.webp",
+      "w": 300,
+      "h": 161,
+      "anchorX": 0.4617,
+      "baseW": 266.0
+    },
+    "cherryTree_0": {
+      "file": "assets/sprites/cherryTree_0.webp",
+      "w": 254,
+      "h": 300,
+      "anchorX": 0.4941,
+      "baseW": 142.0
+    },
+    "flowerBed_0": {
+      "file": "assets/sprites/flowerBed_0.webp",
+      "w": 260,
+      "h": 194,
+      "anchorX": 0.5019,
+      "baseW": 190.0
+    },
+    "tex_path": {
+      "file": "assets/sprites/tex_path.webp",
+      "w": 512,
+      "h": 512,
+      "anchorX": 0.5,
+      "baseW": 512.0
+    },
+    "animalFarm_night": {
+      "file": "assets/sprites/animalFarm_night.webp",
+      "w": 640,
+      "h": 590,
+      "anchorX": 0.5008,
+      "baseW": 638.0
+    },
+    "cart_se": {
+      "file": "assets/sprites/cart_se.webp",
+      "w": 256,
+      "h": 300,
+      "anchorX": 0.7188,
+      "baseW": 95.0
+    },
+    "cart_s": {
+      "file": "assets/sprites/cart_s.webp",
+      "w": 164,
+      "h": 300,
+      "anchorX": 0.4939,
+      "baseW": 61.0
+    },
+    "cart_ne": {
+      "file": "assets/sprites/cart_ne.webp",
+      "w": 298,
+      "h": 300,
+      "anchorX": 0.3691,
+      "baseW": 221.0
+    },
+    "cart_n": {
+      "file": "assets/sprites/cart_n.webp",
+      "w": 179,
+      "h": 300,
+      "anchorX": 0.4972,
+      "baseW": 179.0
     }
   },
   "icons": {
@@ -646,6 +758,62 @@ export const MANIFEST = {
       "h": 96,
       "anchorX": 0.1875,
       "baseW": 16.0
+    },
+    "it_shield": {
+      "file": "assets/icons/it_shield.webp",
+      "w": 52,
+      "h": 96,
+      "anchorX": 0.5,
+      "baseW": 52.0
+    },
+    "it_swift": {
+      "file": "assets/icons/it_swift.webp",
+      "w": 67,
+      "h": 96,
+      "anchorX": 0.5,
+      "baseW": 67.0
+    },
+    "it_power": {
+      "file": "assets/icons/it_power.webp",
+      "w": 66,
+      "h": 96,
+      "anchorX": 0.5,
+      "baseW": 66.0
+    },
+    "it_heal": {
+      "file": "assets/icons/it_heal.webp",
+      "w": 66,
+      "h": 96,
+      "anchorX": 0.5,
+      "baseW": 66.0
+    },
+    "it_basket": {
+      "file": "assets/icons/it_basket.webp",
+      "w": 77,
+      "h": 96,
+      "anchorX": 0.5,
+      "baseW": 77.0
+    },
+    "it_pick": {
+      "file": "assets/icons/it_pick.webp",
+      "w": 75,
+      "h": 96,
+      "anchorX": 0.5,
+      "baseW": 75.0
+    },
+    "it_dust": {
+      "file": "assets/icons/it_dust.webp",
+      "w": 78,
+      "h": 96,
+      "anchorX": 0.5,
+      "baseW": 78.0
+    },
+    "it_vision": {
+      "file": "assets/icons/it_vision.webp",
+      "w": 66,
+      "h": 96,
+      "anchorX": 0.5,
+      "baseW": 66.0
     }
   },
   "textures": {
@@ -1190,6 +1358,45 @@ export const MANIFEST = {
         0.1269,
         0.7558,
         0.8638
+      ]
+    },
+    "animalFarm_0": {
+      "file": "assets/anims/animalFarm_0.webp",
+      "frames": 12,
+      "w": 347,
+      "h": 320,
+      "anchorX": 0.5,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    "arch_walk": {
+      "file": "assets/anims/arch_walk.webp",
+      "frames": 16,
+      "w": 99,
+      "h": 166,
+      "anchorX": 0.5201,
+      "ref": [
+        0.1439,
+        0.0214,
+        0.7626,
+        0.9637
+      ]
+    },
+    "arch_build": {
+      "file": "assets/anims/arch_build.webp",
+      "frames": 14,
+      "w": 112,
+      "h": 164,
+      "anchorX": 0.4214,
+      "ref": [
+        0.0915,
+        0.0173,
+        0.6688,
+        0.9741
       ]
     }
   }

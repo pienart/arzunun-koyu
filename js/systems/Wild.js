@@ -5,8 +5,9 @@ import { Yeti } from '../entities/Yeti.js';
 /**
  * VAHŞİ DOĞA: mağara ve Koca Ayak
  *  • Mağara, oyun başında haritanın rastgele ama HEM oyuncuya HEM düşmana uzak, karadan ulaşılabilir bir yerine konur.
- *  • Yaratık yalnızca KIŞIN çıkar (mevsim döngüsü 30 dk → 30 dakikada bir). Önce rastgele bir tarafın üssüne,
- *    WILD_DEF.huntTime sn sonra diğerine saldırır. Kış bitince mağarasına döner ve orada iyileşir.
+ *  • Yaratık yalnızca KIŞIN uyanır (mevsim döngüsü 30 dk → 30 dakikada bir). Rastgele bir tarafın köyüne saldırır ve
+ *    O KÖYÜ YOK EDENE KADAR durmaz (kış bitse de dönmez): o tarafın tüm binaları yıkılınca diğer tarafa yönelir.
+ *    Ancak öldürülürse durur.
  *  • Öldürülürse o kış bir daha çıkmaz; öldüren taraf ödül alır. Sonraki kış yeni bir yaratık uyanır.
  */
 export class Wild {
@@ -83,19 +84,15 @@ export class Wild {
     const w = this.world;
     if (!this.cave) return;
     const winter = w.weather.season.id === 'winter';
-    if (!winter) {
-      this.winterT = 0;
-      this.doneThisWinter = false;
-      if (this.yeti && !this.yeti.dead && !this.yeti.home) this._sendHome();
-      return;
+    if (!winter) { this.winterT = 0; this.doneThisWinter = false; }
+    else {
+      this.winterT += dt;
+      if (!this.yeti && !this.doneThisWinter && this.winterT >= WILD_DEF.delay) this._emerge();
     }
-    this.winterT += dt;
-    if (!this.yeti && !this.doneThisWinter && this.winterT >= WILD_DEF.delay) this._emerge();
     const y = this.yeti;
     if (!y || y.dead || y.home) return;
-    this.huntT -= dt;
-    if (this.huntT <= 0) this._hunt(this.side === PLAYER ? ENEMY : PLAYER);
-    else if (y.state === 'idle') this._hunt(this.side);
+    // Hedef köy yok olana kadar saldırır; yürüyüş bitip boşta kalırsa aynı köyün kalan binasına yeniden yönelir
+    if (y.state === 'idle') this._hunt(this.side);
   }
 
   _emerge() {
@@ -116,15 +113,16 @@ export class Wild {
     const w = this.world, y = this.yeti;
     let target = side === PLAYER ? w.townCenter : w.enemyAI.tc;
     if (!w.isAlive(target)) target = w.buildings.find((b) => b.owner === side);
-    if (!target) { // o taraf yok → diğeri
+    if (!target) { // o köy yok edildi → diğer köy
       side = side === PLAYER ? ENEMY : PLAYER;
       target = w.buildings.find((b) => b.owner === side);
       if (!target) return;
     }
+    const changed = side !== this.side || !this._announced;
     this.side = side;
-    this.huntT = WILD_DEF.huntTime;
+    this._announced = true;
     y.attackMoveTo(w, Math.round(target.centerI), Math.round(target.centerJ));
-    if (side === PLAYER) w.notify('Koca Ayak köyünüze doğru geliyor!', 'warn');
+    if (changed && side === PLAYER) w.notify('Koca Ayak köyünüze doğru geliyor! Köyü yok edene kadar durmayacak.', 'warn');
   }
 
   _sendHome() {
@@ -171,8 +169,8 @@ export class Wild {
 
   attach(y) {
     this.yeti = y;
-    if (this.world.weather.season.id !== 'winter') this._sendHome();
-    else this._hunt(this.side);
+    this._announced = true;
+    this._hunt(this.side);
   }
 }
 

@@ -192,8 +192,8 @@ export class GameMap {
             offX: (rand() - 0.5) * 0.3, offY: (rand() - 0.5) * 0.3,
           }));
         } else if ((t === TileId.GRASS || t === TileId.DIRT) && distSpawn > 7) {
-          const dense = forestNoise.fbm(i * 0.07, j * 0.07, 4) > 0.56;
-          const chance = (dense ? 0.78 : 0.02) * (t === TileId.DIRT ? 0.35 : 1);
+          const dense = forestNoise.fbm(i * 0.07, j * 0.07, 4) > 0.58;
+          const chance = (dense ? 0.6 : 0.012) * (t === TileId.DIRT ? 0.35 : 1); // daha seyrek ormanlar
           if (rand() < chance) {
             const r = rand();
             this.addObject(new ResourceNode('tree', i, j, {
@@ -222,11 +222,14 @@ export class GameMap {
     this._placeCluster('tree', sc, 9, 12, 9, a0 + 1.6);
     this._placeCluster('gold', sc, 11, 16, 7, a0 + 3.1);
     this._placeCluster('stone', sc, 12, 17, 5, a0 + 4.6);
-    // Haritaya dağınık ek kaynaklar: sayı harita alanıyla orantılı, kümeler birbirinden uzak
+    // Haritaya dağınık ek kaynaklar: SEYREK — küçük kümeler, aralarında boşluk, kümeler birbirinden çok uzak
     const area = (W * H) / (128 * 128);
-    for (let k = 0; k < Math.round(8 * area); k++) this._placeCluster('gold', null, 0, 0, 4 + ((rand() * 3) | 0));
-    for (let k = 0; k < Math.round(7 * area); k++) this._placeCluster('stone', null, 0, 0, 3 + ((rand() * 3) | 0));
-    for (let k = 0; k < Math.round(8 * area); k++) this._placeCluster('berry', null, 0, 0, 4 + ((rand() * 2) | 0));
+    for (let k = 0; k < Math.round(4 * area); k++) this._placeCluster('gold', null, 0, 0, 2 + ((rand() * 2) | 0));
+    for (let k = 0; k < Math.round(4 * area); k++) this._placeCluster('stone', null, 0, 0, 2 + ((rand() * 2) | 0));
+    for (let k = 0; k < Math.round(5 * area); k++) this._placeCluster('berry', null, 0, 0, 3);
+    // Tesisler (mağara gibi büyük alanlar): taş ocağı ve altın rezervi
+    for (let k = 0; k < Math.max(2, Math.round(1.2 * area)); k++) this._placeSite('quarry');
+    for (let k = 0; k < Math.max(2, Math.round(1.2 * area)); k++) this._placeSite('goldReserve');
 
     this._analyzeWater();
     this._placeFish();
@@ -241,21 +244,45 @@ export class GameMap {
     for (let j = 4; j < H - 4; j++) {
       for (let i = 4; i < W - 4; i++) {
         const d = this.waterDepth[j][i];
-        if (this.terrain[j][i] === TileId.WATER && d >= 1 && d <= 3) cand.push([i, j]);
+        if (this.terrain[j][i] === TileId.WATER && d >= 1) cand.push([i, j]);
       }
     }
     if (!cand.length) return;
-    const target = Math.max(6, Math.min(34, Math.round(cand.length / 90)));
+    // Denizin her yerinde (kıyıda ve açıkta) birbirinden ~6 karo aralıklı balık sürüleri
+    const target = Math.max(10, Math.min(500, Math.round(cand.length / 30)));
     const placed = [];
-    const ok = (i, j) => placed.every(([a, b]) => Math.hypot(a - i, b - j) >= 7);
+    const cell = new Map(), key = (i, j) => `${(i / 6) | 0},${(j / 6) | 0}`;
+    const ok = (i, j) => {
+      const ci = (i / 6) | 0, cj = (j / 6) | 0;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) for (const [a, b] of cell.get(`${ci + di},${cj + dj}`) ?? []) if (Math.hypot(a - i, b - j) < 6) return false;
+      return true;
+    };
+    const add = (i, j) => { placed.push([i, j]); const k = key(i, j); if (!cell.has(k)) cell.set(k, []); cell.get(k).push([i, j]); };
     const s = this.spawn;
     const near = cand.filter(([i, j]) => Math.hypot(i - s.i, j - s.j) < 20).sort(() => rand() - 0.5);
-    for (const [i, j] of near) { if (placed.length >= 2) break; if (ok(i, j)) placed.push([i, j]); }
-    for (let k = 0; k < 600 && placed.length < target; k++) {
+    for (const [i, j] of near) { if (placed.length >= 2) break; if (ok(i, j)) add(i, j); }
+    for (let k = 0; k < target * 8 && placed.length < target; k++) {
       const [i, j] = cand[(rand() * cand.length) | 0];
-      if (ok(i, j)) placed.push([i, j]);
+      if (ok(i, j)) add(i, j);
     }
     for (const [i, j] of placed) this.addObject(new ResourceNode('fish', i, j, { blocks: false, scale: 1 }));
+  }
+
+  /** 3×3 kaynak tesisi: üsten en az 26 karo, diğer tesislerden 34 karo uzakta, çevresi boş kara */
+  _placeSite(kind) {
+    const rand = this.rand, W = this.width, H = this.height;
+    for (let attempt = 0; attempt < 300; attempt++) {
+      const oi = 8 + ((rand() * (W - 18)) | 0), oj = 8 + ((rand() * (H - 18)) | 0);
+      if (Math.hypot(oi + 1 - this.spawn.i, oj + 1 - this.spawn.j) < 26) continue;
+      if ((this._sites ?? []).some((s) => Math.hypot(s.i - oi, s.j - oj) < 34)) continue;
+      let ok = true;
+      for (let j = oj - 1; ok && j < oj + 4; j++) for (let i = oi - 1; ok && i < oi + 4; i++) ok = this._freeLand(i, j) && this.terrain[j][i] !== TileId.SAND;
+      if (!ok) continue;
+      (this._sites ??= []).push({ i: oi, j: oj, kind });
+      this.addObject(new ResourceNode(kind, oi + 2, oj + 2, { size: 3 }));
+      return true;
+    }
+    return false;
   }
 
   /** Taşkın doldurma (flood fill) ile su bileşenlerini bulur; minSize'dan küçük olanları kuma çevirir. */
@@ -306,7 +333,7 @@ export class GameMap {
       if (!this._freeLand(ci, cj)) continue;
       const tooClose = (this._clusters ?? []).some((c) => {
         const d = Math.hypot(c.i - ci, c.j - cj);
-        return center ? d < 6 : d < (c.kind === kind ? 22 : 8);
+        return center ? d < 6 : d < (c.kind === kind ? 36 : 16);
       });
       if (tooClose && attempt < 100) continue;
       // Kümeyi rastgele büyüt (komşu boş karolara yayıl)
@@ -314,9 +341,12 @@ export class GameMap {
       const seen = new Set([`${ci},${cj}`]);
       for (let k = 0; k < 60 && cells.length < count; k++) {
         const [bi, bj] = cells[(rand() * cells.length) | 0];
-        const ni = bi + ((rand() * 3) | 0) - 1, nj = bj + ((rand() * 3) | 0) - 1;
+        // Ağaç dışındaki kaynaklar yan yana değil: aralarında en az bir boş karo (2 adım ötesi)
+        const step = kind === 'tree' ? 1 : 2;
+        const ni = bi + (((rand() * 3) | 0) - 1) * step, nj = bj + (((rand() * 3) | 0) - 1) * step;
         const key = `${ni},${nj}`;
         if (seen.has(key) || !this._freeLand(ni, nj)) continue;
+        if (step > 1 && cells.some(([a, b]) => Math.max(Math.abs(a - ni), Math.abs(b - nj)) < 2)) continue;
         seen.add(key);
         cells.push([ni, nj]);
       }

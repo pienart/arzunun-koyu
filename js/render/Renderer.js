@@ -1,6 +1,6 @@
 import { CONFIG } from '../config.js';
 import { TileId } from '../world/TileTypes.js';
-import { HW, HH, traceDiamond, footprintCorners } from './iso.js';
+import { HW, HH, traceDiamond, footprintCorners, ChunkedPath, fillPath } from './iso.js';
 import { WaterRenderer, ovCrop } from './WaterRenderer.js';
 import { BUILDINGS, PLAYER, ENEMY } from '../data/gameData.js';
 import { UNIT_PREFIX } from '../data/animData.js';
@@ -154,8 +154,9 @@ const makeSpans = (rows) => ({ jMin: 0, jMax: -1, i0: new Int32Array(rows), i1: 
  * açılışta bir kez OV_SCALE çözünürlüğünde çizilir; ölçek OV_MAX_S'nin altındayken yeniden çizim yalnızca
  * bu görüntüden bir kopyalamadır. Çiftlikler ve grid değişebildiği için her seferinde üstüne çizilir.
  */
-const OV_SCALE = 0.45;  // genel bakış görüntüsünün çözünürlüğü (cihaz pikseli / dünya birimi; 160×160 harita ≈ 56 MB)
-const OV_MAX_S = 0.8;   // bu ölçeğin altında genel bakış kullanılır (en fazla ~1,45 kat büyütme)
+// Harita büyüdükçe çözünürlük düşer → bellek ~70 MB'ta kalır (224×224 harita: 0,36)
+const OV_SCALE = Math.min(0.45, 0.45 * 180 / CONFIG.MAP_WIDTH);  // genel bakış görüntüsünün çözünürlüğü (cihaz pikseli / dünya birimi)
+const OV_MAX_S = Math.min(0.8, OV_SCALE * 1.8);   // bu ölçeğin altında genel bakış kullanılır (en fazla ~1,8 kat büyütme)
 const OV_PAD = 500;     // harita çevresindeki okyanus payı (dünya birimi)
 
 /**
@@ -253,6 +254,9 @@ export class Renderer {
     // Kış: karlı nesne görselleri örtü yarıyı geçince devreye girer (statik katman bir kez yenilenir);
     // sonbaharın son 100 sn'sinde karlı sürümler arka planda hazırlanır (kış başında takılma olmasın)
     const wthr = this.world.weather;
+    // Hayvan çiftliği: gece hayvanlar içeride (ayrı görsel) → karanlık eşiği geçilince statik katman yenilenir
+    const night = (frame.darkness ?? 0) > 0.5;
+    if (night !== this._night) { this._night = night; this.map.version++; }
     const snowy = wthr.snowCover > 0.5;
     if (snowy !== this._snowy) { this._snowy = snowy; this.map.version++; }
     if (snowy || (wthr.season.id === 'autumn' && wthr.seasonTime > SEASON_LEN - 100)) this.sprites.prewarmSnow();
@@ -550,10 +554,12 @@ export class Renderer {
     g.imageSmoothingQuality = 'medium';
 
     const s = this._computeSpans(this.groundSpans, CONFIG.GROUND_PAD, band ? { l: SR.l, r: SR.r, t: band.t - 70, b: band.b + 70 } : SR);
-    BLOBS_PER_EDGE = this.st.s / this.dpr < 0.9 ? 2 : 3; // uzak zoom'da daha az ama biraz büyük leke (LOD)
+    // LOD: uzak zoom'da daha az ama biraz büyük leke; genel bakışta (çok küçük ölçek) karo kenarı başına 1 leke yeter
+    BLOBS_PER_EDGE = forOverview ? 1 : this.st.s / this.dpr < 0.9 ? 2 : 3;
     const paths = {};
-    for (const t of TERRAIN_ORDER) paths[t] = new Path2D();
-    const water = new Path2D(), deep = new Path2D(), deeper = new Path2D();
+    // Parçalı yollar: tek dev Path2D Chromium'da karesel yavaşlıyor (büyük haritada genel bakış 4,6 sn → ~0,4 sn)
+    for (const t of TERRAIN_ORDER) paths[t] = new ChunkedPath();
+    const water = new ChunkedPath(), deep = new ChunkedPath(), deeper = new ChunkedPath();
     const sparkles = sparkleAcc ?? [];
     const grid = this.showGrid && !band ? new Path2D() : null;
     const depthGrid = map.waterDepth;
@@ -609,6 +615,7 @@ export class Renderer {
     const inside = (x, y) => Math.abs(x - mT[0]) / (mR[0] - mT[0]) + Math.abs(y - (mT[1] + mB[1]) / 2) / ((mB[1] - mT[1]) / 2) <= 1;
     const allLand = inside(R.l, R.t) && inside(R.r, R.t) && inside(R.l, R.b) && inside(R.r, R.b);
     if (!allLand) for (const p of [water, deep, deeper]) {
+      p.fresh(); // dikdörtgen ve delik aynı Path2D'de olmalı (sarım kuralı)
       p.rect(R.l, R.t, R.r - R.l, R.b - R.t);
       if (hole.length >= 3) {
         p.moveTo(hole[0][0], hole[0][1]);
@@ -621,7 +628,7 @@ export class Renderer {
     const level = this.st.s < 0.75 ? 'half' : 'full';
     for (const t of TERRAIN_ORDER) {
       g.fillStyle = this._pattern(TEX_OF[t], level, CONFIG.TEXTURE_TILES);
-      g.fill(paths[t]);
+      fillPath(g, paths[t]);
     }
 
     // Makro varyasyon: dokunun her 6 karoda bir tekrar ettiğini gizleyen büyük ölçekli ton farkları
@@ -651,6 +658,7 @@ export class Renderer {
 
   _drawFarms(g, level) {
     const R = this.st.rect, v = { l: R.l - 40, t: R.t - 40, r: R.r + 40, b: R.b + 40 };
+    this._drawPaths(g, v);
     for (const b of this.world.buildings) {
       if (b.type !== 'farm') continue;
       const P = footprintCorners(b.originI, b.originJ, b.size);
@@ -678,6 +686,29 @@ export class Renderer {
     }
   }
 
+  /** Patikalar: zemin katmanında taş döşeli karolar (yapımdayken soluk toprak), kenarı hafif koyu */
+  _drawPaths(g, v) {
+    const paths = this.world.buildings.filter((b) => b.def.ground);
+    if (!paths.length) return;
+    const tex = this.sprites.sprites.tex_path?.levels[0];
+    let pat = this._pathPat;
+    if (!pat && tex) pat = this._pathPat = g.createPattern(tex, 'repeat');
+    if (pat) { const S = tex.width / 2; pat.setTransform(new DOMMatrix([HW / S, HH / S, -HW / S, HH / S, 0, 0])); }
+    const done = new Path2D(), site = new Path2D();
+    for (const b of paths) {
+      const cx = (b.i - b.j) * HW, cy = (b.i + b.j) * HH;
+      if (cx < v.l || cx > v.r || cy < v.t || cy > v.b) continue;
+      traceDiamond(b.complete ? done : site, cx, cy, HW * 0.98, HH * 0.98);
+    }
+    g.fillStyle = 'rgba(90,70,45,0.45)';
+    g.fill(site);
+    g.fillStyle = pat ?? '#9a948a';
+    g.fill(done);
+    g.lineWidth = 1.2;
+    g.strokeStyle = 'rgba(60,50,40,0.35)';
+    g.stroke(done);
+  }
+
   _drawObjects() {
     const o = this.objectCtx, map = this.map;
     o.setTransform(1, 0, 0, 1, 0, 0);
@@ -693,7 +724,7 @@ export class Renderer {
       const row = map.objects[j];
       for (let i = s.i0[j], end = s.i1[j]; i <= end; i++) {
         const obj = row[i];
-        if (!obj || obj.type === 'farm') continue;
+        if (!obj || obj.type === 'farm' || obj.def?.ground) continue;
         const L = this.layout(obj);
         if (!L || L.x > v.r || L.y > v.b || L.x + L.w < v.l || L.y + L.h < v.t) continue;
         list.push(L);
@@ -744,14 +775,15 @@ export class Renderer {
       const owner = obj.owner ?? PLAYER;
       // Sur/kapı kendi kademesiyle (taş sur, kale suru), diğer binalar sahibinin çağıyla çizilir
       const tier = obj.def?.tiers ? obj.tier : this.world.players[owner].tier;
-      const s = obj.progress !== undefined && obj.progress < 1 ? sp.get('foundation') : sp.building(obj.type, tier, owner);
+      const nightKey = obj.def?.dayNight && this._night && obj.progress >= 1 ? sp.get(`${obj.def.sprite}_night`) : null;
+      const s = obj.progress !== undefined && obj.progress < 1 ? sp.get('foundation') : nightKey ?? sp.building(obj.type, tier, owner);
       const baseW = obj.size * TW * CONFIG.BUILDING_FIT;
       const w = baseW / s.baseRatio, h = w * s.aspect;
       // Taban merkezi = ayak izi merkezi (x), görselin alt kenarı = ayak izinin ön köşesi (y)
       const x = cx - s.anchorX * w, y = cy + HH - h + 2;
       const fcY = cy + HH - obj.size * HH; // ayak izi merkezinin y'si
       // Animasyonlu bina (yel değirmeni): sprite anahtarına ait kare dizisi varsa
-      const bkey = obj.progress !== undefined && obj.progress >= 1 ? sp.buildingKey(obj.type, tier) : null;
+      const bkey = obj.progress !== undefined && obj.progress >= 1 && !nightKey ? sp.buildingKey(obj.type, tier) : null;
       const anim = bkey && sp.anims[bkey] ? bkey : null;
       // İki katmanlı gölge: temas gölgesi (ambient occlusion) + güneşin sol-üstten düşürdüğü sağa uzanan gölge
       return { obj, s, x, y, w, h, cx, cy, baseW, flip: false, anim, shadows: [
@@ -784,9 +816,11 @@ export class Renderer {
       case 'stump':
         s = sp.get('stump'); w = TW * 0.42 * obj.scale; h = w * s.aspect; y = cy + HH * 0.35 - h;
         break;
+      case 'quarry':
+      case 'goldReserve':
       case 'cave': {
-        // Mağara: 3×3 ayak izine oturur, ağzı ekranda öne (alta) bakar
-        s = sp.get('cave');
+        // Mağara ve kaynak tesisleri: 3×3 ayak izine oturur
+        s = sp.get(obj.kind);
         if (!s) return null;
         const baseW = obj.size * TW * 1.08;
         w = baseW / s.baseRatio; h = w * s.aspect; y = cy + HH - h + 4;
@@ -829,7 +863,7 @@ export class Renderer {
     for (let k = this.pickList.length - 1; k >= 0; k--) {
       const L = this.pickList[k];
       if (wx < L.x || wy < L.y || wx > L.x + L.w || wy > L.y + L.h) continue;
-      if (L.obj.kind === 'mountain' || L.obj.kind === 'stump' || L.obj.kind === 'ruins' || L.obj.kind === 'campfire' || L.obj.kind === 'cave') continue;
+      if (L.obj.kind === 'mountain' || L.obj.kind === 'stump' || L.obj.kind === 'ruins' || L.obj.kind === 'campfire' || L.obj.kind === 'cave' || L.obj.def?.ground) continue;
       let u = (wx - L.x) / L.w;
       if (L.flip) u = 1 - u;
       if (L.s.hit(u, (wy - L.y) / L.h)) return L.obj;
@@ -898,7 +932,7 @@ export class Renderer {
     for (const it of items) { this._drawItemBase(ctx, it, selected, zoom); this._drawItemBody(ctx, it, px); }
 
     // 2) Örtücüler: birimi gerçekten örten (birim arkasında ve görseli çakışan) binalar/ağaçlar
-    const occluders = this.pickList.filter((L) => L.obj.isBuilding || L.obj.kind === 'tree' || L.obj.kind === 'mountain' || L.obj.kind === 'cave');
+    const occluders = this.pickList.filter((L) => L.obj.isBuilding || L.obj.kind === 'tree' || L.obj.kind === 'mountain' || L.obj.kind === 'cave' || L.obj.size === 3 && L.obj.isResource);
     const covering = new Map(); // L → örttüğü öğeler
     for (const it of items) {
       for (const L of occluders) {
@@ -976,7 +1010,7 @@ export class Renderer {
     let { wx, wy } = it;
     const st = u.animState;
     let s, w, h, flip;
-    const veh = u.naval || u.def.siege ? sp.vehicle(u) : null;
+    const veh = u.naval || u.def.siege || u.def.vehicle ? sp.vehicle(u) : null;
     it.rot = 0;
     if (veh) {
       // Tekne: dalgada iner-kalkar ve yalpalar (balık tutarken de); koçbaşı yalpalar, vururken öne atılır
@@ -1096,15 +1130,14 @@ export class Renderer {
     const wthr = this.world.weather, id = wthr.season.id, I = wthr.intensity;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    const tint = { spring: 'rgba(170,255,160,0.10)', summer: 'rgba(255,215,140,0.08)', autumn: 'rgba(255,160,80,0.16)', winter: 'rgba(225,235,255,0.30)' }[id];
+    const tint = { spring: 'rgba(170,255,160,0.10)', summer: 'rgba(255,215,140,0.08)', autumn: 'rgba(255,160,80,0.16)', winter: 'rgba(200,220,255,0.14)' }[id];
     ctx.globalCompositeOperation = 'soft-light';
     ctx.fillStyle = tint;
     ctx.fillRect(0, 0, this.pixelW, this.pixelH);
     ctx.globalCompositeOperation = 'source-over';
-    if (id === 'winter') { ctx.fillStyle = 'rgba(235,242,255,0.10)'; ctx.fillRect(0, 0, this.pixelW, this.pixelH); }
     // Yağmur/kar sırasında hava kararır, sis beyazlatır
     if (wthr.kind === 'rain' && I > 0.02) { ctx.fillStyle = `rgba(25,35,55,${0.22 * I})`; ctx.fillRect(0, 0, this.pixelW, this.pixelH); }
-    if (wthr.kind === 'snow' && I > 0.02) { ctx.fillStyle = `rgba(230,236,245,${0.12 * I})`; ctx.fillRect(0, 0, this.pixelW, this.pixelH); }
+    // Kar yağarken ekranı beyaz bir perdeyle örtme (sis gibi görünüyordu): yalnızca taneler (_drawWeather) yağar
     ctx.restore();
   }
 
@@ -1274,7 +1307,7 @@ export class Renderer {
   /**
    * Gece katmanı (ekran uzayında, yarım çözünürlük):
    *   1) mavi-lacivert karanlık   2) ışık kaynaklarında karanlık 'destination-out' ile oyulur
-   *   3) ışıklar 'lighter' ile sıcak bir parıltı ekler   4) dolunay ve hâlesi gökyüzü köşesinde
+   *   3) ışıklar 'lighter' ile sıcak bir parıltı ekler
    * Işıklar: yangınlar, kamp ateşi ve geceleri pencerelerinden ışık sızan kendi binalarınız.
    */
   _drawNight(ctx, frame) {
@@ -1325,24 +1358,6 @@ export class Renderer {
       ctx.drawImage(this.fx.glow, x / k - r / k * 0.7, y / k - r / k * 0.45, r / k * 1.4, r / k * 0.9);
     }
     ctx.globalCompositeOperation = 'source-over';
-    // Dolunay: gökyüzünün en tepesinde, gece boyunca soldan sağa yay çizerek ilerler; gün ağarınca solar
-    const p = frame.moon ?? 0.3, top = (this.uiTop ?? 46) * this.dpr;
-    const mx = W * (0.06 + 0.88 * p), my = top + (30 + (1 - Math.sin(Math.PI * p)) * 46) * this.dpr, mr = 24 * this.dpr;
-    ctx.globalAlpha = Math.max(0, Math.min(1, (d - 0.15) * 1.4));
-    const halo = ctx.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 4.5);
-    halo.addColorStop(0, 'rgba(200,215,255,0.35)');
-    halo.addColorStop(1, 'rgba(200,215,255,0)');
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(mx, my, mr * 4.5, 0, Math.PI * 2); ctx.fill();
-    const face = ctx.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.1, mx, my, mr);
-    face.addColorStop(0, '#fbfbf2');
-    face.addColorStop(1, '#d9dccd');
-    ctx.fillStyle = face;
-    ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(150,155,150,0.35)';
-    for (const [ox, oy, rr] of [[-0.35, -0.2, 0.22], [0.25, 0.15, 0.16], [0.05, -0.45, 0.1], [-0.15, 0.4, 0.13], [0.45, -0.25, 0.09]]) {
-      ctx.beginPath(); ctx.arc(mx + ox * mr, my + oy * mr, rr * mr, 0, Math.PI * 2); ctx.fill();
-    }
     ctx.restore();
   }
 

@@ -116,7 +116,7 @@ img { -webkit-user-drag: none; }
 .qi.active { border-color: #5ac8fa; }
 .qi i { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: rgba(90, 200, 250, 0.35); }
 
-#commands { display: grid; grid-template-columns: repeat(auto-fill, 62px); grid-auto-rows: 62px; gap: 6px; padding: 8px; align-content: start; overflow: hidden; }
+#commands { display: grid; grid-template-columns: repeat(auto-fill, 62px); grid-auto-rows: 62px; gap: 6px; padding: 8px; align-content: start; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; }
 .cmd {
   position: relative; padding: 3px 3px 12px; cursor: pointer;
   background: radial-gradient(circle at 50% 30%, #5d4631, #23180f); border: 1px solid #a8843f; border-radius: 4px;
@@ -349,3 +349,77 @@ body:not(.ingame) #help, body:not(.ingame) #pending, body:not(.ingame) #fps, bod
   #dayBtn span i { display: none; }
   .age { min-width: 0; }
 }
+
+/* ───────── Seçime bağlı panel (Kasaba Merkezi / Bilim Merkezi) ───────── */
+#xpanel {
+  position: fixed; left: 10px; bottom: 168px; z-index: 6; max-width: calc(100vw - 350px); max-height: calc(100vh - 230px);
+  overflow: auto; padding: 10px 12px; border-radius: 8px; font-size: 13px;
+}
+body.panel-collapsed #xpanel { bottom: 10px; }
+#xpanel h4 { color: #ffe08a; font-size: 13px; margin-bottom: 6px; }
+#xpanel .xclose { position: absolute; top: 4px; right: 6px; width: 22px; height: 22px; cursor: pointer; border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4); border: 1px solid var(--gold-dim); color: var(--ink); font-size: 16px; line-height: 18px; }
+#xpanel .cols { display: flex; gap: 16px; }
+#xpanel .sub { opacity: 0.75; font-size: 12px; }
+#xpanel .bcs { display: grid; grid-template-columns: repeat(2, minmax(150px, 1fr)); gap: 4px; }
+#xpanel .bc, #xpanel .req {
+  display: grid; grid-template-columns: 30px 1fr auto auto; align-items: center; gap: 6px; padding: 3px 6px; text-align: left;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid transparent; border-radius: 4px; color: var(--ink); font: inherit;
+}
+#xpanel .bc { grid-template-columns: 30px 1fr auto; cursor: pointer; }
+#xpanel .bc:hover, #xpanel .req.todo:hover { border-color: #ffd36b; background: rgba(255, 211, 107, 0.1); }
+#xpanel .bc img, #xpanel .req img { width: 30px; height: 26px; object-fit: contain; }
+#xpanel .bc b { color: #ffe08a; }
+#xpanel .reqs { display: flex; flex-direction: column; gap: 4px; min-width: 260px; }
+#xpanel .req.todo { cursor: pointer; }
+#xpanel .req .cost { display: flex; gap: 6px; }
+#xpanel .req .cost .miss, #xpanel .tnode .cost .miss { color: #ff7a66; }
+#xpanel .ri { width: 16px; height: 16px; vertical-align: middle; }
+#xpanel i.ok { color: #7ee07e; font-style: normal; font-weight: 700; }
+#xpanel i.no { color: #ff7a66; font-style: normal; font-weight: 700; }
+#xpanel .req.done { opacity: 0.7; }
+#xpanel .tabs { display: flex; gap: 4px; margin-bottom: 8px; padding-right: 28px; }
+#xpanel .tab { padding: 4px 12px; cursor: pointer; border-radius: 4px 4px 0 0; background: rgba(0, 0, 0, 0.35); border: 1px solid var(--gold-dim); color: var(--ink); font: 700 13px Georgia, serif; }
+#xpanel .tab.on { background: rgba(255, 211, 107, 0.18); border-color: #ffd36b; color: #ffe08a; }
+#xpanel .tab small { opacity: 0.7; font-weight: 400; }
+#xpanel .tree { display: flex; gap: 10px; align-items: flex-start; }
+#xpanel .chain { display: flex; flex-direction: column; align-items: center; }
+#xpanel .arrow { color: #c9a85a; font-size: 14px; line-height: 14px; margin: 1px 0; }
+#xpanel .tnode {
+  position: relative; width: 128px; padding: 5px 6px; cursor: pointer; display: grid; grid-template-columns: 28px 1fr; gap: 2px 6px; align-items: center;
+  background: radial-gradient(circle at 50% 30%, #5d4631, #23180f); border: 1px solid #a8843f; border-radius: 5px; color: var(--ink); font: 12px Georgia, serif; text-align: left;
+}
+#xpanel .tnode img { width: 28px; height: 28px; object-fit: contain; grid-row: span 2; }
+#xpanel .tnode .nm { font-weight: 700; line-height: 1.15; }
+#xpanel .tnode .ag { position: absolute; top: 2px; right: 4px; font-size: 10px; opacity: 0.7; }
+#xpanel .tnode .cost { display: flex; gap: 4px; font-size: 11px; }
+#xpanel .tnode .cost .ri { width: 12px; height: 12px; }
+#xpanel .tnode:hover { box-shadow: 0 0 0 2px #ffd36b; }
+#xpanel .tnode.done { background: linear-gradient(#35502c, #1d2c18); border-color: #7ee07e; }
+#xpanel .tnode.busy { border-color: #ffd36b; box-shadow: 0 0 8px rgba(255, 211, 107, 0.6); }
+#xpanel .tnode.locked { filter: grayscale(0.85) brightness(0.65); }
+#xpanel .tnode.poor { filter: saturate(0.6); }
+
+/* ───────── Envanter (iksirler) ───────── */
+#items { position: fixed; top: 52px; left: 10px; z-index: 6; display: flex; gap: 6px; }
+#items .it {
+  position: relative; width: 44px; height: 44px; cursor: pointer; padding: 3px; border-radius: 6px;
+  background: radial-gradient(circle at 50% 30%, #5d4631, #23180f); border: 1px solid #a8843f;
+}
+#items .it img { width: 100%; height: 100%; object-fit: contain; }
+#items .it b { position: absolute; right: 2px; bottom: 0; font-size: 12px; color: #fff; text-shadow: 0 1px 2px #000; }
+#items .it em { position: absolute; left: 0; right: 0; top: -14px; text-align: center; font: 700 11px Georgia, serif; color: #ffe08a; text-shadow: 0 1px 2px #000; font-style: normal; }
+#items .it.active { box-shadow: 0 0 0 2px #7ee0ff, 0 0 12px rgba(126, 224, 255, 0.7); }
+#items .it:hover { border-color: #ffd36b; }
+body:not(.ingame) #xpanel, body:not(.ingame) #items { display: none !important; }
+
+/* ───────── Kış teması: buz mavisi paneller ───────── */
+body.winter { --wood-hi: #3c5068; --wood-lo: #18222f; --gold: #cfe4f7; --gold-dim: rgba(170, 205, 240, 0.4); }
+body.winter .hud { border-color: #a9c6e2; box-shadow: 0 2px 12px rgba(0, 10, 30, 0.6), inset 0 1px 0 rgba(220, 240, 255, 0.25); }
+body.winter #topbar { background: linear-gradient(180deg, #4a6582 0%, #1b2736 100%); }
+body.winter #topbar::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 8px; pointer-events: none;
+  background: radial-gradient(circle at 6px 0, #f4f9ff 5px, transparent 6px) 0 0 / 14px 8px repeat-x;
+}
+body.winter .cmd, body.winter #xpanel .tnode, body.winter #items .it { background: radial-gradient(circle at 50% 30%, #4d6580, #172231); border-color: #9cbad8; }
+body.winter .age span, body.winter #xpanel h4, body.winter #pending .ph b { color: #e6f3ff; }

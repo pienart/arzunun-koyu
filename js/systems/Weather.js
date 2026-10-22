@@ -11,7 +11,7 @@ export const SEASONS = [
   { id: 'spring', name: 'İlkbahar', farmMul: 1.1, weather: { clear: 0.55, rain: 0.35, fog: 0.1 } },
   { id: 'summer', name: 'Yaz', farmMul: 1.0, weather: { clear: 0.85, rain: 0.1, fog: 0.05 } },
   { id: 'autumn', name: 'Sonbahar', farmMul: 1.0, weather: { clear: 0.45, rain: 0.35, fog: 0.2 } },
-  { id: 'winter', name: 'Kış', farmMul: 0.75, weather: { clear: 0.3, snow: 0.6, fog: 0.1 } },
+  { id: 'winter', name: 'Kış', farmMul: 0.75, weather: { snow: 0.75, clear: 0.25 } }, // kışın sis yok
 ];
 export const WEATHER_NAMES = { clear: 'Açık', rain: 'Yağmur', snow: 'Kar', fog: 'Sis' };
 // 7,5 dk × 4 mevsim = 30 dk: kış (ve mağaradaki yaratık) 30 dakikada bir gelir
@@ -49,6 +49,8 @@ export class Weather {
       this.version++;
       // Mevsime uymayan hava hemen dağılır (kışın yağmur, yazın kar olmasın)
       if (!(this.kind in this.season.weather)) this.target = 0;
+      // Kış gelince hemen kar yağmaya başlar
+      if (this.season.id === 'winter') { this.kind = 'snow'; this._pending = null; this.target = 0.85; this.timer = 70 + this._rand() * 50; }
       this.changed = this.season.name;
     }
     const goalSnow = this.season.id === 'winter' ? 1 : 0;

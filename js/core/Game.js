@@ -261,7 +261,8 @@ export class Game {
   _onLeftClick(sx, sy, e) {
     if (this.placement) { this._tryPlace(e.shiftKey); return; }
     const ent = this.pickAt(sx, sy);
-    if (!ent) { if (!e.shiftKey) this.select([]); return; }
+    // Boşluğa tıklama: seçim kalkar ve alt panel kapanır (sabitlenmiş olsa da)
+    if (!ent) { if (!e.shiftKey) { this.select([]); this.ui?.closePanel(); } return; }
     if (ent.isUnit && ent.owner === PLAYER && e.shiftKey && this.selection.every((s) => s.isUnit && s.owner === PLAYER)) {
       const set = new Set(this.selection);
       set.has(ent) ? set.delete(ent) : set.add(ent);
@@ -280,7 +281,7 @@ export class Game {
   }
 
   _onBoxSelect(box, e) {
-    if (this.placement?.type === 'wall') { this._placeWallLine(); return; }
+    if (this.placement && BUILDINGS[this.placement.type].line) { this._placeWallLine(); return; }
     if (this.placement) return;
     const a = this.camera.screenToWorld(Math.min(box.x0, box.x1), Math.min(box.y0, box.y1));
     const b = this.camera.screenToWorld(Math.max(box.x0, box.x1), Math.max(box.y0, box.y1));
@@ -301,9 +302,9 @@ export class Game {
 
     if (units.length) {
       const ent = this.pickAt(sx, sy, { units: true });
-      const villagers = units.filter((u) => u.type === 'villager');
+      const villagers = units.filter((u) => u.def.gatherer || u.def.builder || u.def.decorBuilder); // köylü, araba, mimar
       const boats = units.filter((u) => u.naval);
-      const soldiers = units.filter((u) => u.type !== 'villager' && !u.naval);
+      const soldiers = units.filter((u) => u.isMilitary);
       let color = 'rgba(120,255,120,0.9)';
       if (ent && ent.owner && ent.owner !== PLAYER) { // düşman veya yaratık
         // Düşmana sağ tık → tüm seçili savaşanlar saldırır
@@ -315,9 +316,9 @@ export class Game {
         else if (boats.length) world.commandMove(boats, ent.i, ent.j);
         if (soldiers.length) world.commandMove(soldiers, ent.i + 1, ent.j + 1);
       } else if (ent?.isBuilding && ent.owner === PLAYER) {
-        if (!ent.complete) world.commandBuild(villagers, ent);
+        if (!ent.complete) { world.commandBuild(villagers, ent); world.commandMove(villagers.filter((u) => !world.canBuild(u, ent.type)), ent.i + 1, ent.j + 1); }
         else if (ent.type === 'farm') world.commandGather(villagers, ent);
-        else if (world.needsRepair(ent)) world.commandRepair(villagers, ent);
+        else if (world.needsRepair(ent)) world.commandRepair(villagers.filter((u) => u.def.builder), ent);
         else if (ent.def.dropsite && villagers.some((u) => u.carry > 0)) world.commandDeposit(villagers, ent);
         else world.commandMove(villagers, ent.i + 1, ent.j + 1);
         if (soldiers.length) world.commandMove(soldiers, ent.i + 1, ent.j + 1);
@@ -385,11 +386,11 @@ export class Game {
 
   // ═════════════════════ İNŞAAT YERLEŞTİRME ═════════════════════
   startPlacement(type) {
-    if (!this.myUnits.some((u) => u.type === 'villager')) return;
+    if (!this.myUnits.some((u) => this.world.canBuild(u, type))) return;
     const err = this.world.checkBuildable(type);
     if (err) { this.ui.toast(err, 'warn'); return; }
     this.placement = { type };
-    if (type === 'wall') this.ui.toast('Çit: başlangıç karosundan bitişe sürükleyin.', 'info');
+    if (BUILDINGS[type].line) this.ui.toast(`${BUILDINGS[type].name}: başlangıç karosundan bitişe sürükleyin.`, 'info');
     this._updatePlacement();
   }
 
@@ -407,9 +408,9 @@ export class Game {
     p.line = null;
     // Çit: sürüklenirken başlangıçtan imlece kadar karo hattı
     const d = this.input.drag;
-    if (p.type === 'wall' && d && d.mode === 'box' && d.moved) {
+    if (def.line && d && d.mode === 'box' && d.moved) {
       const a = this.camera.screenToWorld(d.sx, d.sy), s = worldToTile(a.x, a.y);
-      p.line = this._wallTiles(s.i, s.j, t.i, t.j).map(({ i, j }) => ({ i, j, ok: !this.world.checkPlacement('wall', i, j) }));
+      p.line = this._wallTiles(s.i, s.j, t.i, t.j).map(({ i, j }) => ({ i, j, ok: !this.world.checkPlacement(p.type, i, j) }));
     }
   }
 
@@ -432,9 +433,9 @@ export class Game {
   _placeWallLine() {
     const p = this.placement;
     if (!p?.line?.length) return;
-    const builders = this.myUnits.filter((u) => u.type === 'villager');
-    const n = this.world.placeWallLine(p.line, builders);
-    if (n) { this.click(); this.ui.toast(`${n} parça çit yerleştirildi.`, 'good'); }
+    const builders = this.myUnits.filter((u) => this.world.canBuild(u, p.type));
+    const n = this.world.placeWallLine(p.line, builders, p.type);
+    if (n) { this.click(); this.ui.toast(`${n} parça ${BUILDINGS[p.type].name.toLocaleLowerCase('tr')} yerleştirildi.`, 'good'); }
     if (!this.input.keys.has('ShiftLeft') && !this.input.keys.has('ShiftRight')) this.placement = null;
   }
 
@@ -446,8 +447,8 @@ export class Game {
       this.ui.toast(err ?? 'Buraya inşa edilemez.', 'warn');
       return;
     }
-    const builders = this.myUnits.filter((u) => u.type === 'villager');
-    const b = p.type === 'wall' ? (this.world.placeWallLine([{ i: p.oi, j: p.oj }], builders) ? true : null) : this.world.placeBuilding(p.type, p.oi, p.oj, builders);
+    const builders = this.myUnits.filter((u) => this.world.canBuild(u, p.type));
+    const b = BUILDINGS[p.type].line ? (this.world.placeWallLine([{ i: p.oi, j: p.oj }], builders, p.type) ? true : null) : this.world.placeBuilding(p.type, p.oi, p.oj, builders);
     if (b) this.click();
     // Shift basılıysa yerleştirme modunda kal (art arda ev/çiftlik)
     if (b && !keep) this.placement = null;

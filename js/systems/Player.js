@@ -11,7 +11,10 @@ export class Player {
     this.age = 0;
     this.techs = new Set();
     // Ekonomi çarpanları (toplama/taşıma/hız)
-    this.modifiers = { food: 1, wood: 1, gold: 1, stone: 1, farm: 1, fish: 1, carry: 1, speed: 1 };
+    this.modifiers = { food: 1, wood: 1, gold: 1, stone: 1, farm: 1, fish: 1, carry: 1, speed: 1, ranch: 1, bldgHp: 1, regen: 0 };
+    this.items = {};          // simya: iksir stoku { id: adet }
+    this.tools = new Set();   // simya: üretilmiş kalıcı aletler
+    this.effects = {};        // etkin iksirler: { id: bitiş zamanı (oyun sn) }
     // Birim türüne eklenen savaş bonusları: bonus.militia.attack = 3 gibi
     this.bonus = {};
     this.popCap = 0;
@@ -52,7 +55,8 @@ export class Player {
 
   applyTech(id, def) {
     this.techs.add(id);
-    for (const [k, v] of Object.entries(def.effect ?? {})) this.modifiers[k] *= v;
+    for (const [k, v] of Object.entries(def.effect ?? {})) this.modifiers[k] = (this.modifiers[k] ?? 1) * v;
+    for (const [k, v] of Object.entries(def.add ?? {})) this.modifiers[k] = (this.modifiers[k] ?? 0) + v;
     for (const [unit, stats] of Object.entries(def.bonus ?? {})) {
       for (const [stat, v] of Object.entries(stats)) this.addBonus(unit, stat, v);
     }

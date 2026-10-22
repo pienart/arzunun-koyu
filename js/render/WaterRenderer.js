@@ -1,4 +1,4 @@
-import { HW, HH } from './iso.js';
+import { HW, HH, fillPath } from './iso.js';
 import { Settings } from '../systems/Settings.js';
 
 const makeCanvas = () => document.createElement('canvas');
@@ -117,12 +117,12 @@ export class WaterRenderer {
     g.shadowColor = 'rgba(40,30,14,0.85)';
     g.shadowBlur = 22 * px;
     g.fillStyle = '#1f6378';
-    g.fill(water);
+    fillPath(g, water);
     g.restore();
 
     // 2) Su tabanı (statik doku)
     g.fillStyle = this._pattern(g, 'base', 5, 0, 0);
-    g.fill(water);
+    fillPath(g, water);
 
     // Derinlik: "uzak gölge" tekniği → şekli ekran dışına öteleyip yalnızca bulanık gölgesini
     // asıl konuma düşürüyoruz. Sonuç: sığdan derine kenarları tamamen yumuşak renk geçişi.
@@ -134,7 +134,7 @@ export class WaterRenderer {
       g.shadowColor = color;
       g.shadowBlur = blur * px;
       g.fillStyle = '#000';
-      g.fill(path);
+      fillPath(g, path);
       g.restore();
     };
     softFill(deep, 'rgba(2,30,62,0.42)', 26);
@@ -152,7 +152,7 @@ export class WaterRenderer {
       m.clearRect(band.l, t, band.r - band.l, h);
     }
     m.fillStyle = '#fff';
-    m.fill(water);
+    fillPath(m, water);
     m.restore();
 
     // Köpük: maskeyi beyaz gölgeyle çiz, sonra maskenin kendisini sil → yalnızca DIŞ hâle kalır

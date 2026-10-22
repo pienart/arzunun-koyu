@@ -39,13 +39,39 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
 - **Başlangıç:** 5000 yiyecek · 5000 odun · 5000 altın · 5000 taş ve 3 köylü.
 - **Kaynak verimi:** Üst bardaki bir kaynağın üzerine gelince **saatlik çıkarım** (son 5 dakikanın ortalaması, oyun
   süresi), dakikalık hız, o kaynağı toplayan köylü/tekne sayısı, tersane geliri ve toplam toplanan miktar görünür.
-- **Binalar:** Ev · Kereste Kampı · Değirmen (kanatları döner) · Maden Kampı · Çiftlik · **Tersane** · **Ahşap Çit** ·
-  **Kapı** · **Ateş Çukuru** · **Kışla** · **Okçuluk Alanı** (Feodal) · **Ahır** (Feodal) · **Gözetleme Kulesi** (Feodal) ·
+- **Binalar:** Ev · Kereste Kampı · Değirmen (kanatları döner) · Maden Kampı · Çiftlik · **Hayvan Çiftliği** · **Tersane** ·
+  **Ahşap Çit** · **Kapı** · **Ateş Çukuru** · **Bilim Merkezi** · **Üniversite** (Kale) · **Simya Atölyesi** (Kale) · **Kışla** · **Okçuluk Alanı** (Feodal) · **Ahır** (Feodal) · **Gözetleme Kulesi** (Feodal) ·
   **Kuşatma Atölyesi** (Kale) · Pazar (Feodal) · Harika (İmparatorluk).
 - **Tersane ve balıkçılık:** Yalnızca köylüler kurabilir ve yalnızca su kenarına yerleşir. **Balıkçı teknesi** üretir;
   tekne kendi gölündeki en yakın **balık sürüsüne** gider, ağ atar ve dolunca tersaneye boşaltır (her su kütlesi ayrı
   numaralanır, tekne başka göle gitmeye çalışmaz). Köylüler kıyıdaki balık sürüsünden de balık tutabilir.
   **Balık Ağları** (Feodal) tekneleri %50 hızlandırır. Tersanenin gölünde balık yoksa uyarı çıkar.
+- **Çağ şartları:** Kaynak yetmez. Feodal için 3 asker + 2 ev, kereste kampı, değirmen ve kışla; Kale için 8 asker +
+  5 ev, Bilim Merkezi, Okçuluk Alanı, Pazar, Gözetleme Kulesi ve Hayvan Çiftliği; İmparatorluk için 15 asker + 8 ev,
+  Ahır, Kuşatma Atölyesi, Üniversite ve Simya Atölyesi gerekir. Kasaba Merkezi seçilince açılan panelde liste ✓/✗ ile
+  görünür; eksik bir binaya tıklayınca (kurulabiliyorsa) Kasaba Merkezi yakınında inşaat başlar ve boştaki bir köylü gider.
+- **Kasaba Merkezi paneli:** Hangi binadan kaç tane olduğu listelenir; bir satıra tıklayınca kamera o türün sıradaki
+  binasına gider ve onu seçer (her tıklamada bir sonraki).
+- **Bilim Merkezi ve araştırma ağacı:** Tüm araştırmalar artık burada: **Köy · Ordu · Sağlık · Savunma** sekmeleri, her
+  sekmede ok ile bağlı zincirler (ör. Çift Balta → Yay Testere → Çift Kişilik Testere). Düğüm rengi: yeşil araştırıldı,
+  sarı çerçeve araştırılıyor, gri kilitli (çağ/ön koşul). Sağlık: Şifalı Otlar → Şifahane (savaşmayan birimler iyileşir)
+  → Tıp Okulu, Temiz Su → Dengeli Beslenme. Savunma: Duvarcılık → Mimarlık (bina canı), Mazgal Delikleri.
+- **Hayvan Çiftliği** (Feodal): ağılda inekler ve keçiler sağılır (animasyonlu); gündüz hayvanlar dışarıda, gece ahırda.
+  Kendiliğinden dakikada 30 yiyecek üretir (seviye ve Süt Ürünleri araştırmasıyla artar).
+- **Simya Atölyesi:** İksirler envantere eklenir (sol üstte ikonlar; tıkla → kullan): Taş Deri (1 dk binalar hasar
+  almaz), Rüzgâr (1 dk birimler %40 hızlı), Güç (1 dk askerler +%50 saldırı), Şifa (herkes anında iyileşir), Kartal Gözü
+  (harita keşfedilir), Bereket Tozu (çiftliklere +150 yiyecek). Kalıcı aletler: Hasır Sepet (+%25 taşıma), Çelik Kazma
+  (altın/taş +%20), Hafif Çizme (köylüler +%10 hız).
+- **Üniversite ve mimar:** Üniversite **mimar** yetiştirir. Süslemeleri (Patika, Çiçek Tarhı, Süs Ağacı) **yalnızca
+  mimar** yapar. Patika sürüklenerek çizilir ve üzerinde birimler %35 hızlı yürür.
+- **Yük Arabası** (İmparatorluk Çağı, Kasaba Merkezi): kaynağa gider, 60 birim yük alır (köylünün 6 katı) ve **yalnızca
+  Kasaba Merkezi'ne** boşaltır.
+- **Kaynak tesisleri:** Haritanın birkaç yerinde mağara gibi büyük **Taş Ocağı** ve **Altın Rezervi** (3×3, 3000 kaynak;
+  birçok köylü aynı anda çalışır). Diğer kaynaklar seyrek: küçük kümeler, kaynaklar yan yana değil, kümeler birbirinden uzak.
+- **Balık:** Denizin her yerinde (kıyıda ve açıkta) ~6 karo aralıklı balık sürüleri.
+- **Biten kaynak:** Ağaç bitince kütük kalmaz, yer dümdüz olur.
+- **İnşaat:** Yarım inşaatta **İnşaatı Yık** (yarı kaynak iade) ve **İşçi Çağır** (en yakın BOŞTAKİ bir köylü gelir).
+- **Seçim:** Boşluğa tıklayınca seçim kalkar ve alt panel kapanır (sabitlenmiş olsa bile).
 - **Bina seviyeleri:** Çiftlik, Kereste Kampı, Değirmen, Maden Kampı ve Tersane seçiliyken **Seviye 2 / 3** ile
   yükseltilir (bedel: bina maliyeti × 1,5 × seviye + 60 × seviye altın; süre 20 sn × seviye). Her seviye üretimi %25
   artırır: kamp/değirmene bırakılan kaynak artar, çiftlik daha hızlı ürün verir ve yiyeceği tazelenir, tersanede
@@ -71,7 +97,6 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
   dolu piksellerine yerleşir, sayısı hasarla 1'den 7'ye çıkar). İnşaat halindeki bina tek, statik bir iskele görselidir.
 - **Gece / gündüz:** Saat sunucudan (HTTP `Date` başlığı) alınır. 16:00'da hava kararmaya başlar, 17:15'ten 06:15'e
   kadar gecedir: ışık sızan evler ve Kasaba Merkezi yanındaki kamp ateşinin başında kupalarından içen askerler.
-  **Dolunay** gökyüzünün en tepesinde gece boyunca soldan sağa yay çizerek ilerler, gün ağarınca kaybolur.
   Üst bardaki saat düğmesi veya **L**: Otomatik → Gece → Gündüz.
 - **Bekleyen inşaatlar:** Sağ üstteki listede her inşaatın yüzdesi ve işçi sayısı görünür; tıklayınca kamera binaya gider.
   Başlıktaki ok düğmesi listeyi **gizler/gösterir** (tercih hatırlanır).
@@ -99,19 +124,20 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
 - **Mağara ve Koca Ayak:** Haritanın rastgele ama hem size hem düşmana uzak bir yerinde bir **mağara** vardır. Mevsim
   döngüsü 30 dakikadır ve yaratık **yalnızca kışın** (yani 30 dakikada bir) dışarı çıkar: kış başlayınca ~25 sn sonra
   uyanır, rastgele bir tarafın üssüne saldırır, 140 sn sonra diğer tarafa yönelir — **hem size hem düşmana** saldırır.
-  Surları hızla yıkar (sura karşı ×4,5 hasar) ama diğer binaları yavaş yıkar (×0,45). Kış bitince mağarasına döner.
-  1500 canı vardır; öldüren taraf 400 yiyecek + 200 altın kazanır, sonraki kış yeni bir yaratık uyanır.
+  Artık çok daha yıkıcıdır (2200 can, 48 saldırı, sura ×5, binalara ×1,1) ve saldırdığı **köyü yok edene kadar durmaz**:
+  kış bitse de dönmez; o köyün binaları bitince diğer köye yönelir. Öldüren taraf 500 yiyecek + 300 altın kazanır.
 - **Savaş sisi:** Keşfedilmemiş alanlar karanlıktır. Keşfettiğiniz yerler açık kalır (yalnızca hafif gölgeli), ama oradan
   geçen düşman birimleri yalnızca görüş alanınızdaysa görünür (minimap dahil). Görüş geniştir: birim görüşünün 1,5 katı
   + 3 karo, Kasaba Merkezi 15 karo. Gece görüş biraz kısalır. Yeni oyunda kapatılabilir.
-- **Harita:** 160×160 karo. Başlangıç kaynakları (meyve, orman, altın, taş) üsse yakın ama farklı yönlerde; haritaya
+- **Harita:** 224×224 karo (önceki haritanın 2 katı alan). Başlangıç kaynakları (meyve, orman, altın, taş) üsse yakın ama farklı yönlerde; haritaya
   dağılan kümeler alanla orantılıdır ve birbirinden uzaktır (aynı tür en az 22, farklı tür en az 8 karo).
 - **Görünüm:** Binalar, ağaçlar ve dağlar arkalarındaki birimlerin ve tavukların ÖNÜNDE çizilir (ayak izine göre derinlik).
   Örtülen kendi birimleriniz soluk siluetle görünür, düşman tamamen gizlenir.
 - **Mevsimler ve hava:** İlkbahar → Yaz → Sonbahar → Kış (her biri 7,5 dakika; oyun yazla başlar). Sonbaharda meşeler
   kızıla döner. **Kışın her yer beyaza bürünür:** zemin ~40 sn içinde karla kaplanır (göller açık kalır, kıyılar buzlu
   görünür), ağaçlar, çalılar, dağlar, madenler ve bina çatıları karlı görünüme geçer, mini harita da beyazlar;
-  ilkbaharda kar aynı hızla erir. Kar yağışı kışın daha sık olur; **kışın çiftlikler %25 yavaş, ilkbaharda %10 hızlı**. Her mevsimin kendi hava
+  ilkbaharda kar aynı hızla erir. Kış gelince **hemen kar yağmaya başlar** (kışın sis yok, ekranı örten beyaz perde
+  kaldırıldı) ve arayüz **kış temasına** (buz mavisi paneller, karlı üst bar) geçer; **kışın çiftlikler %25 yavaş, ilkbaharda %10 hızlı**. Her mevsimin kendi hava
   olasılıkları vardır: yağmur (hava kararır, yağmur sesi), kar (rüzgâr sesi), sis.
 - **Canlılık:** gündüz kuş sürüleri (yerde gölgeleri kayar), Kasaba Merkezi çevresinde gezinip yem gagalayan tavuklar,
   balık sürülerinin su altı gölgeleri, ara sıra sudan sıçrayan balıklar, ev ve atölyelerin bacalarından duman.

@@ -4,8 +4,9 @@
  */
 export const CONFIG = Object.freeze({
   // --- Harita ---
-  MAP_WIDTH: 160,
-  MAP_HEIGHT: 160,
+  // 224×224: önceki 160×160 haritanın 2 katı alan
+  MAP_WIDTH: 224,
+  MAP_HEIGHT: 224,
   SEED: 1337,
   TILE_WIDTH: 64,   // 2:1 izometrik karo
   TILE_HEIGHT: 32,

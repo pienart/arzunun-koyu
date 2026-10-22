@@ -58,7 +58,7 @@ export class Minimap {
     for (let j = 0; j < H; j++) {
       for (let i = 0; i < W; i++) {
         let c = this.colors[map.terrain[j][i]];
-        const o = map.objects[j][i];
+        const o = map.objects[j][i] ?? (map.occupancy[j][i]?.isResource ? map.occupancy[j][i] : null);
         if (o && !o.isBuilding) {
           if (o.kind === 'tree') c = [34, 74, 26];
           else if (o.kind === 'gold') c = [240, 200, 40];
@@ -67,6 +67,8 @@ export class Minimap {
           else if (o.kind === 'mountain') c = [96, 92, 86];
           else if (o.kind === 'fish') c = [120, 200, 235];
           else if (o.kind === 'cave') c = [70, 66, 62];
+          else if (o.kind === 'quarry') c = [215, 215, 225];
+          else if (o.kind === 'goldReserve') c = [255, 210, 30];
         }
         if (snow && map.terrain[j][i] !== TileId.WATER && o?.kind !== 'gold' && o?.kind !== 'berry') c = [c[0] + (232 - c[0]) * snow, c[1] + (238 - c[1]) * snow, c[2] + (248 - c[2]) * snow];
         const k = (j * W + i) * 4;

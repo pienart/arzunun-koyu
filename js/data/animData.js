@@ -23,13 +23,15 @@ export const ANIMS = {
   cav_walk:   { stride: 2.2 },
   cav_attack: { hit: 0.42 },
   yeti_walk:  { stride: 1.6 },
+  arch_walk:  { stride: 1.3 },
+  arch_build: { period: 2.0, hit: 0.5 },
   yeti_attack: { hit: 0.55 },
 };
 
-export const UNIT_PREFIX = { villager: 'vil', militia: 'mil', archer: 'arc', cavalry: 'cav', ram: 'ram', fishingBoat: 'boat', yeti: 'yeti' };
+export const UNIT_PREFIX = { villager: 'vil', militia: 'mil', archer: 'arc', cavalry: 'cav', ram: 'ram', fishingBoat: 'boat', yeti: 'yeti', architect: 'arch', cart: 'cart' };
 
 /** Yönlü SABİT görselli birimler (araç/tekne): dünya birimi cinsinden boy; kare yok, Renderer sallar/iter */
-export const VEHICLE_HEIGHT = { ram: 56, fishingBoat: 64 };
+export const VEHICLE_HEIGHT = { ram: 56, fishingBoat: 64, cart: 58 };
 
 /**
  * 8 YÖNLÜ YÜRÜYÜŞ
