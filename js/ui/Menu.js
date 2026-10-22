@@ -62,6 +62,9 @@ export class Menu {
           <label class="chk"><input type="checkbox" data-set="life"> Canlılık (kuşlar, tavuklar, balıklar, baca dumanı)</label>
           <label class="chk"><input type="checkbox" data-set="autosave"> 2 dakikada bir otomatik kayıt</label>
           <label class="chk"><input type="checkbox" data-set="showFps"> FPS göstergesi</label>
+          <label class="chk"><input type="checkbox" data-snd="music"> Müzik (B)</label>
+          <label class="chk"><input type="checkbox" data-snd="ambient"> Atmosfer sesleri (N)</label>
+          <label class="chk"><input type="checkbox" data-snd="sfx"> Olay sesleri / efektler (M)</label>
           <div class="vols">
             ${[['master', 'Ana ses'], ['music', 'Müzik'], ['ambient', 'Atmosfer'], ['sfx', 'Efektler']].map(([k, n]) => `
               <label>${n}<input type="range" min="0" max="100" data-vol="${k}"><b></b></label>`).join('')}
@@ -99,6 +102,12 @@ export class Menu {
     this.root.addEventListener('change', (e) => {
       const s = e.target.dataset.set;
       if (s) Settings.set(s, e.target.checked);
+      const snd = e.target.dataset.snd, a = this.game?.audio ?? this.audio;
+      if (snd && a) {
+        if (snd === 'music') a.setMusic(e.target.checked);
+        else if (snd === 'ambient') a.setAmbient(e.target.checked);
+        else a.setSfx(e.target.checked);
+      }
     });
     this.root.addEventListener('input', (e) => {
       const v = e.target.dataset.vol;
@@ -135,6 +144,11 @@ export class Menu {
     const d = Settings.data;
     this.views.settings.querySelectorAll('[data-set="quality"] button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.quality));
     for (const k of ['weather', 'life', 'autosave', 'showFps']) this.views.settings.querySelector(`[data-set="${k}"]`).checked = !!d[k];
+    const a = this.game?.audio;
+    for (const inp of this.views.settings.querySelectorAll('[data-snd]')) {
+      inp.disabled = !a;
+      inp.checked = a ? !!{ music: a.musicOn, ambient: a.ambientOn, sfx: a.sfxOn }[inp.dataset.snd] : true;
+    }
     for (const inp of this.views.settings.querySelectorAll('[data-vol]')) {
       const v = Math.round(d.vol[inp.dataset.vol] * 100);
       inp.value = v; inp.nextElementSibling.textContent = `%${v}`;

@@ -50,7 +50,7 @@ export class EnemyAI {
       if (u && post) u.guardAt(w, post.i, post.j);
     });
     // Düşman hazinesi küçük başlar (oyuncunun 5 kat başlangıcı ona uygulanmaz); gerisini köylüleri toplar
-    this.player.resources = { food: 200, wood: 200, gold: 100, stone: 100 };
+    this.player.resources = { food: 200, wood: 200, gold: 100, stone: 100, hide: 0 };
     // Ekonomi: başlangıç köylüleri
     for (let k = 0; k < w.diff.enemyVillagers; k++) this._spawnWorker();
   }
@@ -107,8 +107,9 @@ export class EnemyAI {
     const w = this.world;
     if (!this.enabled || !w.isAlive(this.tc)) return;
     // Çağ atlama (zamana bağlı): +1 saldırı, +5 can (birim başına)
+    // Düşman sizden ~%5 hızlı gelişir: zamanı gelince ya da siz o çağa geçince (hangisi önce) çağ atlar
     const nextAt = ENEMY_AI.ageAt[this.player.age + 1];
-    if (nextAt !== undefined && w.time >= nextAt) {
+    if (nextAt !== undefined && (w.time >= nextAt * 0.95 || w.player.age > this.player.age)) {
       this.player.advanceAge();
       for (const type of ['militia', 'archer']) { this.player.addBonus(type, 'attack', 1); this.player.addBonus(type, 'hp', 5); }
       this.player.addBonus('tower', 'attack', 1);
@@ -128,8 +129,12 @@ export class EnemyAI {
     this.wave++;
     const n = this.wave;
     const mul = w.diff.waveMul;
-    let militia = Math.max(1, Math.round(Math.min(10, 2 + n) * mul));
-    let archers = n >= 2 ? Math.round(Math.min(6, Math.floor(n / 2) + 1) * mul) : 0;
+    // Her dalga kademeli olarak büyür (oyuncunun ordusu büyüdükçe dalga da ~%5 fazlasıyla büyür)
+    const myArmy = w.units.filter((u) => u.owner === PLAYER && u.isMilitary).length;
+    let militia = Math.max(1, Math.round(Math.min(26, 2 + n * 1.5) * mul));
+    let archers = n >= 2 ? Math.round(Math.min(14, Math.floor(n * 0.8) + 1) * mul) : 0;
+    const want = Math.round(myArmy * 1.05 * 0.6);
+    if (militia + archers < want) militia += Math.min(10, want - militia - archers);
     // Biriken kaynakla ek askerler (köylü üretimi için 100 yiyecek yedekte kalır)
     let bought = 0;
     while (bought < 8) {
@@ -141,11 +146,15 @@ export class EnemyAI {
     const target = w.townCenter && w.isAlive(w.townCenter) ? w.townCenter : w.buildings.find((b) => b.owner === PLAYER);
     if (!target) return;
     const ti = Math.round(target.centerI), tj = Math.round(target.centerJ);
+    // Saldırı yönü her dalgada kademeli döner: önce köyün çevresinde (yaklaşık 18 karo) bir ara noktaya, sonra merkeze
+    this.dirBase ??= Math.atan2(this.tc.centerJ - tj, this.tc.centerI - ti);
+    const ang = this.dirBase + (n - 1) * (Math.PI / 3.2);
+    const st = w.map.findWalkableNear(Math.round(ti + Math.cos(ang) * 18), Math.round(tj + Math.sin(ang) * 18), 6) ?? { i: ti, j: tj };
     const spawnFrom = (type) => (type === 'archer' && w.isAlive(this.range) ? this.range : w.isAlive(this.barracks) ? this.barracks : this.tc);
-    const list = [...Array(militia).fill('militia'), ...Array(archers).fill('archer')].slice(0, ENEMY_AI.maxWave);
+    const list = [...Array(militia).fill('militia'), ...Array(archers).fill('archer')].slice(0, 40);
     for (const type of list) {
       const u = w.spawnUnitNear(spawnFrom(type), type);
-      if (u) u.attackMoveTo(w, ti, tj);
+      if (u) { u.nextGoal = { i: ti, j: tj }; u.attackMoveTo(w, st.i, st.j, true); }
     }
     w.notify(`Düşman saldırısı başladı! (Dalga ${n}: ${militia} milis${archers ? `, ${archers} okçu` : ''}${bought ? ` — ${bought} tanesi düşman hazinesinden` : ''})`, 'warn');
     w.sound('horn');

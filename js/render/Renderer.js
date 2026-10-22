@@ -322,6 +322,7 @@ export class Renderer {
     this._drawBuildingOverlays(ctx, frame);
     this._drawCampfire(ctx, frame);
     this._drawCorpses(ctx, frame);
+    this._drawImpactsAndMeat(ctx);
     this._drawUnits(ctx, frame);
     this._drawProjectiles(ctx);
     if (life) this.ambient.drawSmoke(ctx, frame);
@@ -777,7 +778,7 @@ export class Renderer {
       const tier = obj.def?.tiers ? obj.tier : this.world.players[owner].tier;
       const nightKey = obj.def?.dayNight && this._night && obj.progress >= 1 ? sp.get(`${obj.def.sprite}_night`) : null;
       const s = obj.progress !== undefined && obj.progress < 1 ? sp.get('foundation') : nightKey ?? sp.building(obj.type, tier, owner);
-      const baseW = obj.size * TW * CONFIG.BUILDING_FIT;
+      const baseW = obj.size * TW * CONFIG.BUILDING_FIT * (obj.def?.fit ?? 1); // ince tabanlı süsler (fener, heykel) küçültülür
       const w = baseW / s.baseRatio, h = w * s.aspect;
       // Taban merkezi = ayak izi merkezi (x), görselin alt kenarı = ayak izinin ön köşesi (y)
       const x = cx - s.anchorX * w, y = cy + HH - h + 2;
@@ -816,6 +817,7 @@ export class Renderer {
       case 'stump':
         s = sp.get('stump'); w = TW * 0.42 * obj.scale; h = w * s.aspect; y = cy + HH * 0.35 - h;
         break;
+      case 'portal':
       case 'quarry':
       case 'goldReserve':
       case 'cave': {
@@ -863,7 +865,7 @@ export class Renderer {
     for (let k = this.pickList.length - 1; k >= 0; k--) {
       const L = this.pickList[k];
       if (wx < L.x || wy < L.y || wx > L.x + L.w || wy > L.y + L.h) continue;
-      if (L.obj.kind === 'mountain' || L.obj.kind === 'stump' || L.obj.kind === 'ruins' || L.obj.kind === 'campfire' || L.obj.kind === 'cave' || L.obj.def?.ground) continue;
+      if (L.obj.kind === 'mountain' || L.obj.kind === 'stump' || L.obj.kind === 'ruins' || L.obj.kind === 'campfire' || L.obj.kind === 'cave' || L.obj.kind === 'portal' || L.obj.def?.ground) continue;
       let u = (wx - L.x) / L.w;
       if (L.flip) u = 1 - u;
       if (L.s.hit(u, (wy - L.y) / L.h)) return L.obj;
@@ -1026,6 +1028,7 @@ export class Renderer {
     } else {
       s = sp.unitSprite(u, st);
       const k = sp.unitScale[u.type] ?? sp.villagerScale;
+      if (u.def.animal && u.moving) wy -= Math.abs(Math.sin(u.walkDist * (u.type === 'rabbit' ? 9 : 5))) * (u.type === 'rabbit' ? 4 : 2.5);
       w = s.levels[0].width * k; h = s.levels[0].height * k;
       // Yürürken yön dilimi aynalamayı belirler (batı = doğunun aynası); dururken hedefe bakış (facing)
       flip = st?.flip !== undefined ? st.flip : it.facing < 0;
@@ -1317,9 +1320,11 @@ export class Renderer {
     // Evlerin pencereleri (yalnızca ekrandaki tamamlanmış kendi binaları)
     const v = this._viewRect(80);
     for (const b of this.world.buildings) {
-      if (!b.complete || b.type === 'farm' || b.owner !== PLAYER) continue;
+      if (!b.complete || b.type === 'farm' || b.owner !== PLAYER || b.def.ground || b.def.wall) continue;
       const cx = (b.centerI - b.centerJ) * HW, cy = (b.centerI + b.centerJ) * HH;
       if (cx < v.l || cx > v.r || cy < v.t || cy > v.b) continue;
+      if (b.def.lamp) { this._lights.push({ x: cx, y: cy - 40, r: 125, warm: true, flicker: 0.96 + 0.04 * cnoise(t * 0.7 + b.id), strength: 0.9 }); continue; }
+      if (b.def.decor) continue;
       this._lights.push({ x: cx, y: cy - b.size * 6, r: 40 + b.size * 26, warm: true, flicker: 0.95 + 0.05 * cnoise(t * 0.8 + b.id), strength: 0.55 });
     }
 
@@ -1432,6 +1437,30 @@ export class Renderer {
    * Oklar: yerdeki konum başlangıçtan hedefe doğrusal ilerler, yükseklik ise sin(π·p) ile kavis çizer.
    * Ok gövdesinin yönü, yörüngenin bir sonraki noktasına göre hesaplanır.
    */
+  /** Mancınık isabetleri (toz bulutu) ve avlanan hayvanların et yığınları */
+  _drawImpactsAndMeat(ctx) {
+    const w = this.world, fx = this.fx, fog = w.fog;
+    for (const im of w.impacts ?? []) {
+      const age = w.time - im.t;
+      if (age > 1.2) continue;
+      const x = (im.x - im.y) * HW, y = (im.x + im.y) * HH, r = 14 + age * 40;
+      ctx.globalAlpha = (1 - age / 1.2) * 0.7;
+      ctx.drawImage(fx.smoke, x - r, y - r * 0.6, r * 2, r * 1.2);
+    }
+    ctx.globalAlpha = 1;
+    const v = this._viewRect(40);
+    for (const o of w.meat ?? []) {
+      if (!w.isAlive(o) || (fog && !fog.isExplored(o.i, o.j))) continue;
+      const x = (o.i - o.j) * HW, y = (o.i + o.j) * HH;
+      if (x < v.l || x > v.r || y < v.t || y > v.b) continue;
+      const k = 0.6 + 0.4 * (o.amount / o.maxAmount);
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(x, y + 2, 12 * k, 5 * k, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#7b2f22'; ctx.beginPath(); ctx.ellipse(x, y - 2, 10 * k, 5 * k, -0.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#b5523c'; ctx.beginPath(); ctx.ellipse(x - 2, y - 4, 6 * k, 3 * k, -0.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#efe3cf'; ctx.fillRect(x + 4 * k, y - 6 * k, 6 * k, 1.6);
+    }
+  }
+
   _drawProjectiles(ctx) {
     const list = this.world.projectiles;
     if (!list.length) return;
@@ -1444,6 +1473,11 @@ export class Renderer {
     for (const pr of list) {
       const p = Math.min(1, pr.p);
       const [x, y] = pos(pr, p);
+      if (pr.stone) { // mancınık taşı: gölgeli gri yuvarlak kaya
+        ctx.fillStyle = '#4d4a45'; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.arc(x - 1.5, y - 1.5, 2, 0, Math.PI * 2); ctx.fill();
+        continue;
+      }
       const [x2, y2] = pos(pr, Math.min(1, p + 0.04));
       let dx = x2 - x, dy = y2 - y;
       const len = Math.hypot(dx, dy) || 1;

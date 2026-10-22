@@ -4,13 +4,16 @@
  * Yeni bir bina/birim/teknoloji eklemek çoğu zaman yalnızca bu dosyaya bir satır eklemek demektir.
  */
 
-export const RESOURCE_TYPES = ['food', 'wood', 'gold', 'stone'];
-export const RESOURCE_NAMES = { food: 'Yiyecek', wood: 'Odun', gold: 'Altın', stone: 'Taş' };
+// hide (deri): avlanan yabani hayvanlardan; kışlık giysi ve zırh araştırmalarında kullanılır
+export const RESOURCE_TYPES = ['food', 'wood', 'gold', 'stone', 'hide'];
+export const RESOURCE_NAMES = { food: 'Yiyecek', wood: 'Odun', gold: 'Altın', stone: 'Taş', hide: 'Deri' };
 
 /** Oyuncular: 1 = siz (mavi), 2 = düşman (kırmızı), 3 = vahşi doğa (mağaradaki yaratık; herkese saldırır) */
 export const PLAYER = 1;
 export const ENEMY = 2;
 export const WILD = 3;
+
+/** Yabani hayvanlar: sahibi yok sayılır (WILD), askerler kendiliğinden saldırmaz; köylüler avlar */
 
 /**
  * Çağlar. tier → binaların hangi görsel setle çizileceği (0: ahşap/saz, 1: taş+ahşap, 2: büyük taş).
@@ -18,11 +21,11 @@ export const WILD = 3;
  */
 export const AGES = [
   { id: 0, name: 'Karanlık Çağ',      short: 'I',   tier: 0 },
-  { id: 1, name: 'Feodal Çağ',        short: 'II',  tier: 1, cost: { food: 300 },             time: 25,
+  { id: 1, name: 'Feodal Çağ',        short: 'II',  tier: 1, cost: { food: 300 },             time: 90,
     req: { military: 3, buildings: { house: 2, lumberCamp: 1, mill: 1, barracks: 1 } } },
-  { id: 2, name: 'Kale Çağı',         short: 'III', tier: 2, cost: { food: 500, gold: 200 },  time: 35,
+  { id: 2, name: 'Kale Çağı',         short: 'III', tier: 2, cost: { food: 500, gold: 200 },  time: 140,
     req: { military: 8, buildings: { house: 5, scienceCenter: 1, archeryRange: 1, market: 1, watchTower: 1, animalFarm: 1 } } },
-  { id: 3, name: 'İmparatorluk Çağı', short: 'IV',  tier: 2, cost: { food: 800, gold: 500 },  time: 45,
+  { id: 3, name: 'İmparatorluk Çağı', short: 'IV',  tier: 2, cost: { food: 800, gold: 500 },  time: 200,
     req: { military: 15, buildings: { house: 8, stable: 1, siegeWorkshop: 1, university: 1, alchemyLab: 1 } } },
 ];
 
@@ -90,7 +93,7 @@ export const BUILDINGS = {
   },
   siegeWorkshop: {
     name: 'Kuşatma Atölyesi', size: 3, hp: 1500, cost: { wood: 200 }, buildTime: 40, age: 2, requires: ['barracks'],
-    trains: ['ram'], sprite: 'siegeWorkshop', armor: { melee: 0, pierce: 7 },
+    trains: ['ram', 'catapult', 'warWagon'], sprite: 'siegeWorkshop', armor: { melee: 0, pierce: 7 },
     desc: 'Binalara ağır hasar veren koçbaşı üretir.',
   },
   wall: {
@@ -110,6 +113,47 @@ export const BUILDINGS = {
       { name: 'Taş Kapı', hp: 1800, armor: { melee: 6, pierce: 10 }, cost: { stone: 30 } },
       { name: 'Kale Kapısı', hp: 3600, armor: { melee: 10, pierce: 14 }, cost: { stone: 45 } },
     ],
+  },
+  // ── Halk, gıda ve depolama ──
+  tavern: {
+    name: 'Taverna', size: 3, hp: 1200, cost: { wood: 200, gold: 50 }, buildTime: 35, age: 1, sprite: 'tavern',
+    happiness: 7, wineUse: 0.04, armor: { melee: 0, pierce: 7 },
+    desc: 'Halkın eğlendiği yer: huzuru artırır (+7; şarap yoksa yalnızca +2). Şarap Mahzeni\'nin şarabını tüketir.',
+  },
+  wineCellar: {
+    name: 'Şarap Mahzeni', size: 2, hp: 800, cost: { wood: 120, stone: 60 }, buildTime: 25, age: 1, sprite: 'wineCellar',
+    wine: { make: 0.08, food: 0.16 }, armor: { melee: 1, pierce: 8 },
+    desc: 'Yiyecekten şarap yapar (dakikada ~10 yiyecek → 5 şarap). Tavernalar şarapla halkı mutlu eder.',
+  },
+  granary: {
+    name: 'Ambar', size: 3, hp: 1400, cost: { wood: 200, stone: 50 }, buildTime: 30, age: 0, sprite: 'granary', levels: true,
+    protect: 0.05, armor: { melee: 1, pierce: 8 },
+    desc: 'Güvenli depo: yağmada kaynakların %5\'ini korur (seviye başına +%5, ambarlar toplanır, en fazla %40). Kışın gıda tüketimindeki artışı azaltır.',
+  },
+  greenhouse: {
+    name: 'Sera', size: 3, hp: 900, cost: { wood: 150, stone: 50, gold: 50 }, buildTime: 35, age: 1, sprite: 'greenhouse',
+    income: { food: 0.35 }, incomeMod: 'farm', levels: true, winterOk: true, armor: { melee: 0, pierce: 5 },
+    desc: 'Cam altında sebze: kendiliğinden dakikada 21 yiyecek, KIŞIN DE. Kışın köylüler dışarıdan gıda toplayamaz; sera ve sebze yatakları çalışır.',
+  },
+  vegetableBed: {
+    name: 'Sebze Yatağı', size: 2, hp: 300, cost: { wood: 50 }, buildTime: 10, age: 0, sprite: 'vegetableBed',
+    farmFood: 250, winterOk: true, farmMul: 1.2, armor: { melee: 0, pierce: 3 },
+    desc: 'Küçük, verimli bostan (250 yiyecek, çiftlikten %20 hızlı). Örtülü olduğu için kışın da hasat edilir.',
+  },
+  waterMill: {
+    name: 'Su Değirmeni', size: 2, hp: 700, cost: { wood: 150 }, buildTime: 25, age: 0, coastal: true, sprite: 'waterMill',
+    income: { food: 0.2 }, incomeMod: 'farm', armor: { melee: 0, pierce: 7 },
+    desc: 'Su kenarına kurulur; un öğütür: kendiliğinden az miktarda yiyecek (dakikada 12).',
+  },
+  goldPanning: {
+    name: 'Altın Eleme Tesisi', size: 2, hp: 700, cost: { wood: 150, stone: 50 }, buildTime: 30, age: 1, coastal: true, sprite: 'goldPanning',
+    income: { gold: 0.25 }, incomeMod: 'gold', armor: { melee: 0, pierce: 7 },
+    desc: 'Feodal Çağ\'dan itibaren su kenarına kurulur: kumdan altın eler (dakikada 15 altın).',
+  },
+  hospital: {
+    name: 'Hastane', size: 3, hp: 1500, cost: { wood: 250, stone: 100, gold: 100 }, buildTime: 40, age: 1, sprite: 'hospital',
+    heal: { radius: 9, rate: 3 }, revive: { chance: 0.35, time: 25 }, armor: { melee: 1, pierce: 8 },
+    desc: 'Çevresindeki (9 karo) yaralı askerleri hızla iyileştirir (saniyede 3 can). Ölen askerlerinizin bir kısmı (%35) 25 sn sonra hastanede iyileşip geri döner.',
   },
   firePit: {
     name: 'Ateş Çukuru', size: 1, hp: 150, cost: { wood: 30, stone: 10 }, buildTime: 6, age: 0, sprite: 'campfire', light: true,
@@ -155,11 +199,35 @@ export const BUILDINGS = {
     armor: { melee: 5, pierce: 10 }, desc: 'Taş döşeli yürüme yolu: sürükleyerek çizin. Üzerinde birimler %35 daha hızlı yürür.',
   },
   flowerBed: {
-    name: 'Çiçek Tarhı', size: 1, hp: 100, cost: { wood: 10, food: 10 }, buildTime: 4, age: 0, decor: true, sprite: 'flowerBed',
+    name: 'Çiçek Tarhı', size: 1, hp: 100, cost: { wood: 10, food: 10 }, buildTime: 4, age: 0, decor: true, sprite: 'flowerBed', beauty: 1,
     armor: { melee: 0, pierce: 5 }, desc: 'Lale ve lavanta dolu taş kenarlı tarh: şehri güzelleştirir.',
   },
+  hedge: {
+    name: 'Çit Bitkisi', size: 1, hp: 120, cost: { wood: 4 }, buildTime: 2, age: 0, decor: true, line: true, sprite: 'hedge', beauty: 0.4,
+    armor: { melee: 1, pierce: 5 }, desc: 'Budanmış şimşir: sürükleyerek çizin. Bahçe ve yol kenarlarını çevreler (güzellik).',
+  },
+  bench: {
+    name: 'Bank', size: 1, hp: 100, cost: { wood: 15 }, buildTime: 4, age: 0, decor: true, sprite: 'bench', beauty: 1, fit: 0.8,
+    armor: { melee: 0, pierce: 5 }, desc: 'Meydana bank: halk dinlenir (güzellik +1).',
+  },
+  lampPost: {
+    name: 'Sokak Feneri', size: 1, hp: 120, cost: { wood: 10, gold: 10 }, buildTime: 4, age: 0, decor: true, sprite: 'lampPost', beauty: 1, lamp: true, fit: 0.32,
+    armor: { melee: 0, pierce: 5 }, desc: 'Geceleri yanar: çevresini aydınlatır ve görüşü artırır.',
+  },
+  well: {
+    name: 'Kuyu', size: 1, hp: 300, cost: { stone: 40, wood: 20 }, buildTime: 10, age: 0, decor: true, sprite: 'well', beauty: 2, wellBonus: 0.1, fit: 0.75,
+    armor: { melee: 2, pierce: 8 }, desc: 'Temiz su: 8 karo içinde çalışan köylüler %10 hızlı toplar.',
+  },
+  statue: {
+    name: 'Heykel', size: 1, hp: 500, cost: { stone: 120, gold: 40 }, buildTime: 20, age: 1, decor: true, sprite: 'statue', beauty: 4, fit: 0.6,
+    armor: { melee: 4, pierce: 10 }, desc: 'Kral heykeli: halkın gururu (güzellik +4).',
+  },
+  fountain: {
+    name: 'Çeşme', size: 2, hp: 600, cost: { stone: 200, gold: 60 }, buildTime: 30, age: 1, decor: true, sprite: 'fountain', beauty: 6, fountain: true,
+    armor: { melee: 3, pierce: 10 }, desc: 'Meydan çeşmesi: güzellik +6, çevresindeki (6 karo) birimler yavaşça iyileşir.',
+  },
   cherryTree: {
-    name: 'Süs Ağacı', size: 1, hp: 150, cost: { wood: 20, food: 20 }, buildTime: 6, age: 0, decor: true, sprite: 'cherryTree',
+    name: 'Süs Ağacı', size: 1, hp: 150, cost: { wood: 20, food: 20 }, buildTime: 6, age: 0, decor: true, sprite: 'cherryTree', beauty: 2, fit: 0.8,
     armor: { melee: 0, pierce: 5 }, desc: 'Taş saksıda çiçek açmış kiraz ağacı: meydanları ve yolları süsler.',
   },
   wonder: {
@@ -170,9 +238,9 @@ export const BUILDINGS = {
 };
 
 /** Köylünün inşa menüsündeki sıra */
-export const BUILD_MENU = ['house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 'animalFarm', 'dock', 'wall', 'gate', 'firePit', 'barracks', 'archeryRange', 'stable', 'watchTower', 'scienceCenter', 'market', 'siegeWorkshop', 'university', 'alchemyLab', 'wonder'];
+export const BUILD_MENU = ['house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 'vegetableBed', 'animalFarm', 'greenhouse', 'granary', 'dock', 'waterMill', 'goldPanning', 'wall', 'gate', 'firePit', 'barracks', 'archeryRange', 'stable', 'watchTower', 'hospital', 'tavern', 'wineCellar', 'scienceCenter', 'market', 'siegeWorkshop', 'university', 'alchemyLab', 'wonder'];
 /** Mimarın süsleme menüsü */
-export const DECOR_MENU = ['path', 'flowerBed', 'cherryTree'];
+export const DECOR_MENU = ['path', 'hedge', 'flowerBed', 'cherryTree', 'bench', 'lampPost', 'well', 'statue', 'fountain'];
 
 /**
  * Birimler.
@@ -207,6 +275,21 @@ export const UNITS = {
     name: 'Koçbaşı', cost: { wood: 160, gold: 75 }, trainTime: 30, pop: 1, hp: 175, speed: 0.9,
     attack: 4, armor: { melee: 0, pierce: 150 }, range: 0, reload: 3, los: 4, bldgMul: 30, siege: true,
   },
+  // Mancınık: uzaktan taş atar, isabet noktasında alan hasarı (binalara ×3)
+  catapult: {
+    name: 'Mancınık', cost: { wood: 250, gold: 150 }, trainTime: 45, pop: 2, hp: 150, speed: 0.85, age: 2,
+    attack: 30, armor: { melee: 0, pierce: 6 }, range: 9, reload: 6, los: 10, bldgMul: 3, splash: 1.3, vehicle: true,
+  },
+  // Savaş Arabası: içine 50 asker alır, yayalardan hızlı; çok pahalı (5000 kaynak) ve uzun sürede üretilir
+  warWagon: {
+    name: 'Savaş Arabası', cost: { food: 1000, wood: 2000, gold: 1500, stone: 500 }, trainTime: 180, pop: 1, hp: 1400, speed: 2.3, age: 3,
+    attack: 0, armor: { melee: 4, pierce: 12 }, range: 0, reload: 2, los: 7, bldgMul: 0, vehicle: true, transport: 50, noAttack: true,
+  },
+  // Yabani hayvanlar (avlanır: et + deri)
+  gazelle: { name: 'Ceylan', cost: {}, trainTime: 0, pop: 0, hp: 18, speed: 2.4, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 6, bldgMul: 0, animal: true, civil: true, meat: 120, hide: 6, height: 26 },
+  deer:    { name: 'Geyik', cost: {}, trainTime: 0, pop: 0, hp: 30, speed: 2.2, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 6, bldgMul: 0, animal: true, civil: true, meat: 160, hide: 10, height: 33 },
+  rabbit:  { name: 'Tavşan', cost: {}, trainTime: 0, pop: 0, hp: 6, speed: 2.0, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 5, bldgMul: 0, animal: true, civil: true, meat: 40, hide: 2, height: 11 },
+  horse:   { name: 'Yaban Atı', cost: {}, trainTime: 0, pop: 0, hp: 45, speed: 2.7, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 7, bldgMul: 0, animal: true, civil: true, meat: 200, hide: 14, height: 36 },
   fishingBoat: {
     name: 'Balıkçı Teknesi', cost: { wood: 75 }, trainTime: 15, pop: 1, hp: 60, speed: 2.0, carry: 15,
     attack: 0, armor: { melee: 0, pierce: 4 }, range: 0, reload: 2, los: 6, bldgMul: 0, naval: true,
@@ -232,7 +315,8 @@ export const RESOURCE_NODES = {
   berry: { name: 'Meyve Çalısı',  resType: 'food',  amount: 125 },
   gold:  { name: 'Altın Madeni',  resType: 'gold',  amount: 800 },
   stone: { name: 'Taş Ocağı',     resType: 'stone', amount: 350 },
-  fish:  { name: 'Balık Sürüsü',  resType: 'food',  amount: 250 },
+  fish:  { name: 'Balık Sürüsü',  resType: 'food',  amount: 400 },
+  carcass: { name: 'Av Eti',      resType: 'food',  amount: 120 },
   // Tesisler: haritanın birkaç yerinde, 3×3 büyük ve zengin kaynak alanları (birçok köylü aynı anda çalışır)
   quarry:      { name: 'Taş Ocağı Tesisi', resType: 'stone', amount: 3000, size: 3 },
   goldReserve: { name: 'Altın Rezervi',    resType: 'gold',  amount: 3000, size: 3 },
@@ -286,6 +370,9 @@ export const TECHS = {
   // ── SAVUNMA ──
   masonry:     { cat: 'defense', name: 'Duvarcılık',     icon: 'stone',       age: 1, cost: { wood: 150, stone: 100 }, time: 30, effect: { bldgHp: 1.2 }, desc: 'Tüm binalar +%20 can.' },
   architecture:{ cat: 'defense', name: 'Mimarlık',       icon: 'build',       age: 3, cost: { wood: 300, stone: 200 }, time: 40, effect: { bldgHp: 1.2 }, requires: 'masonry', desc: 'Tüm binalar +%20 can.' },
+  furClothes:  { cat: 'health', name: 'Kürk Giysiler',  icon: 'it_hide',     age: 1, cost: { hide: 60, food: 100 },  time: 25, add: { winterProof: 1 }, desc: 'Deriden kışlık giysi: kışın toplama yavaşlamaz ve halkın huzuru düşmez.' },
+  leatherArmor:{ cat: 'army', name: 'Deri Zırh',         icon: 'it_hide',     age: 1, cost: { hide: 100, gold: 50 },  time: 25, bonus: { militia: { melee: 1, pierce: 1 }, archer: { melee: 1, pierce: 1 }, cavalry: { melee: 1, pierce: 1 } }, desc: 'Askerler: deriden zırh, +1 / +1.' },
+  hunting:     { cat: 'village', name: 'Avcılık',        icon: 'it_hide',     age: 0, cost: { food: 80, wood: 40 },   time: 15, add: { huntBonus: 0.5 }, desc: 'Avlanan hayvandan %50 fazla et ve deri.' },
   murderHoles: { cat: 'defense', name: 'Mazgal Delikleri', icon: 'quiver',    age: 2, cost: { food: 200, stone: 100 }, time: 30, bonus: { tower: { attack: 2 } }, desc: 'Kuleler ve Kasaba Merkezi: +2 ok hasarı.' },
 };
 
@@ -342,13 +429,26 @@ export const ENEMY_AI = {
 export const DIFFICULTY = {
   // firstWave: ilk saldırının en erken zamanı (sn; asla 20 dakikadan önce değil) — üstüne 0–5 dk rastgele eklenir.
   // interval : dalgalar arası ORTALAMA süre; her seferinde %60–%150 arası rastgele (saldırı zamanı tahmin edilemez).
-  easy:   { name: 'Kolay', firstWave: 1500, interval: 300, waveMul: 0.65, enemyGather: 0.7, enemyVillagers: 4 },
-  normal: { name: 'Normal', firstWave: 1200, interval: 240, waveMul: 1, enemyGather: 1, enemyVillagers: 6 },
-  hard:   { name: 'Zor', firstWave: 1200, interval: 180, waveMul: 1.4, enemyGather: 1.35, enemyVillagers: 9 },
+  // enemyGather: düşman köylülerinin toplama çarpanı (normalde sizden %5 hızlı)
+  easy:   { name: 'Kolay', firstWave: 1500, interval: 300, waveMul: 0.65, enemyGather: 0.75, enemyVillagers: 4 },
+  normal: { name: 'Normal', firstWave: 1200, interval: 240, waveMul: 1, enemyGather: 1.05, enemyVillagers: 6 },
+  hard:   { name: 'Zor', firstWave: 1200, interval: 180, waveMul: 1.4, enemyGather: 1.4, enemyVillagers: 9 },
 };
 
+/**
+ * HUZUR (0–100): toplama hızını etkiler (×0,8 … ×1,2).
+ * Artıran: evler, nüfus, güzellik (süsler), tavernalar (şarapla). Azaltan: savaş, kayıplar, açlık, kış (kürksüz).
+ */
+export const HAPPINESS = { start: 60, base: 45, perHouse: 1.5, maxHouse: 15, perPop: 0.2, maxPop: 10, perBeauty: 0.6, maxBeauty: 20, maxTavern: 21, war: 15, starving: 25, winter: 8 };
+
+/** Gıda tüketimi (birim başına, saniyede): köylü ~0,7, asker ~1,2 yiyecek/dk. Kışın %30 fazla (ambar varsa %10). */
+export const UPKEEP = { civil: 0.012, military: 0.02, winter: 1.3, winterGranary: 1.1 };
+
+/** Yağma: düşman bir binanızı yıkınca korunmayan kaynakların bu oranı çalınır */
+export const PLUNDER = 0.08;
+
 export const START = {
-  resources: { food: 5000, wood: 5000, gold: 5000, stone: 5000 },
+  resources: { food: 5000, wood: 5000, gold: 5000, stone: 5000, hide: 0 },
   villagers: 3,
   popMax: 200,
 };

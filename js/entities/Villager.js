@@ -156,8 +156,9 @@ export class Villager extends Unit {
     const cap = this.def.carry * mods.carry;
     const season = rateKey === 'farm' ? world.weather.farmMul : 1;
     const diff = this.owner !== PLAYER ? world.diff.enemyGather : 1;
-    const lvl = node.isBuilding ? world.levelMul(node) : 1; // yükseltilmiş çiftlik daha hızlı ürün verir
-    const want = Math.min(GATHER_RATES[rateKey] * mods[rateKey] * season * diff * lvl * (this.def.gatherMul ?? 1) * dt, cap - this.carry);
+    if (!world.canGatherNow(node)) { this.stop(); return; } // kış: dışarıdan gıda yok
+    const lvl = node.isBuilding ? world.levelMul(node) * (node.def.farmMul ?? 1) : 1; // yükseltilmiş çiftlik daha hızlı ürün verir
+    const want = Math.min(GATHER_RATES[rateKey] * mods[rateKey] * season * diff * lvl * (this.def.gatherMul ?? 1) * world.gatherMul(this) * dt, cap - this.carry);
     const got = world.takeFromNode(node, want);
     this.carry += got;
     this.lastKind = node.isBuilding ? 'farm' : node.kind;

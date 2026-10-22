@@ -1,10 +1,11 @@
 import { CONFIG } from '../config.js';
-import { BUILDINGS, UNITS, TECHS, AGES, MARKET, RESOURCE_NAMES, START, PLAYER, ENEMY, WILD, REPAIR, DIFFICULTY, LEVELS, ITEMS, formatCost } from '../data/gameData.js';
+import { BUILDINGS, UNITS, TECHS, AGES, MARKET, RESOURCE_NAMES, RESOURCE_TYPES, START, PLAYER, ENEMY, WILD, REPAIR, DIFFICULTY, LEVELS, ITEMS, HAPPINESS, UPKEEP, PLUNDER, RESOURCE_NODES, formatCost } from '../data/gameData.js';
 import { TileId, TileRegistry } from '../world/TileTypes.js';
 import { SpatialGrid } from './SpatialGrid.js';
 import { Weather } from './Weather.js';
 import { Boat } from '../entities/Boat.js';
-import { GameMap, StaticObject } from '../world/GameMap.js';
+import { GameMap, StaticObject, ResourceNode } from '../world/GameMap.js';
+const StaticObjectNode = (kind, i, j, amount) => new ResourceNode(kind, i, j, { amount, blocks: false });
 import { Building } from '../entities/Building.js';
 import { Villager } from '../entities/Villager.js';
 import { Architect, Cart } from '../entities/Workers.js';
@@ -13,6 +14,8 @@ import { Player } from './Player.js';
 import { Pathfinder } from './Pathfinder.js';
 import { EnemyAI } from './EnemyAI.js';
 import { Wild } from './Wild.js';
+import { Portals } from './Portals.js';
+import { Animals } from './Animals.js';
 
 const CORPSE_TIME = 6; // ceset: ölüm animasyonu + yerde kalma + solma (sn)
 
@@ -68,6 +71,8 @@ export class World {
     this._attackAlertAt = -99;
     this.enemyAI = new EnemyAI(this);
     this.wild = new Wild(this);
+    this.portals = new Portals(this);
+    this.animals = new Animals(this);
     if (opts.save) return; // SaveGame.apply gerisini kurar
 
     // Başlangıç: kasaba merkezi + köylüler
@@ -81,6 +86,8 @@ export class World {
     this.enemyAI.setup();
     // Mağara: iki üsten de uzak, rastgele bir yer
     this.wild.setup();
+    this.portals.setup();
+    this.animals.setup();
     this.recountPopulation();
   }
 
@@ -143,6 +150,9 @@ export class World {
     if (this.corpses.length && this.corpses[0].t > CORPSE_TIME) this.corpses = this.corpses.filter((c) => c.t <= CORPSE_TIME);
     this.enemyAI.update(dt);
     this.wild.update(dt);
+    this.portals.update(dt);
+    this.animals.update(dt);
+    this._economy(dt);
   }
 
   // ───────────── Sorgular ─────────────
@@ -165,7 +175,7 @@ export class World {
   recountPopulation() {
     for (const p of Object.values(this.players)) {
       let pop = 0, cap = 0;
-      for (const u of this.units) if (u.owner === p.id) pop++;
+      for (const u of this.units) if (u.owner === p.id) pop += 1 + (u.cargo?.length ?? 0);
       for (const b of this.buildings) {
         if (b.owner !== p.id) continue;
         pop += b.garrison.length;
@@ -303,7 +313,7 @@ export class World {
     if (kind === 'farm') {
       const owner = forUnit?.owner ?? PLAYER;
       for (const b of this.buildings) {
-        if (b.type !== 'farm' || b.owner !== owner || !b.complete) continue;
+        if (!b.def.farmFood || b.owner !== owner || !b.complete || !this.canGatherNow(b)) continue;
         if (b.farmer && b.farmer !== forUnit && !b.farmer.dead && b.farmer.task?.target === b) continue;
         const d = Math.hypot(b.centerI - ci, b.centerJ - cj);
         if (d < bestD && d <= maxR) { bestD = d; best = b; }
@@ -423,6 +433,11 @@ export class World {
   }
 
   assignGather(unit, target, keepCarry = false) {
+    if (!this.canGatherNow(target)) {
+      if (unit.owner === PLAYER && this.time - (this._winterWarnAt ?? -99) > 20) { this._winterWarnAt = this.time; this.notify('Kışın dışarıdan gıda toplanamaz: sera, sebze yatağı, balıkçı teknesi ve av işe yarar.', 'warn'); }
+      unit.stop();
+      return;
+    }
     if (target.isBuilding) {
       // Çiftlikte aynı anda tek köylü çalışır (AoE kuralı)
       if (target.farmer && target.farmer !== unit && !target.farmer.dead && target.farmer.task?.target === target) {
@@ -489,13 +504,13 @@ export class World {
   /** İnşaat bittiğinde köylü ne yapsın? (AoE davranışı) */
   afterBuild(unit, b) {
     unit.stop();
-    if (b.type === 'farm' && (!b.farmer || b.farmer.dead || b.farmer.task?.target !== b)) {
+    if (b.def.farmFood && (!b.farmer || b.farmer.dead || b.farmer.task?.target !== b)) {
       this.assignGather(unit, b);
       return;
     }
     let pending = null, pd = 10;
     for (const o of this.buildings) {
-      if (o.owner !== unit.owner || o.complete || o.type === 'farm' || !this.canBuild(unit, o.type)) continue;
+      if (o.owner !== unit.owner || o.complete || o.def.farmFood || !this.canBuild(unit, o.type)) continue;
       const d = rectDist(unit.tileI, unit.tileJ, o);
       if (d < pd) { pd = d; pending = o; }
     }
@@ -591,6 +606,12 @@ export class World {
   }
 
   /** Haritadaki balık sürüleri (Renderer'ın su altı çizimi için) */
+  collectKind(kind) {
+    const out = [], map = this.map;
+    for (let j = 0; j < map.height; j++) for (let i = 0; i < map.width; i++) { const o = map.objects[j][i]; if (o?.kind === kind) out.push(o); }
+    return out;
+  }
+
   collectFish() {
     const out = [], map = this.map;
     for (let j = 0; j < map.height; j++) for (let i = 0; i < map.width; i++) { const o = map.objects[j][i]; if (o?.kind === 'fish') out.push(o); }
@@ -685,6 +706,195 @@ export class World {
     this.sound('collapse', b.centerI, b.centerJ, 0.5);
   }
 
+  // ───────────── Ekonomi: gıda tüketimi, şarap, huzur, hastane, çeşme ─────────────
+  /** Ambarların koruduğu pay (0..0,4) */
+  protectedShare(owner) {
+    let s = 0;
+    for (const b of this.buildings) if (b.owner === owner && b.complete && b.def.protect) s += b.def.protect * b.level;
+    return Math.min(0.4, s);
+  }
+
+  /** Kışın dışarıdaki gıda kaynaklarından (meyve, çiftlik, kıyı balığı) toplanamaz; sera/sebze yatağı ve av eti hariç */
+  canGatherNow(node) {
+    if (this.weather.season.id !== 'winter') return true;
+    const food = node.isBuilding ? !!node.def.farmFood : node.resType === 'food';
+    if (!food) return true;
+    return node.isBuilding ? !!node.def.winterOk : node.kind === 'carcass';
+  }
+
+  /** Köylünün toplama çarpanı: huzur (×0,8–1,2), kuyu yakınlığı (+%10), kış soğuğu (kürk yoksa −%15) */
+  gatherMul(u) {
+    const p = this.players[u.owner];
+    let m = u.owner === PLAYER ? 0.8 + 0.4 * (p.happiness / 100) : 1;
+    if (this._wellAt(u.tileI, u.tileJ, u.owner)) m *= 1.1;
+    if (this.weather.season.id === 'winter' && !p.modifiers.winterProof) m *= 0.85;
+    return m;
+  }
+
+  _wellAt(i, j, owner) {
+    if (owner !== PLAYER) return false;
+    if (this._wellV !== this.map.version) {
+      this._wellV = this.map.version;
+      this._wells = this.buildings.filter((b) => b.owner === PLAYER && b.complete && b.def.wellBonus).map((b) => [b.i, b.j]);
+    }
+    for (const [a, c] of this._wells) if (Math.abs(a - i) <= 8 && Math.abs(c - j) <= 8) return true;
+    return false;
+  }
+
+  _economy(dt) {
+    const p = this.player, winter = this.weather.season.id === 'winter';
+    // 1) Gıda tüketimi: köylü/asker başına; kışın daha fazla (ambar varsa az)
+    let need = 0;
+    for (const u of this.units) {
+      if (u.owner !== PLAYER || u.def.animal) continue;
+      need += (u.isMilitary ? UPKEEP.military : UPKEEP.civil) * (1 + (u.cargo?.length ?? 0) * 0);
+      if (u.cargo) need += u.cargo.length * UPKEEP.military;
+    }
+    for (const b of this.buildings) if (b.owner === PLAYER) need += b.garrison.length * UPKEEP.civil;
+    const hasGranary = this.buildings.some((b) => b.owner === PLAYER && b.complete && b.def.protect);
+    if (winter) need *= hasGranary ? UPKEEP.winterGranary : UPKEEP.winter;
+    const eat = Math.min(p.resources.food, need * dt);
+    p.resources.food -= eat;
+    p.stats.spent.food += eat;
+    p.starving = need > 0 && p.resources.food <= 0.5;
+    // 2) Şarap: mahzen yiyecekten şarap yapar, tavernalar tüketir
+    for (const b of this.buildings) {
+      if (b.owner !== PLAYER || !b.complete) continue;
+      if (b.def.wine && p.wine < 500 && p.resources.food > 100) { const f = b.def.wine.food * dt; p.resources.food -= f; p.stats.spent.food += f; p.wine += b.def.wine.make * dt; }
+      if (b.def.wineUse) p.wine = Math.max(0, p.wine - b.def.wineUse * dt);
+    }
+    // 3) Hastane ve çeşme: yakındaki birimleri iyileştir; hastanedeki yaralılar geri döner
+    for (const b of this.buildings) {
+      if (!b.complete) continue;
+      const heal = b.def.heal ?? (b.def.fountain ? { radius: 6, rate: 1 } : null);
+      if (heal) {
+        this.grid.each(b.centerI, b.centerJ, heal.radius, (u) => {
+          if (u.owner !== b.owner || u.dead || u.hp >= u.maxHp) return;
+          if (b.def.heal && !u.isMilitary) return;
+          u.hp = Math.min(u.maxHp, u.hp + heal.rate * dt);
+        });
+      }
+      if (b.revive?.length) {
+        for (const r of b.revive) r.t -= dt;
+        while (b.revive.length && b.revive[0].t <= 0) {
+          const r = b.revive.shift(), u = this.spawnUnitNear(b, r.type);
+          if (u) { u.hp = u.maxHp * 0.6; this.recountPopulation(); if (b.owner === PLAYER) this.notify(`${u.name} hastaneden taburcu oldu.`, 'good'); }
+        }
+      }
+    }
+    // 4) Huzur: saniyede bir hedef hesaplanır, değer hedefe yavaşça yaklaşır
+    p.grief = Math.max(0, (p.grief ?? 0) - dt * 0.15);
+    this._happyT = (this._happyT ?? 0) - dt;
+    if (this._happyT <= 0) {
+      this._happyT = 1;
+      const H = HAPPINESS, f = {};
+      let houses = 0, beauty = 0, taverns = 0;
+      for (const b of this.buildings) {
+        if (b.owner !== PLAYER || !b.complete) continue;
+        if (b.type === 'house') houses++;
+        if (b.def.beauty) beauty += b.def.beauty;
+        if (b.def.happiness) taverns += p.wine > 0.5 ? b.def.happiness : 2;
+      }
+      f.base = H.base;
+      f.houses = Math.min(H.maxHouse, houses * H.perHouse);
+      f.pop = Math.min(H.maxPop, p.population * H.perPop);
+      f.beauty = Math.min(H.maxBeauty, beauty * H.perBeauty);
+      f.tavern = Math.min(H.maxTavern, taverns);
+      f.war = this.time - this.lastCombatAt < 40 ? -H.war : 0;
+      f.losses = -Math.min(20, p.grief ?? 0);
+      f.starving = p.starving ? -H.starving : 0;
+      f.winter = winter && !p.modifiers.winterProof ? -H.winter : 0;
+      const target = Math.max(0, Math.min(100, Object.values(f).reduce((a, c) => a + c, 0)));
+      p.happyFactors = f;
+      p.happyTarget = target;
+      p.happiness += Math.sign(target - p.happiness) * Math.min(Math.abs(target - p.happiness), target < p.happiness ? 1.5 : 0.6);
+      if (p.happiness < 25 && this.time - (this._unrestAt ?? -999) > 90) { this._unrestAt = this.time; this.notify('Halk huzursuz! Toplama yavaşladı: taverna, süsleme ve gıda sağlayın.', 'warn'); }
+      if (p.starving && this.time - (this._starveAt ?? -999) > 45) { this._starveAt = this.time; this.notify('Yiyecek bitti! Halk aç: sera, sebze yatağı, balıkçılık veya hayvan çiftliği kurun.', 'warn'); }
+    }
+  }
+
+  /** Avlanan hayvan: yerinde et kalır; avcının sahibi deri kazanır; avlayan köylüler ete yönelir */
+  _onAnimalKilled(u, killerOwner) {
+    this.units = this.units.filter((x) => x !== u);
+    this.corpses.push({ type: u.type, owner: u.owner, x: u.x, y: u.y, facing: u.facing, dir: u.dir, t: 0, animal: true });
+    const p = this.players[killerOwner];
+    const bonus = 1 + (p?.modifiers.huntBonus ?? 0);
+    if (p) p.add('hide', Math.round(u.def.hide * bonus));
+    const spot = this.map.isWalkable(u.tileI, u.tileJ) && !this.map.objects[u.tileJ][u.tileI] ? { i: u.tileI, j: u.tileJ } : this.map.findWalkableNear(u.tileI, u.tileJ, 3);
+    if (!spot || this.map.objects[spot.j][spot.i]) return;
+    const meat = this.map.addObject(StaticObjectNode('carcass', spot.i, spot.j, Math.round(u.def.meat * bonus)));
+    this.meat = (this.meat ?? []).filter((m) => this.isAlive(m)).concat([meat]);
+    for (const h of this.units) if (h.target === u && h.def.gatherer) this.assignGather(h, meat);
+    if (killerOwner === PLAYER) this.notify(`${u.name} avlandı: +${Math.round(u.def.hide * bonus)} deri, ${Math.round(u.def.meat * bonus)} et.`, 'good');
+  }
+
+  // ───────────── Savaş arabası (asker taşıma) ─────────────
+  commandBoard(units, wagon) {
+    for (const u of units) {
+      if (!u.isMilitary || u.def.vehicle || u === wagon) continue;
+      u.stop();
+      u.state = 'board';
+      u.task = { target: wagon };
+      u.repathT = 0;
+    }
+  }
+
+  board(u, wagon) {
+    if (!this.isAlive(wagon) || wagon.cargo.length >= wagon.def.transport) { u.stop(); return; }
+    u.stop();
+    u.boarded = wagon;
+    this.units = this.units.filter((x) => x !== u);
+    wagon.cargo.push(u);
+    this.recountPopulation();
+  }
+
+  /** Arabadakileri çevreye indir (hpFrac: araba yıkıldıysa canları azalır) */
+  unload(wagon, hpFrac = 1) {
+    if (!wagon.cargo?.length) return;
+    for (const u of wagon.cargo) {
+      const s = this.map.findWalkableNear(wagon.tileI, wagon.tileJ, 6);
+      if (!s) continue;
+      u.boarded = null;
+      u.x = u.prevX = s.i; u.y = u.prevY = s.j;
+      u.hp = Math.max(1, u.hp * hpFrac);
+      u.stop();
+      this.units.push(u);
+    }
+    wagon.cargo = [];
+    this.recountPopulation();
+  }
+
+  // ───────────── Bina taşıma (mimar) ─────────────
+  relocateCost(b) {
+    const c = {};
+    for (const [k, v] of Object.entries(b.cost ?? b.def.cost)) c[k] = Math.ceil(v * 0.3);
+    return c;
+  }
+
+  /** Binayı yeni yere taşı: bir mimar gerekir, bedel maliyetin %30'u. Üretim kuyruğu ve seviye korunur. */
+  relocate(b, oi, oj) {
+    const arch = this.units.filter((u) => u.owner === PLAYER && u.type === 'architect');
+    if (!arch.length) { this.notify('Binayı taşımak için bir mimar gerekir (Üniversite).', 'warn'); return false; }
+    const err = this.checkPlacement(b.type, oi, oj, b);
+    if (err) { this.notify(err, 'warn'); return false; }
+    const cost = this.relocateCost(b);
+    if (!this.player.spend(cost)) { this.notify('Taşıma için yetersiz kaynak.', 'warn'); return false; }
+    this.ungarrison(b);
+    this.map.removeObject(b);
+    b.i = oi + b.size - 1; b.j = oj + b.size - 1;
+    this.map.addObject(b);
+    b.rally = null;
+    for (const u of this.units) {
+      if (rectDist(u.tileI, u.tileJ, b) === 0 && b.blocks) { const s = this.map.findWalkableNear(u.tileI, u.tileJ, 8); if (s) { u.x = u.prevX = s.i; u.y = u.prevY = s.j; u.path = []; } }
+      if (u.task?.target === b) u.stop();
+    }
+    if (b.type === 'farm' || b.def.ground) this.map.groundVersion++;
+    arch.sort((a, c) => Math.hypot(a.x - b.centerI, a.y - b.centerJ) - Math.hypot(c.x - b.centerI, c.y - b.centerJ));
+    this.commandMove([arch[0]], b.i + 1, b.j + 1);
+    this.notify(`${b.name} taşındı (${formatCost(cost)}). Mimar yeni yere gidiyor.`, 'good');
+    return true;
+  }
+
   // ───────────── Çağ şartları ─────────────
   /** Bir sonraki çağın şartları: { age, military: { have, need }, buildings: [{ type, have, need }], ok } */
   ageReq(owner = PLAYER) {
@@ -748,7 +958,7 @@ export class World {
     p.items[id]--;
     if (it.dur) p.effects[id] = Math.max(this.time, p.effects[id] ?? 0) + it.dur;
     if (id === 'heal') for (const u of this.units) if (u.owner === owner) u.hp = u.maxHp;
-    if (id === 'fertilizer') { for (const b of this.buildings) if (b.owner === owner && b.type === 'farm' && b.complete) b.food += 150; this.map.groundVersion++; }
+    if (id === 'fertilizer') { for (const b of this.buildings) if (b.owner === owner && b.def.farmFood && b.complete) b.food += 150; this.map.groundVersion++; }
     if (id === 'vision' && this.fog) { this.fog.explored.fill(1); this.fog._t = 0; }
     if (owner === PLAYER) { this.notify(`${it.name} kullanıldı${it.dur ? ` (${it.dur} sn)` : ''}.`, 'good'); this.sound('bell', null, null, 0.5); }
     p.version++;
@@ -780,11 +990,22 @@ export class World {
   }
 
   /** Konum kuralı: ayak izi boş + (tersane ise) su kenarı. Hata metni veya null döner. */
-  checkPlacement(type, oi, oj) {
+  checkPlacement(type, oi, oj, ignore = null) {
     const def = BUILDINGS[type];
-    if (!this.map.canPlace(oi, oj, def.size)) return 'Buraya inşa edilemez.';
+    const ok = ignore ? this._canPlaceIgnoring(oi, oj, def.size, ignore) : this.map.canPlace(oi, oj, def.size);
+    if (!ok) return 'Buraya inşa edilemez.';
     if (def.coastal && !this.map.isCoastal(oi, oj, def.size)) return `${def.name} su kenarına kurulmalı.`;
     return null;
+  }
+
+  _canPlaceIgnoring(oi, oj, size, ignore) {
+    const map = this.map;
+    for (let j = oj; j < oj + size; j++) for (let i = oi; i < oi + size; i++) {
+      if (!map.inBounds(i, j) || !TileRegistry.get(map.terrain[j][i]).buildable) return false;
+      const o = map.occupancy[j][i];
+      if (o && o !== ignore) return false;
+    }
+    return true;
   }
 
   placeBuilding(type, oi, oj, builders) {
@@ -974,7 +1195,7 @@ export class World {
         const t = b.rally.target;
         if (t && this.isAlive(t)) {
           if (t.owner && t.owner !== u.owner) this.commandAttack([u], t);
-          else if (u.def.gatherer && (t.isResource || (t.isBuilding && t.type === 'farm' && t.complete && !u.def.vehicle))) this.assignGather(u, t);
+          else if (u.def.gatherer && (t.isResource || (t.isBuilding && t.def.farmFood && t.complete && !u.def.vehicle))) this.assignGather(u, t);
           else if (t.isBuilding && !t.complete && this.canBuild(u, t.type)) this.commandBuild([u], t);
           else this.commandMove([u], Math.round(t.centerI ?? t.i) + 1, Math.round(t.centerJ ?? t.j) + 1);
         } else if (b.rally.i !== undefined) {
@@ -1006,7 +1227,7 @@ export class World {
       }
     } else if (item.kind === 'level') {
       b.level = Math.min(LEVELS.MAX_LEVEL, b.level + 1);
-      if (b.type === 'farm') { b.food += b.def.farmFood * 0.5; this.map.groundVersion++; } // yükseltilen tarla tazelenir
+      if (b.def.farmFood) { b.food += b.def.farmFood * 0.5; this.map.groundVersion++; } // yükseltilen tarla tazelenir
       this.map.version++;
       if (b.owner === PLAYER) { this.notify(`${b.name} seviye ${b.level} oldu: üretim +%${Math.round(LEVELS.bonus * (b.level - 1) * 100)}.`, 'good'); this.sound('bell', b.centerI, b.centerJ, 0.6); }
     } else if (item.kind === 'age') {
@@ -1018,7 +1239,7 @@ export class World {
     }
   }
 
-  /** Kendiliğinden gelir (tersane balıkçıları). Kesirli birikir, istatistiğe de yazılır. */
+  /** Kendiliğinden gelir (tersane, hayvan çiftliği, sera, su değirmeni, altın eleme). Kesirli birikir, istatistiğe yazılır. */
   _passiveIncome(dt) {
     for (const b of this.buildings) {
       const inc = b.def.income;
@@ -1074,7 +1295,8 @@ export class World {
     const dmg = this.stat(u, 'attack');
     if (this.stat(u, 'range') > 0) {
       this.spawnArrow(u.x, u.y, 22, t, dmg, u);
-      this.sound('bow', u.x, u.y, 0.5);
+      if (u.def.splash) { const pr = this.projectiles[this.projectiles.length - 1]; pr.splash = u.def.splash; pr.stone = true; pr.dur *= 1.6; this.sound('ram', u.x, u.y, 0.5); }
+      else this.sound('bow', u.x, u.y, 0.5);
     } else {
       this.damage(u, t, dmg, 'melee');
       if (u.def.siege) this.sound('ram', u.x, u.y, 0.8);
@@ -1099,7 +1321,8 @@ export class World {
       }
       pr.p += dt / pr.dur;
       if (pr.p >= 1) {
-        if (this.isAlive(pr.target)) {
+        if (pr.splash) this._splash(pr);
+        else if (this.isAlive(pr.target)) {
           this.damage(pr.attacker?.dead ? null : pr.attacker, pr.target, pr.damage, 'pierce', pr.owner);
           this.sound('hit', pr.tx, pr.ty, 0.35);
         }
@@ -1135,6 +1358,7 @@ export class World {
     }
     // Karşılık ver: boştaki birim saldırana döner
     if (target.isUnit && attacker?.isUnit && !attacker.dead && attacker.owner !== target.owner) {
+      if (target.def.animal) { target.flee(this, attacker); return; }
       if (target.state === 'idle') target.attack(attacker);
       else if (target.state === 'guard') target.attack(attacker, 'guard');
       // Yakındaki boştaki askerler savaşa katılır (her iki taraf için)
@@ -1149,7 +1373,7 @@ export class World {
    * Aynı asker için en fazla 0,5 sn'de bir çağrılır.
    */
   callAllies(u, foe) {
-    if (u.owner === WILD || this.time - (u._allyAt ?? -9) < 0.5) return;
+    if (u.owner === WILD || foe.def?.animal || this.time - (u._allyAt ?? -9) < 0.5) return;
     u._allyAt = this.time;
     this.grid.each(u.x, u.y, 7, (o) => {
       if (o === u || o.owner !== u.owner || o.dead || !o.isMilitary || o.target) return;
@@ -1161,8 +1385,35 @@ export class World {
     });
   }
 
+  /** Mancınık taşı: isabet noktasının çevresindeki tüm düşman birim ve binalarına hasar (yakın dövüş türü) */
+  _splash(pr) {
+    const att = pr.attacker?.dead ? null : pr.attacker, R = pr.splash;
+    this.grid.each(pr.tx, pr.ty, R + 0.5, (o) => {
+      if (o.owner === pr.owner || o.dead || o.def.animal) return;
+      if (Math.hypot(o.x - pr.tx, o.y - pr.ty) <= R) this.damage(att, o, pr.damage, 'melee', pr.owner);
+    });
+    for (const b of this.buildings) {
+      if (b.owner === pr.owner || rectEuclid(pr.tx, pr.ty, b) > R) continue;
+      this.damage(att, b, pr.damage, 'melee', pr.owner);
+    }
+    this.sound('collapse', pr.tx, pr.ty, 0.35);
+    this.impacts = (this.impacts ?? []).concat([{ x: pr.tx, y: pr.ty, t: this.time }]).slice(-12);
+  }
+
   killUnit(u, killerOwner) {
     u.dead = true;
+    if (u.def.animal) { this._onAnimalKilled(u, killerOwner); return; }
+    if (u.cargo?.length) this.unload(u, 0.5); // savaş arabası: içindekiler yarı canla kaçar
+    if (u.owner === PLAYER) this.players[PLAYER].grief = (this.players[PLAYER].grief ?? 0) + 1.5;
+    // Hastane: ölen askerin bir kısmı iyileşip geri döner
+    if (u.isMilitary && !u.def.vehicle && u.type !== 'yeti') {
+      const hosp = this.buildings.filter((b) => b.owner === u.owner && b.complete && b.def.revive);
+      if (hosp.length && Math.random() < hosp[0].def.revive.chance) {
+        hosp.sort((a, c) => rectEuclid(u.x, u.y, a) - rectEuclid(u.x, u.y, c));
+        (hosp[0].revive ??= []).push({ type: u.type, t: hosp[0].def.revive.time });
+        if (u.owner === PLAYER) this.notify(`Yaralı ${u.name.toLocaleLowerCase('tr')} hastaneye kaldırıldı (25 sn sonra döner).`, 'info');
+      }
+    }
     if (u.type === 'yeti') this.wild.onKilled(u, killerOwner);
     this.units = this.units.filter((x) => x !== u);
     this.corpses.push({ type: u.type, owner: u.owner, x: u.x, y: u.y, facing: u.facing, dir: u.dir, t: 0, naval: !!u.naval });
@@ -1175,6 +1426,13 @@ export class World {
 
   destroyBuilding(b) {
     this.ungarrison(b); // içeridekiler yıkıntıdan kaçar
+    if (b.owner === PLAYER && !b.def.wall && !b.def.gate && !b.def.decor && b.type !== 'farm') {
+      const p = this.player, keep = this.protectedShare(PLAYER);
+      let lost = 0;
+      for (const r of RESOURCE_TYPES) { const x = Math.floor(p.resources[r] * (1 - keep) * PLUNDER); p.resources[r] -= x; lost += x; }
+      p.grief = (p.grief ?? 0) + 5;
+      if (lost > 0) this.notify(`Yağma! ${lost} kaynak çalındı${keep > 0 ? ` (ambarlar %${Math.round(keep * 100)}'ünü korudu)` : ' — ambar kurarak koruyun'}.`, 'warn');
+    }
     this.removeBuilding(b);
     this.map.addObject(new StaticObject('ruins', b.i, b.j, { size: b.size, blocks: false }));
     this.sound('collapse', b.centerI, b.centerJ, 0.8);
@@ -1216,7 +1474,7 @@ export class World {
     if (!u.def.siege) {
       const melee = (u.def.range ?? 0) <= 0;
       this.grid.each(u.x, u.y, radius, (o) => {
-        if (o.owner === u.owner || o.dead || (melee && o.naval)) return;
+        if (o.owner === u.owner || o.dead || o.def.animal || (melee && o.naval)) return;
         const d = Math.hypot(o.x - u.x, o.y - u.y);
         if (d < bestD) { bestD = d; best = o; }
       });
@@ -1247,7 +1505,7 @@ export class World {
     if (wall) return wall;
     let sol = null, sd = radius, vil = null, vd = radius;
     this.grid.each(u.x, u.y, radius, (o) => {
-      if (o.owner === u.owner || o.dead || (melee && o.naval)) return;
+      if (o.owner === u.owner || o.dead || o.def.animal || (melee && o.naval)) return;
       const d = Math.hypot(o.x - u.x, o.y - u.y);
       if (o.isMilitary) { if (d < sd) { sd = d; sol = o; } } else if (d < vd) { vd = d; vil = o; }
     });
@@ -1272,7 +1530,7 @@ export class World {
       const range = atk.range + (bonus.range ?? 0);
       let best = null, bestD = range;
       this.grid.each(b.centerI, b.centerJ, range + b.size, (u) => {
-        if (u.owner === b.owner || u.dead) return;
+        if (u.owner === b.owner || u.dead || u.def.animal) return;
         const d = rectEuclid(u.x, u.y, b);
         if (d < bestD) { bestD = d; best = u; }
       });

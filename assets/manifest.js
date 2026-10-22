@@ -630,6 +630,209 @@ export const MANIFEST = {
       "h": 300,
       "anchorX": 0.4972,
       "baseW": 179.0
+    },
+    "tavern_0": {
+      "file": "assets/sprites/tavern_0.webp",
+      "w": 599,
+      "h": 640,
+      "anchorX": 0.5234,
+      "baseW": 564.0
+    },
+    "granary_0": {
+      "file": "assets/sprites/granary_0.webp",
+      "w": 640,
+      "h": 632,
+      "anchorX": 0.5109,
+      "baseW": 623.0
+    },
+    "greenhouse_0": {
+      "file": "assets/sprites/greenhouse_0.webp",
+      "w": 640,
+      "h": 591,
+      "anchorX": 0.4992,
+      "baseW": 640.0
+    },
+    "hospital_0": {
+      "file": "assets/sprites/hospital_0.webp",
+      "w": 640,
+      "h": 491,
+      "anchorX": 0.5047,
+      "baseW": 627.0
+    },
+    "wineCellar_0": {
+      "file": "assets/sprites/wineCellar_0.webp",
+      "w": 520,
+      "h": 415,
+      "anchorX": 0.4952,
+      "baseW": 516.0
+    },
+    "vegetableBed_0": {
+      "file": "assets/sprites/vegetableBed_0.webp",
+      "w": 520,
+      "h": 432,
+      "anchorX": 0.5712,
+      "baseW": 369.0
+    },
+    "waterMill_0": {
+      "file": "assets/sprites/waterMill_0.webp",
+      "w": 517,
+      "h": 520,
+      "anchorX": 0.499,
+      "baseW": 517.0
+    },
+    "goldPanning_0": {
+      "file": "assets/sprites/goldPanning_0.webp",
+      "w": 520,
+      "h": 465,
+      "anchorX": 0.501,
+      "baseW": 518.0
+    },
+    "fountain_0": {
+      "file": "assets/sprites/fountain_0.webp",
+      "w": 474,
+      "h": 480,
+      "anchorX": 0.4989,
+      "baseW": 462.0
+    },
+    "statue_0": {
+      "file": "assets/sprites/statue_0.webp",
+      "w": 132,
+      "h": 300,
+      "anchorX": 0.4962,
+      "baseW": 132.0
+    },
+    "lampPost_0": {
+      "file": "assets/sprites/lampPost_0.webp",
+      "w": 102,
+      "h": 260,
+      "anchorX": 0.2794,
+      "baseW": 58.0
+    },
+    "bench_0": {
+      "file": "assets/sprites/bench_0.webp",
+      "w": 240,
+      "h": 202,
+      "anchorX": 0.4208,
+      "baseW": 187.0
+    },
+    "hedge_0": {
+      "file": "assets/sprites/hedge_0.webp",
+      "w": 220,
+      "h": 176,
+      "anchorX": 0.5,
+      "baseW": 197.0
+    },
+    "well_0": {
+      "file": "assets/sprites/well_0.webp",
+      "w": 185,
+      "h": 260,
+      "anchorX": 0.4784,
+      "baseW": 152.0
+    },
+    "portal": {
+      "file": "assets/sprites/portal.webp",
+      "w": 480,
+      "h": 366,
+      "anchorX": 0.5167,
+      "baseW": 389.0
+    },
+    "catapult_e": {
+      "file": "assets/sprites/catapult_e.webp",
+      "w": 300,
+      "h": 259,
+      "anchorX": 0.515,
+      "baseW": 290.0
+    },
+    "warWagon_e": {
+      "file": "assets/sprites/warWagon_e.webp",
+      "w": 340,
+      "h": 239,
+      "anchorX": 0.6397,
+      "baseW": 236.0
+    },
+    "gazelle_idle": {
+      "file": "assets/sprites/gazelle_idle.webp",
+      "w": 125,
+      "h": 150,
+      "anchorX": 0.336,
+      "baseW": 85.0
+    },
+    "deer_idle": {
+      "file": "assets/sprites/deer_idle.webp",
+      "w": 129,
+      "h": 150,
+      "anchorX": 0.3566,
+      "baseW": 93.0
+    },
+    "rabbit_idle": {
+      "file": "assets/sprites/rabbit_idle.webp",
+      "w": 145,
+      "h": 150,
+      "anchorX": 0.4,
+      "baseW": 117.0
+    },
+    "horse_idle": {
+      "file": "assets/sprites/horse_idle.webp",
+      "w": 150,
+      "h": 127,
+      "anchorX": 0.3467,
+      "baseW": 105.0
+    },
+    "catapult_se": {
+      "file": "assets/sprites/catapult_se.webp",
+      "w": 300,
+      "h": 266,
+      "anchorX": 0.52,
+      "baseW": 287.0
+    },
+    "catapult_s": {
+      "file": "assets/sprites/catapult_s.webp",
+      "w": 207,
+      "h": 300,
+      "anchorX": 0.4662,
+      "baseW": 194.0
+    },
+    "catapult_ne": {
+      "file": "assets/sprites/catapult_ne.webp",
+      "w": 300,
+      "h": 289,
+      "anchorX": 0.4833,
+      "baseW": 291.0
+    },
+    "catapult_n": {
+      "file": "assets/sprites/catapult_n.webp",
+      "w": 223,
+      "h": 300,
+      "anchorX": 0.4552,
+      "baseW": 204.0
+    },
+    "warWagon_se": {
+      "file": "assets/sprites/warWagon_se.webp",
+      "w": 304,
+      "h": 340,
+      "anchorX": 0.6809,
+      "baseW": 193.0
+    },
+    "warWagon_s": {
+      "file": "assets/sprites/warWagon_s.webp",
+      "w": 172,
+      "h": 340,
+      "anchorX": 0.5,
+      "baseW": 155.0
+    },
+    "warWagon_ne": {
+      "file": "assets/sprites/warWagon_ne.webp",
+      "w": 340,
+      "h": 278,
+      "anchorX": 0.3574,
+      "baseW": 230.0
+    },
+    "warWagon_n": {
+      "file": "assets/sprites/warWagon_n.webp",
+      "w": 156,
+      "h": 340,
+      "anchorX": 0.4968,
+      "baseW": 148.0
     }
   },
   "icons": {
@@ -814,6 +1017,34 @@ export const MANIFEST = {
       "h": 96,
       "anchorX": 0.5,
       "baseW": 66.0
+    },
+    "it_hide": {
+      "file": "assets/icons/it_hide.webp",
+      "w": 96,
+      "h": 88,
+      "anchorX": 0.5,
+      "baseW": 96.0
+    },
+    "happy": {
+      "file": "assets/icons/happy.webp",
+      "w": 96,
+      "h": 95,
+      "anchorX": 0.5,
+      "baseW": 96.0
+    },
+    "wine": {
+      "file": "assets/icons/wine.webp",
+      "w": 63,
+      "h": 96,
+      "anchorX": 0.5,
+      "baseW": 63.0
+    },
+    "boulder": {
+      "file": "assets/icons/boulder.webp",
+      "w": 95,
+      "h": 96,
+      "anchorX": 0.5,
+      "baseW": 95.0
     }
   },
   "textures": {

@@ -65,6 +65,23 @@ export class Camera {
   endDrag() { this.dragging = false; }
 
   /** Sürükleme bırakıldığında son hızla "fırlatma" (inertia). */
+  /**
+   * Yumuşak uçuş: ekran merkezi (wx, wy)'ye ve `zoom`a `duration` sn'de, ease-in-out ile. Konum doğrusal,
+   * zoom logaritmik ara değerlenir (O: köye dön · E: tüm haritayı göster).
+   */
+  flyTo(wx, wy, zoom, duration = 1.1) {
+    const cx = this.x + this.viewW / (2 * this.zoom), cy = this.y + this.viewH / (2 * this.zoom);
+    this.vx = this.vy = 0;
+    this.intro = null;
+    this.fly = { fx: cx, fy: cy, tx: wx, ty: wy, fz: this.zoom, tz: zoom, t: 0, duration };
+  }
+
+  /** Tüm haritanın ekrana sığdığı zoom */
+  fitZoom(margin = 0.94) {
+    const b = this.bounds;
+    return Math.min(this.viewW / (b.maxX - b.minX), this.viewH / (b.maxY - b.minY)) * margin;
+  }
+
   fling(vx, vy) {
     const MAX = 3500;
     this.vx = clamp(vx, -MAX, MAX);
@@ -73,8 +90,9 @@ export class Camera {
 
   // ───────────── ZOOM ─────────────
   zoomAt(sx, sy, factor) {
-    if (this.intro) { this.targetZoom = this.zoom; this.intro = null; }
-    this.targetZoom = clamp(this.targetZoom * factor, CONFIG.ZOOM_MIN, CONFIG.ZOOM_MAX);
+    if (this.intro || this.fly) { this.targetZoom = this.zoom; this.intro = null; this.fly = null; }
+    // Tüm harita görünümünden (E) tekerlekle yaklaşırken alt sınır yavaşça normale döner
+    this.targetZoom = clamp(this.targetZoom * factor, Math.min(CONFIG.ZOOM_MIN, this.zoom * 0.9), CONFIG.ZOOM_MAX);
     this._anchor.x = sx;
     this._anchor.y = sy;
   }
@@ -102,6 +120,19 @@ export class Camera {
       this.zoom = this.targetZoom = Math.exp(Math.log(it.from) + (Math.log(it.to) - Math.log(it.from)) * e);
       this.centerOn(it.wx, it.wy);
       if (p >= 1) this.intro = null;
+    }
+
+    // --- Yumuşak uçuş (flyTo) ---
+    const f = this.fly;
+    if (f) {
+      f.t += dt;
+      const p = Math.min(1, f.t / f.duration);
+      const e = p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2;
+      this.zoom = this.targetZoom = Math.exp(Math.log(f.fz) + (Math.log(f.tz) - Math.log(f.fz)) * e);
+      this.x = f.fx + (f.tx - f.fx) * e - this.viewW / (2 * this.zoom);
+      this.y = f.fy + (f.ty - f.fy) * e - this.viewH / (2 * this.zoom);
+      this.clamp();
+      if (p >= 1) this.fly = null;
     }
 
     // --- Yumuşak zoom ---

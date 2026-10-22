@@ -28,10 +28,10 @@ export const ANIMS = {
   yeti_attack: { hit: 0.55 },
 };
 
-export const UNIT_PREFIX = { villager: 'vil', militia: 'mil', archer: 'arc', cavalry: 'cav', ram: 'ram', fishingBoat: 'boat', yeti: 'yeti', architect: 'arch', cart: 'cart' };
+export const UNIT_PREFIX = { villager: 'vil', militia: 'mil', archer: 'arc', cavalry: 'cav', ram: 'ram', fishingBoat: 'boat', yeti: 'yeti', architect: 'arch', cart: 'cart', catapult: 'catapult', warWagon: 'warWagon', gazelle: 'gazelle', deer: 'deer', rabbit: 'rabbit', horse: 'horse' };
 
 /** Yönlü SABİT görselli birimler (araç/tekne): dünya birimi cinsinden boy; kare yok, Renderer sallar/iter */
-export const VEHICLE_HEIGHT = { ram: 56, fishingBoat: 64, cart: 58 };
+export const VEHICLE_HEIGHT = { ram: 56, fishingBoat: 64, cart: 58, catapult: 60, warWagon: 76 };
 
 /**
  * 8 YÖNLÜ YÜRÜYÜŞ

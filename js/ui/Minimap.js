@@ -68,6 +68,7 @@ export class Minimap {
           else if (o.kind === 'fish') c = [120, 200, 235];
           else if (o.kind === 'cave') c = [70, 66, 62];
           else if (o.kind === 'quarry') c = [215, 215, 225];
+          else if (o.kind === 'portal') c = [170, 80, 230];
           else if (o.kind === 'goldReserve') c = [255, 210, 30];
         }
         if (snow && map.terrain[j][i] !== TileId.WATER && o?.kind !== 'gold' && o?.kind !== 'berry') c = [c[0] + (232 - c[0]) * snow, c[1] + (238 - c[1]) * snow, c[2] + (248 - c[2]) * snow];

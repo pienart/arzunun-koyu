@@ -5,6 +5,7 @@ import { Soldier } from '../entities/Soldier.js';
 import { Boat } from '../entities/Boat.js';
 import { Yeti } from '../entities/Yeti.js';
 import { Architect, Cart } from '../entities/Workers.js';
+import { Animal } from '../entities/Animal.js';
 import { UNITS, PLAYER, ENEMY, RESOURCE_NODES } from '../data/gameData.js';
 
 /**
@@ -41,6 +42,11 @@ export const SaveGame = {
     } catch { return null; }
   },
 
+  /** Oyun bittiğinde: elle ve otomatik kayıt silinir */
+  clear() {
+    try { localStorage.removeItem(KEY); localStorage.removeItem(AUTO); } catch { /* yok say */ }
+  },
+
   /** @returns {boolean} başarılı mı (bellek dolu / gizli pencere → false) */
   save(game, auto = false) {
     try {
@@ -71,10 +77,11 @@ export const SaveGame = {
       id: u.id, type: u.type, owner: u.owner, x: +u.x.toFixed(3), y: +u.y.toFixed(3), hp: u.hp, maxHp: u.maxHp,
       state: u.state, phase: u.phase, task: ref(u.task?.target), carry: u.carry ?? 0, carryType: u.carryType ?? null,
       lastKind: u.lastKind ?? null, lastPos: u.lastPos ?? null, post: u.post ?? null, moveGoal: u.moveGoal ?? null, dir: u.dir,
+      cargo: u.cargo?.length ? u.cargo.map(unit) : undefined,
     });
     const players = {};
     for (const [id, p] of Object.entries(w.players)) {
-      players[id] = { resources: p.resources, age: p.age, techs: [...p.techs], modifiers: p.modifiers, bonus: p.bonus, stats: p.stats, items: p.items, tools: [...p.tools], effects: p.effects };
+      players[id] = { resources: p.resources, age: p.age, techs: [...p.techs], modifiers: p.modifiers, bonus: p.bonus, stats: p.stats, items: p.items, tools: [...p.tools], effects: p.effects, wine: p.wine, happiness: p.happiness };
     }
     return {
       v: VERSION, date: Date.now(), seed: w.seed, difficulty: w.difficulty, fog: game.fog.enabled,
@@ -116,7 +123,7 @@ export const SaveGame = {
     }
     for (const [k, amount] of keep) { // üretimde olmayan düğüm (olmamalı) → yine de ekle
       const [kind, i, j] = k.split(':');
-      map.addObject(new ResourceNode(kind, +i, +j, { amount, blocks: kind !== 'fish', size: RESOURCE_NODES[kind]?.size ?? 1 }));
+      map.addObject(new ResourceNode(kind, +i, +j, { amount, blocks: kind !== 'fish' && kind !== 'carcass', size: RESOURCE_NODES[kind]?.size ?? 1 }));
     }
     for (const [kind, i, j, size, scale, flip, offX, offY] of d.decor) {
       if (!map.objects[j][i]) map.addObject(new StaticObject(kind, i, j, { size, scale, flip: !!flip, offX, offY, blocks: false }));
@@ -130,6 +137,7 @@ export const SaveGame = {
       Object.assign(p.resources, s.resources);
       p.age = s.age; p.techs = new Set(s.techs); Object.assign(p.modifiers, s.modifiers); p.bonus = s.bonus; p.stats = s.stats;
       p.items = s.items ?? {}; p.tools = new Set(s.tools ?? []); p.effects = s.effects ?? {};
+      p.wine = s.wine ?? 0; p.happiness = s.happiness ?? 60; p.resources.hide ??= 0; p.stats.gathered.hide ??= 0; p.stats.spent ??= { food: 0 };
     }
 
     // Binalar (önce hepsi, sonra referanslar)
@@ -150,10 +158,11 @@ export const SaveGame = {
     // Birimler
     const make = (s) => {
       const def = UNITS[s.type];
-      const u = s.type === 'yeti' ? new Yeti(s.x, s.y) : s.type === 'architect' ? new Architect(s.x, s.y, s.owner) : s.type === 'cart' ? new Cart(s.x, s.y, s.owner) : s.type === 'villager' ? new Villager(s.x, s.y, s.owner) : def?.naval ? new Boat(s.x, s.y, s.owner) : new Soldier(s.type, s.x, s.y, s.owner);
+      const u = def?.animal ? new Animal(s.type, s.x, s.y, { i: Math.round(s.x), j: Math.round(s.y) }) : s.type === 'yeti' ? new Yeti(s.x, s.y) : s.type === 'architect' ? new Architect(s.x, s.y, s.owner) : s.type === 'cart' ? new Cart(s.x, s.y, s.owner) : s.type === 'villager' ? new Villager(s.x, s.y, s.owner) : def?.naval ? new Boat(s.x, s.y, s.owner) : new Soldier(s.type, s.x, s.y, s.owner);
       u.maxHp = s.maxHp; u.hp = s.hp; u.dir = s.dir ?? 0;
       if ('carry' in u) { u.carry = s.carry; if (s.carryType) u.carryType = s.carryType; }
       u.lastKind = s.lastKind; u.lastPos = s.lastPos;
+      if (s.cargo && u.cargo) for (const c of s.cargo) { const m = make(c); m.boarded = u; u.cargo.push(m); }
       return u;
     };
     const orders = [];
@@ -167,6 +176,9 @@ export const SaveGame = {
     world.enemyAI.restore(d.enemy, byId);
     world.weather.restore(d.weather);
     world.wild.restore(d.wild); // mağara (eski kayıtta yoksa yeni bir yere konur)
+    world.portals.setup();
+    world.animals.adopt(world.units.filter((u) => u.def.animal));
+    world.meat = world.collectKind('carcass');      // geçitler her dakika zaten yer değiştirir: yeni yerlerde başlar
     world.time = d.time;
 
     // Görevleri yeniden ver

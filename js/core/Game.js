@@ -161,8 +161,9 @@ export class Game {
     for (const ev of this.world.events.splice(0)) this.ui.toast(ev.text, ev.kind);
     for (const sn of this.world.sounds.splice(0)) this.audio.play(sn.name, sn.i, sn.j, sn.vol);
     this._updateAudioEnv();
-    if (this.world.victory && !this._victoryShown) { this._victoryShown = true; this.ui.showVictory(); }
-    if (this.world.defeat && !this._defeatShown) { this._defeatShown = true; this.ui.showDefeat(); }
+    // Oyun bitti (zafer ya da yenilgi): tüm kayıtlar silinir → menüde "Devam Et" çıkmaz, her şey sıfırdan başlar
+    if (this.world.victory && !this._victoryShown) { this._victoryShown = true; SaveGame.clear(); this.ui.showVictory(); }
+    if (this.world.defeat && !this._defeatShown) { this._defeatShown = true; SaveGame.clear(); this.ui.showDefeat(); }
 
     this._uiTimer += dt;
     if (this._uiTimer >= CONFIG.UI_INTERVAL) {
@@ -206,6 +207,7 @@ export class Game {
   }
 
   saveGame() {
+    if (this.world.victory || this.world.defeat) { this.ui.toast('Oyun bitti: kayıt yapılamaz.', 'warn'); return false; }
     const ok = SaveGame.save(this, false);
     this.ui.toast(ok ? 'Oyun kaydedildi.' : 'Kayıt başarısız (tarayıcı belleği kapalı veya dolu).', ok ? 'good' : 'warn');
     return ok;
@@ -310,6 +312,8 @@ export class Game {
         // Düşmana sağ tık → tüm seçili savaşanlar saldırır
         world.commandAttack(units, ent);
         color = 'rgba(255,70,60,0.95)';
+      } else if (ent?.isUnit && ent.owner === PLAYER && ent.def.transport) {
+        world.commandBoard(units.filter((u) => u !== ent), ent); // askerler savaş arabasına biner
       } else if (ent?.isResource) {
         world.commandGather(villagers, ent);
         if (ent.kind === 'fish') world.commandFish(boats, ent);
@@ -317,7 +321,7 @@ export class Game {
         if (soldiers.length) world.commandMove(soldiers, ent.i + 1, ent.j + 1);
       } else if (ent?.isBuilding && ent.owner === PLAYER) {
         if (!ent.complete) { world.commandBuild(villagers, ent); world.commandMove(villagers.filter((u) => !world.canBuild(u, ent.type)), ent.i + 1, ent.j + 1); }
-        else if (ent.type === 'farm') world.commandGather(villagers, ent);
+        else if (ent.def.farmFood) world.commandGather(villagers, ent);
         else if (world.needsRepair(ent)) world.commandRepair(villagers.filter((u) => u.def.builder), ent);
         else if (ent.def.dropsite && villagers.some((u) => u.carry > 0)) world.commandDeposit(villagers, ent);
         else world.commandMove(villagers, ent.i + 1, ent.j + 1);
@@ -385,6 +389,13 @@ export class Game {
   }
 
   // ═════════════════════ İNŞAAT YERLEŞTİRME ═════════════════════
+  /** Bina taşıma: yerleştirme hayaleti binanın türüyle açılır, tıklanan yere taşınır */
+  startRelocate(b) {
+    this.placement = { type: b.type, relocate: b };
+    this.ui.toast(`${b.name}: yeni yerini seçin (Esc iptal).`, 'info');
+    this._updatePlacement();
+  }
+
   startPlacement(type) {
     if (!this.myUnits.some((u) => this.world.canBuild(u, type))) return;
     const err = this.world.checkBuildable(type);
@@ -404,7 +415,7 @@ export class Game {
     // İmleç ayak izinin ortasında olsun
     p.oi = t.i - Math.floor((def.size - 1) / 2);
     p.oj = t.j - Math.floor((def.size - 1) / 2);
-    p.valid = !this.world.checkPlacement(p.type, p.oi, p.oj) && !this.world.checkBuildable(p.type);
+    p.valid = p.relocate ? !this.world.checkPlacement(p.type, p.oi, p.oj, p.relocate) : !this.world.checkPlacement(p.type, p.oi, p.oj) && !this.world.checkBuildable(p.type);
     p.line = null;
     // Çit: sürüklenirken başlangıçtan imlece kadar karo hattı
     const d = this.input.drag;
@@ -442,6 +453,10 @@ export class Game {
   _tryPlace(keep) {
     const p = this.placement;
     if (!p) return;
+    if (p.relocate) {
+      if (this.world.relocate(p.relocate, p.oi, p.oj)) { this.click(); this.placement = null; }
+      return;
+    }
     if (!p.valid) {
       const err = this.world.checkBuildable(p.type) ?? this.world.checkPlacement(p.type, p.oi, p.oj);
       this.ui.toast(err ?? 'Buraya inşa edilemez.', 'warn');
@@ -469,7 +484,18 @@ export class Game {
       case 'Pause': case 'KeyP': this.menu ? this.menu.openPause() : this.setPaused(!this.paused); break;
       case 'Period': case 'NumpadDecimal': this.selectNextIdle(); break;
       case 'KeyH': this.select([this.world.townCenter]); this.focusTownCenter(); break;
+      case 'KeyO': { // köyün ilk görünümüne yumuşakça dön (ilk zoom)
+        const tc = this.world.townCenter;
+        if (tc) this.camera.flyTo((tc.centerI - tc.centerJ) * HW, (tc.centerI + tc.centerJ) * HH + 40, 1.2, 1.2);
+        break;
+      }
+      case 'KeyE': { // tüm harita (en dıştan)
+        const b = this.camera.bounds;
+        this.camera.flyTo((b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2, this.camera.fitZoom(), 1.3);
+        break;
+      }
       case 'KeyG': this.renderer.toggleGrid(); break;
+      case 'KeyK': this.ui.toggleMinimap(); break;
       case 'F1': case 'KeyX': this.ui.toggleHelp(); break;
       case 'F2': this.ui.togglePanel(); break;
       case 'KeyM': this.ui.toggleSfx(); break;

@@ -165,16 +165,16 @@ export class GameMap {
         const e = (elev[j][i] - min) / (max - min) - smoothstep(0.75, 1.0, edge) * 0.8;
         elev[j][i] = e;
         let t;
-        if (e < 0.28) t = TileId.WATER;
+        if (e < 0.305) t = TileId.WATER;   // biraz daha geniş göller ve deniz
         else if (e < 0.33) t = TileId.SAND;
         else if (e < 0.75) t = dirtNoise.fbm(i * 0.09, j * 0.09, 3) > 0.64 ? TileId.DIRT : TileId.GRASS;
-        else t = TileId.MOUNTAIN;
+        else t = TileId.GRASS;             // kayalık (dağ) yok: yüksek yerler de çayır
         this.terrain[j][i] = t;
       }
     }
 
     // 2b) Küçük su birikintilerini kurut: kumun ortasında tek karelik "su elmasları" kalmasın
-    this._removeSmallLakes(10);
+    this._removeSmallLakes(220); // küçük su birikintisi kalmasın: yalnızca geniş göller ve deniz
 
     // 3) Başlangıç noktası: merkeze en yakın, geniş ve açık alan
     this.spawn = this._findOpenArea(W >> 1, H >> 1, 4, 3) ?? { i: W >> 1, j: H >> 1 };
@@ -249,12 +249,12 @@ export class GameMap {
     }
     if (!cand.length) return;
     // Denizin her yerinde (kıyıda ve açıkta) birbirinden ~6 karo aralıklı balık sürüleri
-    const target = Math.max(10, Math.min(500, Math.round(cand.length / 30)));
+    const target = Math.max(16, Math.min(900, Math.round(cand.length / 18))); // bol balık: 10 tekne rahatça avlanır
     const placed = [];
     const cell = new Map(), key = (i, j) => `${(i / 6) | 0},${(j / 6) | 0}`;
     const ok = (i, j) => {
       const ci = (i / 6) | 0, cj = (j / 6) | 0;
-      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) for (const [a, b] of cell.get(`${ci + di},${cj + dj}`) ?? []) if (Math.hypot(a - i, b - j) < 6) return false;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) for (const [a, b] of cell.get(`${ci + di},${cj + dj}`) ?? []) if (Math.hypot(a - i, b - j) < 5) return false;
       return true;
     };
     const add = (i, j) => { placed.push([i, j]); const k = key(i, j); if (!cell.has(k)) cell.set(k, []); cell.get(k).push([i, j]); };

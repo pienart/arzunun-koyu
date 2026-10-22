@@ -11,7 +11,7 @@ export class Player {
     this.age = 0;
     this.techs = new Set();
     // Ekonomi çarpanları (toplama/taşıma/hız)
-    this.modifiers = { food: 1, wood: 1, gold: 1, stone: 1, farm: 1, fish: 1, carry: 1, speed: 1, ranch: 1, bldgHp: 1, regen: 0 };
+    this.modifiers = { food: 1, wood: 1, gold: 1, stone: 1, hide: 1, farm: 1, fish: 1, carry: 1, speed: 1, ranch: 1, bldgHp: 1, regen: 0, winterProof: 0, huntBonus: 0 };
     this.items = {};          // simya: iksir stoku { id: adet }
     this.tools = new Set();   // simya: üretilmiş kalıcı aletler
     this.effects = {};        // etkin iksirler: { id: bitiş zamanı (oyun sn) }
@@ -19,7 +19,10 @@ export class Player {
     this.bonus = {};
     this.popCap = 0;
     this.population = 0;
-    this.stats = { gathered: { food: 0, wood: 0, gold: 0, stone: 0 }, kills: 0, losses: 0 };
+    this.stats = { gathered: { food: 0, wood: 0, gold: 0, stone: 0, hide: 0 }, spent: { food: 0 }, kills: 0, losses: 0 };
+    this.wine = 0;            // şarap mahzeninin ürettiği, tavernaların tükettiği şarap
+    this.happiness = 60;      // huzur (0–100)
+    this.happyFactors = {};   // arayüz için: huzuru oluşturan kalemler
     this.version = 0;
   }
 

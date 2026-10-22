@@ -46,6 +46,30 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
   tekne kendi gölündeki en yakın **balık sürüsüne** gider, ağ atar ve dolunca tersaneye boşaltır (her su kütlesi ayrı
   numaralanır, tekne başka göle gitmeye çalışmaz). Köylüler kıyıdaki balık sürüsünden de balık tutabilir.
   **Balık Ağları** (Feodal) tekneleri %50 hızlandırır. Tersanenin gölünde balık yoksa uyarı çıkar.
+- **Halkın huzuru (üst barda, 0–100):** Toplama hızını ×0,8–×1,2 değiştirir. Evler, nüfus, süslemeler ve şaraplı
+  tavernalar artırır; savaş, kayıplar, yağma, açlık ve (Kürk Giysiler araştırılmadıysa) kış düşürür. Üzerine gelince kalemler görünür.
+- **Gıda tüketimi:** Her köylü (~0,7/dk) ve asker (~1,2/dk) yiyecek tüketir; kışın %30 fazla (ambar varsa %10). Yiyecek
+  kaynağının üzerine gelince toplanan, harcanan ve net saatlik değer görünür. Yiyecek biterse halk aç kalır (huzur düşer).
+- **Taverna / Şarap Mahzeni / Ambar:** Mahzen yiyecekten şarap yapar, taverna şarapla huzuru +7 artırır (şarapsız +2).
+  Ambar yağmada kaynakların %5'ini korur (seviye başına +%5, en fazla %40) ve kış tüketimini azaltır. Düşman bir binanızı
+  yıkarsa korunmayan kaynakların %8'i yağmalanır.
+- **Kış ve gıda:** Kışın köylüler dışarıdaki gıda kaynaklarından (meyve, çiftlik, kıyı balığı) toplayamaz. Sera (kendiliğinden,
+  kışın da), Sebze Yatağı (kışın da hasat), balıkçı tekneleri, hayvan çiftliği ve av eti çalışır.
+- **Su kenarı:** Su Değirmeni (az yiyecek) ve Feodal Çağ'dan itibaren Altın Eleme Tesisi (dakikada 15 altın).
+- **Hastane:** 9 karo içindeki yaralı askerleri saniyede 3 can iyileştirir; ölen askerlerin %35'i 25 sn sonra geri döner.
+- **Mancınık** (Kale): 9 karo menzil, alan hasarı. **Savaş Arabası** (İmparatorluk, 5000 kaynak, 3 dk): 50 asker taşır,
+  yayalardan hızlı; askerleri seçip arabaya sağ tıklayın, "İndir" ile indirin.
+- **Yabani hayvanlar:** Ceylan, geyik, tavşan, yaban atı sürüleri; ara sıra köyün yakınına gelirler. Köylülerle sağ tıklayıp
+  avlayın: et (yerde kalır, toplanır) ve **deri**. Deri: Kürk Giysiler, Deri Zırh; Avcılık araştırması +%50 et/deri.
+- **Mimar:** Patika, çit bitkisi (sürükle), çiçek tarhı, süs ağacı, bank, sokak feneri (geceleri yanar), kuyu (8 karo içinde
+  +%10 toplama), heykel, çeşme (çevresini iyileştirir). Süsler güzellik → huzur verir. Mimar varsa binalar **taşınabilir**
+  (bina seçili → Taşı; bedel maliyetin %30'u).
+- **Gizemli Geçit:** Haritanın uç bölgelerinde, kütüklerle örtülü iki toprak tümsek. Birinin üstüne giren birim diğerinden
+  çıkar; geçitler her dakika yer değiştirir.
+- **Düşman:** Sizden ~%5 hızlı gelişir (çağ atladığınızda o da atlar); saldırılar rastgele aralıklarla, her seferinde daha
+  kalabalık ve her dalgada farklı bir yönden gelir.
+- **Oyun sonu:** Zafer veya yenilgide tüm kayıtlar silinir; menüde "Devam Et" çıkmaz, oyun sıfırdan başlar.
+- **Çağ atlama süresi:** Feodal 90 sn, Kale 140 sn, İmparatorluk 200 sn.
 - **Çağ şartları:** Kaynak yetmez. Feodal için 3 asker + 2 ev, kereste kampı, değirmen ve kışla; Kale için 8 asker +
   5 ev, Bilim Merkezi, Okçuluk Alanı, Pazar, Gözetleme Kulesi ve Hayvan Çiftliği; İmparatorluk için 15 asker + 8 ev,
   Ahır, Kuşatma Atölyesi, Üniversite ve Simya Atölyesi gerekir. Kasaba Merkezi seçilince açılan panelde liste ✓/✗ ile
@@ -129,15 +153,14 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
 - **Savaş sisi:** Keşfedilmemiş alanlar karanlıktır. Keşfettiğiniz yerler açık kalır (yalnızca hafif gölgeli), ama oradan
   geçen düşman birimleri yalnızca görüş alanınızdaysa görünür (minimap dahil). Görüş geniştir: birim görüşünün 1,5 katı
   + 3 karo, Kasaba Merkezi 15 karo. Gece görüş biraz kısalır. Yeni oyunda kapatılabilir.
-- **Harita:** 224×224 karo (önceki haritanın 2 katı alan). Başlangıç kaynakları (meyve, orman, altın, taş) üsse yakın ama farklı yönlerde; haritaya
+- **Harita:** 224×224 karo. Kayalık (dağ) yok; küçük su birikintisi yok, göller ve deniz geniş, her yerde bol balık. Başlangıç kaynakları (meyve, orman, altın, taş) üsse yakın ama farklı yönlerde; haritaya
   dağılan kümeler alanla orantılıdır ve birbirinden uzaktır (aynı tür en az 22, farklı tür en az 8 karo).
 - **Görünüm:** Binalar, ağaçlar ve dağlar arkalarındaki birimlerin ve tavukların ÖNÜNDE çizilir (ayak izine göre derinlik).
   Örtülen kendi birimleriniz soluk siluetle görünür, düşman tamamen gizlenir.
-- **Mevsimler ve hava:** İlkbahar → Yaz → Sonbahar → Kış (her biri 7,5 dakika; oyun yazla başlar). Sonbaharda meşeler
+- **Mevsimler ve hava:** İlkbahar → Yaz → Sonbahar → Kış (her biri 7,5 dakika; oyun yazla başlar). Kış gelince arayüz değişmez. Sonbaharda meşeler
   kızıla döner. **Kışın her yer beyaza bürünür:** zemin ~40 sn içinde karla kaplanır (göller açık kalır, kıyılar buzlu
   görünür), ağaçlar, çalılar, dağlar, madenler ve bina çatıları karlı görünüme geçer, mini harita da beyazlar;
-  ilkbaharda kar aynı hızla erir. Kış gelince **hemen kar yağmaya başlar** (kışın sis yok, ekranı örten beyaz perde
-  kaldırıldı) ve arayüz **kış temasına** (buz mavisi paneller, karlı üst bar) geçer; **kışın çiftlikler %25 yavaş, ilkbaharda %10 hızlı**. Her mevsimin kendi hava
+  ilkbaharda kar aynı hızla erir. Kış gelince **hemen kar yağmaya başlar** (kışın sis yok); **kışın çiftlikler %25 yavaş, ilkbaharda %10 hızlı**. Her mevsimin kendi hava
   olasılıkları vardır: yağmur (hava kararır, yağmur sesi), kar (rüzgâr sesi), sis.
 - **Canlılık:** gündüz kuş sürüleri (yerde gölgeleri kayar), Kasaba Merkezi çevresinde gezinip yem gagalayan tavuklar,
   balık sürülerinin su altı gölgeleri, ara sıra sudan sıçrayan balıklar, ev ve atölyelerin bacalarından duman.
@@ -163,11 +186,13 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
 | Sağ tık | Topla / inşa et / bırak / yürü · **düşmana: saldır** · binada toplanma noktası |
 | Orta tuş veya Space + sol sürükle | Haritayı kaydır · WASD / Oklar · Tekerlek: imlece zoom |
 | Minimap sol / sağ tık | Kamerayı taşı / seçili birimleri gönder |
-| Seçim yap · Alt menünün sekmesi veya **F2** | Alt menü seçim yapınca kendiliğinden açılır, seçim kalkınca kapanır · sekme/F2 sabit açık tutar (hatırlanır). Mini harita sağ altta ayrı ve hep görünür |
-| Atmosfer butonu veya **N** · Efektler butonu veya **M** | Atmosfer / olay seslerini aç-kapat (tercih hatırlanır) |
+| Seçim yap · Alt menünün sekmesi veya **F2** | Alt menü seçim yapınca açılır; boşluğa tıklayınca kapanır · sekme/F2 sabit açık tutar |
+| **O** / **E** | Köyün ilk görünümüne yumuşakça dön / tüm haritayı göster |
+| **K** veya mini harita sekmesi | Mini haritayı gizle / göster (hatırlanır) |
+| **B** · **N** · **M** (veya Ayarlar menüsü) | Müzik / atmosfer / olay seslerini aç-kapat — ses düğmeleri üst bardan Ayarlar'a taşındı |
 | X veya F1 · L | Kontroller penceresi · Gece/gündüz modu |
 | **Ctrl+1…9** · **1…9** (iki kez) | Seçimi gruba kaydet · grubu seç (iki kez: kamera gruba gider) · Shift+rakam: gruba ekle |
-| **Q E R T Y U I O F C V Z J K** | Görünen komut butonları sırasıyla (harf butonun sol üst köşesinde) |
+| **Q R T Y U I F C V Z J K** | Görünen komut butonları sırasıyla (harf butonun sol üst köşesinde) |
 | **Esc / F10 / P** · **F5** · **B** | Menü ve duraklatma · hızlı kayıt · müzik aç-kapat |
 | H · . · Esc · G · F1 · F3 | Kasaba Merkezi · Boşta köylü · İptal · Grid · Yardım · Performans |
 
