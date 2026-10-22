@@ -73,6 +73,9 @@ export class Minimap {
   }
 
   draw(time) {
+    // Kutu boyutu değiştiyse (gizliyken kuruldu, pencere yeniden boyutlandı) tuvali yeniden ölç
+    const r = this.canvas.getBoundingClientRect();
+    if (r.width > 10 && (Math.abs(r.width - this.cssW) > 1 || Math.abs(r.height - this.cssH) > 1)) this.resize();
     // Statik kısım (arazi + kaynaklar) en fazla saniyede bir yeniden üretilir
     if (this.map.version !== this._builtVersion && time - this._builtAt > 1) {
       this._rebuild();

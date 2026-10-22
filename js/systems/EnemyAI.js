@@ -192,7 +192,8 @@ export class EnemyAI {
       const o = map.occupancy[j][i];
       return !o || o.kind === 'tree' || o.kind === 'stump';
     };
-    for (const minD of strict ? [ENEMY_AI.minDistance, 40] : [ENEMY_AI.minDistance, 35, 20]) {
+    // Yürüme mesafesi (karo): önce en uzak seçenek, bulunamazsa adım adım yakına
+    for (const minD of strict ? [ENEMY_AI.minDistance + 18, ENEMY_AI.minDistance, 55, 40] : [ENEMY_AI.minDistance, 35, 20]) {
       for (const n of order) {
         if (dist[n] < minD) break;
         const ci = n % W, cj = (n / W) | 0;

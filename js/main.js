@@ -12,8 +12,9 @@ loadAssets(MANIFEST, (p) => {
   pct.textContent = `%${Math.round(p * 100)}`;
 }).then((assets) => {
   const menu = new Menu((opts) => {
-    const game = new Game(assets, opts);
+    // Arayüz önce görünür olsun: mini harita vb. boyutlarını kurulumda doğru ölçsün
     document.body.classList.add('ingame');
+    const game = new Game(assets, opts);
     menu.game = game;
     game.menu = menu;
     game.start();

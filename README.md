@@ -18,7 +18,15 @@ hatası alırsanız `web.config` dosyasının proje kökünde olduğundan emin o
 
 **VS Code:** "Live Server" eklentisiyle `index.html` → "Open with Live Server".
 
-**Elle:** `python tools/server.py` (önbelleği kapatır: güncellemeden sonra Ctrl+F5 gerekmez) veya `npx serve -l 8080 .`
+**Elle:** `python tools/stamp.py` ardından `python tools/server.py` veya `npx serve -l 8080 .`
+
+**Önbellek:** `baslat.bat`/`baslat.sh` her açılışta `tools/stamp.py`'yi çalıştırır: her JavaScript dosyasına içerik özetinden
+bir sürüm verilir (`index.html` içindeki import map) ve görsel/ses adreslerine `?v=` eklenir. Böylece oyun güncellenince
+tarayıcı eski dosyaları kullanamaz (eski ve yeni dosyaların karışması örneğin teknelerin karadan yol bulmaya çalışıp
+yerinde kalmasına yol açıyordu). `tools/server.py` hem IPv4 hem IPv6 dinler: Windows'ta `localhost`'un IPv6 denemesindeki
+bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yüklenir).
+
+**Sürümler:** `VERSION` dosyası ve git etiketleri (`v1.0.0`, `v1.1.0`, …).
 
 ## Oynanış
 
@@ -46,7 +54,8 @@ hatası alırsanız `web.config` dosyasının proje kökünde olduğundan emin o
 - **Hasar:** Tamamlanmış bina hasar aldıkça üzerinde alevler ve duman çıkar (alevler binanın kendi görselinin
   dolu piksellerine yerleşir, sayısı hasarla 1'den 7'ye çıkar). İnşaat halindeki bina tek, statik bir iskele görselidir.
 - **Gece / gündüz:** Saat sunucudan (HTTP `Date` başlığı) alınır. 16:00'da hava kararmaya başlar, 17:15'ten 06:15'e
-  kadar gecedir: dolunay, ışık sızan evler ve Kasaba Merkezi yanındaki kamp ateşinin başında kupalarından içen askerler.
+  kadar gecedir: ışık sızan evler ve Kasaba Merkezi yanındaki kamp ateşinin başında kupalarından içen askerler.
+  **Dolunay** gökyüzünün en tepesinde gece boyunca soldan sağa yay çizerek ilerler, gün ağarınca kaybolur.
   Üst bardaki saat düğmesi veya **L**: Otomatik → Gece → Gündüz.
 - **Bekleyen inşaatlar:** Sağ üstteki listede her inşaatın yüzdesi ve işçi sayısı görünür; tıklayınca kamera binaya gider.
 - **Çağlar:** Karanlık → Feodal → Kale → İmparatorluk; binaların görünümü her çağda değişir.
@@ -60,10 +69,15 @@ hatası alırsanız `web.config` dosyasının proje kökünde olduğundan emin o
 - **Düşman (kırmızı):** Haritanın uzak ama karadan ulaşılabilir bir köşesinde üs kurar (Kasaba Merkezi, Kışla, Okçuluk Alanı,
   2 kule, nöbetçiler). **Ekonomisi vardır:** köylüleri üssün çevresinde kaynak toplar, düşman zamanla yeni köylü yetiştirir
   ve biriken kaynakla her dalgaya ek asker satın alır → düşman köylülerine baskın yapmak dalgaları küçültür.
-  Zorluk; ilk saldırı zamanını (Kolay 8 / Normal 5 / Zor 3,5 dk), dalga aralığını, dalga büyüklüğünü, düşman köylü
+  Zorluk; ilk saldırı zamanını (Kolay 12 / Normal 8,5 / Zor 6 dk; dalga aralığı 4,7 / 3,7 / 2,8 dk), dalga büyüklüğünü, düşman köylü
   sayısını ve toplama hızını belirler. Düşman zamanla çağ atlar ve güçlenir. Kalan süre üst barda görünür.
-- **Savaş sisi:** Keşfedilmemiş alanlar karanlık, görüş dışındaki alanlar yarı karanlıktır; düşman birimleri yalnızca
-  görüş alanında görünür (minimap dahil). Gece görüş biraz kısalır. Yeni oyunda kapatılabilir.
+- **Savaş sisi:** Keşfedilmemiş alanlar karanlıktır. Keşfettiğiniz yerler açık kalır (yalnızca hafif gölgeli), ama oradan
+  geçen düşman birimleri yalnızca görüş alanınızdaysa görünür (minimap dahil). Görüş geniştir: birim görüşünün 1,5 katı
+  + 3 karo, Kasaba Merkezi 15 karo. Gece görüş biraz kısalır. Yeni oyunda kapatılabilir.
+- **Harita:** 160×160 karo. Başlangıç kaynakları (meyve, orman, altın, taş) üsse yakın ama farklı yönlerde; haritaya
+  dağılan kümeler alanla orantılıdır ve birbirinden uzaktır (aynı tür en az 22, farklı tür en az 8 karo).
+- **Görünüm:** Binalar, ağaçlar ve dağlar arkalarındaki birimlerin ve tavukların ÖNÜNDE çizilir (ayak izine göre derinlik).
+  Örtülen kendi birimleriniz soluk siluetle görünür, düşman tamamen gizlenir.
 - **Mevsimler ve hava:** İlkbahar → Yaz → Sonbahar → Kış (her biri 6 dakika). Sonbaharda meşeler kızıla döner, kışın
   kar örtüsü tonu ve kar yağışı olur; **kışın çiftlikler %25 yavaş, ilkbaharda %10 hızlı**. Her mevsimin kendi hava
   olasılıkları vardır: yağmur (hava kararır, yağmur sesi), kar (rüzgâr sesi), sis.
@@ -91,7 +105,7 @@ hatası alırsanız `web.config` dosyasının proje kökünde olduğundan emin o
 | Sağ tık | Topla / inşa et / bırak / yürü · **düşmana: saldır** · binada toplanma noktası |
 | Orta tuş veya Space + sol sürükle | Haritayı kaydır · WASD / Oklar · Tekerlek: imlece zoom |
 | Minimap sol / sağ tık | Kamerayı taşı / seçili birimleri gönder |
-| Alt menünün sağ üstündeki küçük sekme veya **F2** | Alt menüyü gizle / göster (tercih hatırlanır) |
+| Seçim yap · Alt menünün sekmesi veya **F2** | Alt menü seçim yapınca kendiliğinden açılır, seçim kalkınca kapanır · sekme/F2 sabit açık tutar (hatırlanır). Mini harita sağ altta ayrı ve hep görünür |
 | Atmosfer butonu veya **N** · Efektler butonu veya **M** | Atmosfer / olay seslerini aç-kapat (tercih hatırlanır) |
 | X veya F1 · L | Kontroller penceresi · Gece/gündüz modu |
 | **Ctrl+1…9** · **1…9** (iki kez) | Seçimi gruba kaydet · grubu seç (iki kez: kamera gruba gider) · Shift+rakam: gruba ekle |
@@ -153,7 +167,8 @@ python tools/slice_sprites.py                                  # pillow + numpy 
 python tools/process_anim.py                                   # opencv + pillow: videolar → animasyon şeritleri (manifest "anims")
 python tools/key_sprite.py tools/raw/dock.png dock_0 640       # macenta zeminli görsel → sprite + manifest (en büyük boyut)
 python tools/process_audio2.py                                 # imageio-ffmpeg + numpy: ek sesler → seviye eşitleme, kesintisiz döngü
-python tools/server.py                                         # önbelleksiz yerel sunucu
+python tools/stamp.py                                          # modül/varlık adreslerine içerik sürümü (import map)
+python tools/server.py                                         # önbelleksiz, IPv4+IPv6 yerel sunucu
 ```
 
 **Üretilen varlıklar (Higgsfield):** atlı, koçbaşı, tekne (5 yön), ahır, kuşatma atölyesi, çit, kapı, tavuk, kamp ateşi
@@ -172,7 +187,7 @@ ve hazır olunca yer değiştirir. Kaydırırken yeni çizim önceden başlar. A
 yalnızca nesne katmanını yeniden çizer; zemin yalnızca çiftlik değişince yenilenir.
 Simülasyonda yakın düşman, kule hedefi ve birimlerin itmesi mekânsal ızgarayla hesaplanır (adım başına ~0,06 ms).
 Düşman renkli animasyon kareleri açılışı uzatmasın diye oyun başladıktan sonra arka planda hazırlanır.
-`baslat.bat`/`baslat.sh` artık `tools/server.py` kullanır (Cache-Control: no-cache); güncellemeden sonra Ctrl+F5 gerekmez.
+`baslat.bat`/`baslat.sh` önce `tools/stamp.py` (sürümlü modül adresleri), sonra `tools/server.py` (Cache-Control: no-cache) çalıştırır.
 
 ## Bilinen sınırlamalar / sonraki adımlar
 
