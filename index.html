@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arzu'nun Köyü</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="loading">
+    <h1>ARZU'NUN KÖYÜ</h1>
+    <p>Krallık hazırlanıyor…</p>
+    <div class="bar"><i id="loadBar"></i></div>
+    <div id="loadPct">%0</div>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <!-- Üst kaynak barı -->
+  <header id="topbar" class="hud">
+    <div class="res" id="res-wood" title="Odun"><img src="assets/icons/wood.webp" alt="" /><b>0</b></div>
+    <div class="res" id="res-food" title="Yiyecek"><img src="assets/icons/food.webp" alt="" /><b>0</b></div>
+    <div class="res" id="res-gold" title="Altın"><img src="assets/icons/gold.webp" alt="" /><b>0</b></div>
+    <div class="res" id="res-stone" title="Taş"><img src="assets/icons/stone.webp" alt="" /><b>0</b></div>
+    <div class="res" id="res-pop" title="Nüfus / Sınır"><img src="assets/icons/pop.webp" alt="" /><b>0/0</b></div>
+    <div class="spacer"></div>
+    <div class="wave hidden" id="waveBox" title="Düşman saldırısına kalan süre"><img src="assets/icons/horn.webp" alt="" /><b>0:00</b></div>
+    <div class="sound" role="group" aria-label="Ses">
+      <button id="ambBtn" class="sndbtn" title="Atmosfer sesini kapat (N)" aria-label="Atmosfer sesi">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z" fill="currentColor" opacity=".9"/><path d="M5 19l8-8" stroke="#24180f" stroke-width="1.6" stroke-linecap="round"/><path class="x" d="M3 3l18 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        <span>Atmosfer</span>
+      </button>
+      <button id="musicBtn" class="sndbtn" title="Müziği kapat (B)" aria-label="Müzik">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 17V5l11-2v12" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="2.8" fill="currentColor"/><circle cx="17.5" cy="15" r="2.8" fill="currentColor"/><path class="x" d="M3 3l18 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        <span>Müzik</span>
+      </button>
+      <button id="sfxBtn" class="sndbtn" title="Olay seslerini kapat (M)" aria-label="Olay sesleri">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="wv" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/><path class="x" d="M16 9l6 6M22 9l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Efektler</span>
+      </button>
+    </div>
+    <button id="dayBtn" title="Gece/Gündüz (L)" aria-label="Gece ve gündüz modu">
+      <svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" fill="currentColor"/></svg>
+      <span><b>12:00</b><i>Otomatik</i></span>
+    </button>
+    <button id="helpBtn" title="Kontroller (X)" aria-label="Kontroller penceresi">?</button>
+    <button id="menuBtn" title="Menü (Esc / F10)" aria-label="Oyun menüsü"><span></span><span></span><span></span></button>
+    <button id="idleBtn" title="Boşta köylüyü seç (.)"><img src="assets/sprites/vil_idle.webp" alt="" /><b>0</b></button>
+    <div class="age" id="ageBox" title="Mevcut çağ">
+      <img src="assets/icons/age.webp" alt="" />
+      <div><span id="ageName">Karanlık Çağ</span><div class="ageprog"><i id="ageProg"></i></div></div>
+    </div>
+  </header>
+
+  <!-- Alt panel: seçim bilgisi · komutlar · minimap (sağ üstteki sekmeyle gizlenebilir) -->
+  <button id="panelToggle" title="Menüyü gizle (F2)" aria-label="Alt menüyü gizle veya göster"><span></span></button>
+  <footer id="bottombar" class="hud">
+    <section id="selinfo"></section>
+    <section id="commands"></section>
+    <section id="mapbox"><canvas id="minimap"></canvas></section>
+  </footer>
+
+  <!-- Bekleyen inşaatlar (sağ üst) -->
+  <aside id="pending" class="hud hidden" aria-label="Bekleyen inşaatlar">
+    <div class="ph"><img src="assets/icons/build.webp" alt="" /><b>İnşaatlar</b><span id="pendingCount">0</span></div>
+    <ul id="pendingList"></ul>
+  </aside>
+
+  <div id="tooltip"></div>
+  <div id="toasts"></div>
+
+  <div id="help" class="hud">
+    <button id="helpClose" title="Kapat (X)">×</button>
+    <b>Kontroller</b>
+    <ul>
+      <li><kbd>Sol tık</kbd> seç · <kbd>Sürükle</kbd> kutu seçimi · <kbd>Çift tık</kbd> ekrandaki tüm köylüler</li>
+      <li><kbd>Sağ tık</kbd> kaynağa gönder / inşa et / yürü · binada toplanma noktası</li>
+      <li><kbd>Orta tuş</kbd> veya <kbd>Space + sol</kbd> sürükle: haritayı kaydır</li>
+      <li><kbd>WASD</kbd> / <kbd>Oklar</kbd> kaydır · <kbd>Tekerlek</kbd> imlece zoom</li>
+      <li><kbd>Shift</kbd> + yerleştir: art arda inşa · <kbd>Esc</kbd> iptal</li>
+      <li><kbd>Sağ tık</kbd> düşmana: saldır · Askerler yakındaki düşmanla kendiliğinden savaşır</li>
+      <li><kbd>H</kbd> Kasaba Merkezi · <kbd>.</kbd> boşta köylü · <kbd>F2</kbd> alt menü · <kbd>M</kbd> olay sesleri · <kbd>N</kbd> atmosfer · <kbd>G</kbd> grid · <kbd>F3</kbd> performans · <kbd>L</kbd> gece/gündüz</li>
+      <li><kbd>Ctrl</kbd>+<kbd>1…9</kbd> grup kaydet · <kbd>1…9</kbd> grubu seç (iki kez: kamera gruba) · <kbd>Q E R T…</kbd> komut kısayolları</li>
+      <li><kbd>Esc</kbd>/<kbd>F10</kbd>/<kbd>P</kbd> menü ve duraklat · <kbd>F5</kbd> hızlı kayıt · <kbd>B</kbd> müzik · Çit: sürükleyerek çiz</li>
+      <li><kbd>X</kbd> bu pencereyi aç / kapat</li>
+    </ul>
+  </div>
+
+  <pre id="debug" class="hud hidden"></pre>
+  <div id="fps" class="hidden">0 FPS</div>
+  <div id="pauseBadge">DURAKLATILDI</div>
+
+  <!-- Ana menü / duraklatma / ayarlar (js/ui/Menu.js doldurur) -->
+  <div id="menu" class="hidden"></div>
+
+  <div id="victory" class="endscreen hidden">
+    <div class="crown"><img src="assets/icons/age.webp" alt="" /></div>
+    <h2>ZAFER!</h2>
+    <p>Medeniyetiniz tarihe adını yazdırdı.</p>
+    <p class="stats"></p>
+    <button onclick="location.reload()">Ana Menü</button>
+  </div>
+
+  <div id="defeat" class="endscreen hidden">
+    <div class="crown"><img src="assets/icons/banner.webp" alt="" /></div>
+    <h2>YENİLGİ</h2>
+    <p>Kasaba Merkeziniz düştü.</p>
+    <p class="stats"></p>
+    <button onclick="location.reload()">Ana Menü</button>
+  </div>
+
+  <!-- type="module": ES6 modülleri → yerel sunucu gerekir (file:// çalışmaz) -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

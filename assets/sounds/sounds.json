@@ -1,0 +1,72 @@
+{
+  "chop": {
+    "file": "assets/sounds/chop.mp3",
+    "dur": 0.4,
+    "loop": false
+  },
+  "mine": {
+    "file": "assets/sounds/mine.mp3",
+    "dur": 0.58,
+    "loop": false
+  },
+  "hammer": {
+    "file": "assets/sounds/hammer.mp3",
+    "dur": 0.5,
+    "loop": false
+  },
+  "sword": {
+    "file": "assets/sounds/sword.mp3",
+    "dur": 0.9,
+    "loop": false
+  },
+  "bow": {
+    "file": "assets/sounds/bow.mp3",
+    "dur": 1.3,
+    "loop": false
+  },
+  "hit": {
+    "file": "assets/sounds/hit.mp3",
+    "dur": 0.46,
+    "loop": false
+  },
+  "death": {
+    "file": "assets/sounds/death.mp3",
+    "dur": 1.2,
+    "loop": false
+  },
+  "bell": {
+    "file": "assets/sounds/bell.mp3",
+    "dur": 0.88,
+    "loop": false
+  },
+  "horn": {
+    "file": "assets/sounds/horn.mp3",
+    "dur": 2.6,
+    "loop": false
+  },
+  "fanfare": {
+    "file": "assets/sounds/fanfare.mp3",
+    "dur": 4.43,
+    "loop": false
+  },
+  "collapse": {
+    "file": "assets/sounds/collapse.mp3",
+    "dur": 2.4,
+    "loop": false
+  },
+  "click": {
+    "file": "assets/sounds/click.mp3",
+    "dur": 0.13,
+    "loop": false
+  },
+  "defeat": {
+    "file": "assets/sounds/defeat.mp3",
+    "dur": 3.43,
+    "loop": false
+  },
+  "nature": {
+    "file": "assets/sounds/nature.mp3",
+    "dur": 20.06,
+    "loop": true
+  }
+}

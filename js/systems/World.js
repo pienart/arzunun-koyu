@@ -1,0 +1,1060 @@
+import { CONFIG } from '../config.js';
+import { BUILDINGS, UNITS, TECHS, AGES, MARKET, RESOURCE_NAMES, START, PLAYER, ENEMY, REPAIR, DIFFICULTY, formatCost } from '../data/gameData.js';
+import { TileId, TileRegistry } from '../world/TileTypes.js';
+import { SpatialGrid } from './SpatialGrid.js';
+import { Weather } from './Weather.js';
+import { Boat } from '../entities/Boat.js';
+import { GameMap, StaticObject } from '../world/GameMap.js';
+import { Building } from '../entities/Building.js';
+import { Villager } from '../entities/Villager.js';
+import { Soldier } from '../entities/Soldier.js';
+import { Player } from './Player.js';
+import { Pathfinder } from './Pathfinder.js';
+import { EnemyAI } from './EnemyAI.js';
+
+const CORPSE_TIME = 6; // ceset: ölüm animasyonu + yerde kalma + solma (sn)
+
+/** Bir karonun, dikdörtgen ayak izine Chebyshev uzaklığı (0 = içinde, 1 = bitişik) */
+function rectDist(i, j, obj) {
+  const dx = Math.max(obj.originI - i, 0, i - obj.i);
+  const dy = Math.max(obj.originJ - j, 0, j - obj.j);
+  return Math.max(dx, dy);
+}
+
+/** Kesirli bir noktanın, binanın ayak izi KENARINA Öklid uzaklığı (karo kenarları ±0.5'te) */
+function rectEuclid(x, y, b) {
+  const dx = Math.max(b.originI - 0.5 - x, 0, x - (b.i + 0.5));
+  const dy = Math.max(b.originJ - 0.5 - y, 0, y - (b.j + 0.5));
+  return Math.hypot(dx, dy);
+}
+
+/**
+ * World: oyun durumunun tamamı ve kuralları (simülasyon katmanı).
+ * Render ve DOM'dan bağımsızdır → ileride sunucuda/lockstep'te aynen çalıştırılabilir.
+ * Görsel/işitsel tepkiler için yalnızca olay kuyrukları üretir: events (bildirim), sounds (ses), alerts (minimap uyarısı).
+ */
+export class World {
+  /**
+   * @param opts { seed, difficulty: 'easy'|'normal'|'hard', save }  save verilirse başlangıç kurulumu yapılmaz;
+   *             SaveGame.apply durumu kayıttan geri yükler.
+   */
+  constructor(opts = {}) {
+    this.seed = opts.seed ?? CONFIG.SEED;
+    this.difficulty = DIFFICULTY[opts.difficulty] ? opts.difficulty : 'normal';
+    this.diff = DIFFICULTY[this.difficulty];
+    this.map = new GameMap(CONFIG.MAP_WIDTH, CONFIG.MAP_HEIGHT, this.seed);
+    this.grid = new SpatialGrid(this.map.width, this.map.height, 8);
+    this.weather = new Weather(this.seed);
+    this.lastCombatAt = -99;   // müzik: son çatışma anı (oyuncu taraflı)
+    this._pass = new Map();
+    this._navPass = (i, j) => (this.isNavigable(i, j) ? 1 : 0);
+    this.fishNodes = this.collectFish();
+    this.players = { [PLAYER]: new Player(PLAYER), [ENEMY]: new Player(ENEMY) };
+    this.player = this.players[PLAYER];
+    this.pathfinder = new Pathfinder(this.map);
+    this.units = [];
+    this.buildings = [];
+    this.projectiles = [];
+    this.corpses = [];
+    this.time = 0;
+    this.victory = false;
+    this.defeat = false;
+    this.events = [];
+    this.sounds = [];
+    this.alerts = [];
+    this._popWarnAt = -99;
+    this._attackAlertAt = -99;
+    this.enemyAI = new EnemyAI(this);
+    if (opts.save) return; // SaveGame.apply gerisini kurar
+
+    // Başlangıç: kasaba merkezi + köylüler
+    const s = this.map.spawn;
+    this.townCenter = this.addBuilding('townCenter', s.i, s.j, PLAYER, true);
+    for (let k = 0; k < START.villagers; k++) this.spawnUnitNear(this.townCenter, 'villager');
+
+    this.campfire = this._placeCampfire();
+
+    // Düşman üssü (haritanın uzak, karadan ulaşılabilir bir köşesi)
+    this.enemyAI.setup();
+    this.recountPopulation();
+  }
+
+  /**
+   * Kamp ateşi: Kasaba Merkezi'nin 5–8 karo yakınında, çevresindeki 3×3 alan boş ve yürünebilir bir karo.
+   * Geceleri yanar; başında askerler içki içer (Renderer süsü — birim değildir, nüfusa sayılmaz).
+   */
+  _placeCampfire() {
+    const tc = this.townCenter, map = this.map;
+    const ci = Math.round(tc.centerI), cj = Math.round(tc.centerJ);
+    let best = null, bestScore = Infinity;
+    for (let j = cj - 9; j <= cj + 9; j++) {
+      for (let i = ci - 9; i <= ci + 9; i++) {
+        const d = Math.hypot(i - ci, j - cj);
+        if (d < 5 || d > 8) continue;
+        let ok = true;
+        for (let dj = -1; dj <= 1 && ok; dj++) for (let di = -1; di <= 1 && ok; di++) ok = map.isWalkable(i + di, j + dj);
+        if (!ok) continue;
+        const score = d - (i + j - ci - cj) * 0.3; // ekranda TC'nin önü (aşağısı) tercih edilir
+        if (score < bestScore) { bestScore = score; best = { i, j }; }
+      }
+    }
+    if (!best) return null;
+    return map.addObject(new StaticObject('campfire', best.i, best.j, { blocks: true }));
+  }
+
+  // ───────────── Olay kuyrukları ─────────────
+  notify(text, kind = 'info') { this.events.push({ text, kind, t: this.time }); }
+  sound(name, i = null, j = null, vol = 1) { this.sounds.push({ name, i, j, vol }); }
+  alert(i, j) { this.alerts.push({ i, j, t: this.time }); }
+
+  // ───────────── Simülasyon adımı (sabit 20 Hz) ─────────────
+  update(dt) {
+    if (this.victory || this.defeat) return;
+    this.time += dt;
+    for (const b of this.buildings) { b.builders = 0; b.repairers = 0; }
+    for (const u of this.units) {
+      if (u.phase !== 'work' || !u.task?.target) continue;
+      if (u.state === 'build') u.task.target.builders++;
+      else if (u.state === 'repair') u.task.target.repairers++;
+    }
+    // İçeride korunan köylüler yavaşça iyileşir
+    for (const b of this.buildings) for (const u of b.garrison) u.hp = Math.min(u.maxHp, u.hp + dt);
+    for (const b of this.buildings.slice()) b.update(dt, this);
+    this._passiveIncome(dt);
+    this.weather.update(dt);
+    if (this.weather.changed) { this.notify(`Mevsim değişti: ${this.weather.changed}`, 'info'); this.weather.changed = null; this.map.version++; }
+    this.grid.rebuild(this.units);
+    this._buildingAttacks(dt);
+    for (const u of this.units.slice()) if (!u.dead) u.update(dt, this);
+    this.grid.rebuild(this.units);
+    this._separate(dt);
+    this._updateProjectiles(dt);
+    for (const c of this.corpses) c.t += dt;
+    if (this.corpses.length && this.corpses[0].t > CORPSE_TIME) this.corpses = this.corpses.filter((c) => c.t <= CORPSE_TIME);
+    this.enemyAI.update(dt);
+  }
+
+  // ───────────── Sorgular ─────────────
+  isAlive(obj) {
+    if (!obj) return false;
+    if (obj.isUnit) return !obj.dead && !obj.garrisoned;
+    if (obj.isBuilding) return !obj.destroyed;
+    if (obj.isResource) return obj.amount > 0 && this.map.objects[obj.j][obj.i] === obj;
+    return false;
+  }
+
+  /** Birim hedefin "yanında" mı? (yürünebilir çiftlikte: içinde) */
+  isAt(unit, obj) {
+    const d = rectDist(unit.tileI, unit.tileJ, obj);
+    return obj.isBuilding && !obj.blocks ? d === 0 : d <= 1;
+  }
+
+  unitsOf(owner) { return this.units.filter((u) => u.owner === owner); }
+
+  recountPopulation() {
+    for (const p of Object.values(this.players)) {
+      let pop = 0, cap = 0;
+      for (const u of this.units) if (u.owner === p.id) pop++;
+      for (const b of this.buildings) {
+        if (b.owner !== p.id) continue;
+        pop += b.garrison.length;
+        if (b.queue[0]?.kind === 'unit' && b.queue[0].started) pop++;
+        if (b.complete) cap += b.def.popProvided ?? 0;
+      }
+      p.population = pop;
+      p.popCap = Math.min(START.popMax, cap);
+      p.version++;
+    }
+  }
+
+  warnPopCap() {
+    if (this.time - this._popWarnAt > 8) {
+      this._popWarnAt = this.time;
+      this.notify('Nüfus sınırına ulaşıldı! Ev inşa edin.', 'warn');
+    }
+  }
+
+  /** Birim istatistiği = temel değer + teknoloji/çağ bonusları */
+  stat(u, key) {
+    const base = key === 'melee' || key === 'pierce' ? u.def.armor[key] : u.def[key];
+    return base + (this.players[u.owner].bonus[u.type]?.[key] ?? 0);
+  }
+
+  // ───────────── Geçiş kuralları ─────────────
+  /** Tekne: su karosu ve üzerinde engel yok (balık sürüsü engel değildir) */
+  isNavigable(i, j) {
+    const map = this.map;
+    if (!map.inBounds(i, j) || map.terrain[j][i] !== TileId.WATER) return false;
+    const o = map.occupancy[j][i];
+    return !o || !o.blocks;
+  }
+
+  /**
+   * Birimin yol bulma maliyet fonksiyonu (Pathfinder pass):
+   *   kara birimi : yürünebilir karo 1; kendi kapısı 1; düşman askeri için rakibin çit/kapısı 7 (kırarak geçer)
+   *   tekne       : su karosu 1
+   */
+  passFor(u) {
+    if (u.naval) return this._navPass;
+    const breach = u.owner === ENEMY && u.isMilitary;
+    const key = u.owner * 2 + (breach ? 1 : 0);
+    let fn = this._pass.get(key);
+    if (!fn) {
+      const map = this.map, owner = u.owner;
+      fn = (i, j) => {
+        if (i < 0 || j < 0 || i >= map.width || j >= map.height) return 0;
+        if (!TileRegistry.get(map.terrain[j][i]).walkable) return 0;
+        const o = map.occupancy[j][i];
+        if (!o || !o.blocks) return 1;
+        if (o.isBuilding && o.def.gate && o.owner === owner && o.complete) return 1;
+        if (breach && o.isBuilding && (o.def.wall || o.def.gate) && o.owner !== owner) return 7;
+        return 0;
+      };
+      this._pass.set(key, fn);
+    }
+    return fn;
+  }
+
+  /** Bir sonraki karo, kırmadan geçilmesi gereken düşman çiti/kapısı mı? (saldırı yürüyüşünde önce onu kır) */
+  blockingWall(u, i, j) {
+    const o = this.map.getObjectAt(i, j);
+    return o && o.isBuilding && (o.def.wall || o.def.gate) && o.owner !== u.owner && !(o.def.gate && o.owner === u.owner) ? o : null;
+  }
+
+  /**
+   * Birimler birbirini iter: aynı noktada üst üste binmezler. Mekânsal ızgarada yalnızca yakın çiftler denetlenir;
+   * itme yalnızca geçilebilir karolara yapılır, çalışan (ağaç kesen vb.) birimler daha az itilir.
+   */
+  _separate(dt) {
+    const R = 0.55, maxStep = 1.4 * dt;
+    for (const u of this.units) {
+      if (u.naval) continue;
+      this.grid.each(u.x, u.y, 1, (o) => {
+        if (o.id <= u.id || o.naval || o.dead) return;
+        let dx = u.x - o.x, dy = u.y - o.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= R * R) return;
+        let d = Math.sqrt(d2);
+        if (d < 1e-4) { const a = (u.id * 2.39996) % (Math.PI * 2); dx = Math.cos(a); dy = Math.sin(a); d = 1; } // tam üst üste: sabit açıyla ayır
+        const push = Math.min(R - Math.min(d, R), maxStep) * 0.5;
+        const nx = dx / d, ny = dy / d;
+        const ku = u.phase === 'work' ? 0.3 : 1, ko = o.phase === 'work' ? 0.3 : 1;
+        this._nudge(u, nx * push * ku, ny * push * ku);
+        this._nudge(o, -nx * push * ko, -ny * push * ko);
+      });
+    }
+  }
+
+  _nudge(u, dx, dy) {
+    const x = u.x + dx, y = u.y + dy;
+    if (u.canWalk(this, Math.round(x), Math.round(y))) { u.x = x; u.y = y; }
+  }
+
+  // ───────────── Yol bulma yardımcıları ─────────────
+  moveToGoal(unit, fn, hi, hj, maxNodes) {
+    const path = this.pathfinder.find(unit.tileI, unit.tileJ, fn, hi, hj, maxNodes, this.passFor(unit));
+    if (!path) return false;
+    unit.path = path;
+    unit.goal = { fn, hi, hj };
+    return true;
+  }
+
+  repath(unit) {
+    const g = unit.goal;
+    return g ? this.moveToGoal(unit, g.fn, g.hi, g.hj) : false;
+  }
+
+  moveToTarget(unit, obj) {
+    const walkable = obj.isBuilding && !obj.blocks;
+    const fn = walkable ? (i, j) => rectDist(i, j, obj) === 0 : (i, j) => rectDist(i, j, obj) <= 1;
+    const ci = obj.centerI ?? obj.i, cj = obj.centerJ ?? obj.j;
+    return this.moveToGoal(unit, fn, Math.round(ci), Math.round(cj));
+  }
+
+  /** En yakın, bu kaynağı kabul eden (kendi) tamamlanmış binaya gönderir. */
+  sendToDropsite(unit) {
+    let best = null, bestD = Infinity;
+    for (const b of this.buildings) {
+      if (b.owner !== unit.owner || !b.complete || !b.def.dropsite?.includes(unit.carryType)) continue;
+      const d = rectDist(unit.tileI, unit.tileJ, b);
+      if (d < bestD) { bestD = d; best = b; }
+    }
+    unit.dropTarget = best;
+    return best ? this.moveToTarget(unit, best) : false;
+  }
+
+  findNearestResource(kind, ci, cj, maxR = 10, forUnit = null) {
+    let best = null, bestD = Infinity;
+    if (kind === 'farm') {
+      const owner = forUnit?.owner ?? PLAYER;
+      for (const b of this.buildings) {
+        if (b.type !== 'farm' || b.owner !== owner || !b.complete) continue;
+        if (b.farmer && b.farmer !== forUnit && !b.farmer.dead && b.farmer.task?.target === b) continue;
+        const d = Math.hypot(b.centerI - ci, b.centerJ - cj);
+        if (d < bestD && d <= maxR) { bestD = d; best = b; }
+      }
+      return best;
+    }
+    const map = this.map;
+    for (let j = Math.max(0, cj - maxR); j <= Math.min(map.height - 1, cj + maxR); j++) {
+      for (let i = Math.max(0, ci - maxR); i <= Math.min(map.width - 1, ci + maxR); i++) {
+        const o = map.objects[j][i];
+        if (!o || !o.isResource || o.kind !== kind) continue;
+        const d = Math.hypot(i - ci, j - cj);
+        if (d < bestD) { bestD = d; best = o; }
+      }
+    }
+    return best;
+  }
+
+  retarget(unit) {
+    if (!unit.lastKind || !unit.lastPos) return false;
+    const next = this.findNearestResource(unit.lastKind, unit.lastPos.i, unit.lastPos.j, 10, unit);
+    if (!next) return false;
+    this.assignGather(unit, next, true);
+    return true;
+  }
+
+  // ───────────── Komutlar ─────────────
+  commandMove(units, ti, tj) {
+    // Grup hareketi: herkes aynı karoya yığılmasın → hedef çevresinde halka halka farklı karolar
+    const land = units.filter((u) => !u.naval), sea = units.filter((u) => u.naval);
+    if (land.length && sea.length) { this.commandMove(land, ti, tj); this.commandMove(sea, ti, tj); return; }
+    const naval = sea.length > 0;
+    const spots = this._spreadSpots(ti, tj, units.length, naval ? (i, j) => this.isNavigable(i, j) : null);
+    units.forEach((u, k) => {
+      const s = spots[k] ?? { i: ti, j: tj };
+      u.stop();
+      u.state = 'move';
+      if (!this.moveToGoal(u, (i, j) => i === s.i && j === s.j, s.i, s.j)) u.stop();
+    });
+  }
+
+  commandAttack(units, target) {
+    for (const u of units) {
+      if (u.naval) continue;
+      // Koçbaşı yalnızca binaya saldırır; birime gönderilirse oraya yürür
+      if (u.def.siege && target.isUnit) { this.commandMove([u], target.tileI, target.tileJ); continue; }
+      u.stop(); u.attack(target);
+    }
+  }
+
+  // ───────────── Tekneler ─────────────
+  commandFish(boats, node) {
+    for (const b of boats) {
+      if (!b.naval) continue;
+      b.stop();
+      b.state = 'fish';
+      b.phase = 'toNode';
+      b.task = { target: node };
+      if (!this.moveToTarget(b, node)) b.stop();
+    }
+  }
+
+  isAtDock(boat, dock) { return rectDist(boat.tileI, boat.tileJ, dock) <= 1; }
+
+  sendBoatToDock(boat) {
+    let best = null, bestD = Infinity;
+    const region = this.map.regionAt(boat.tileI, boat.tileJ);
+    for (const b of this.buildings) {
+      if (b.owner !== boat.owner || b.type !== 'dock' || !b.complete) continue;
+      if (!this.map.regionsAround(b).has(region)) continue; // başka göldeki tersaneye gidilemez
+      const d = rectDist(boat.tileI, boat.tileJ, b);
+      if (d < bestD) { bestD = d; best = b; }
+    }
+    boat.dropTarget = best;
+    if (!best) return false;
+    return this.moveToGoal(boat, (i, j) => rectDist(i, j, best) <= 1, Math.round(best.centerI), Math.round(best.centerJ), 20000);
+  }
+
+  /** Teknenin bulunduğu göldeki en yakın balık sürüsü */
+  retargetBoat(boat) {
+    const region = this.map.regionAt(boat.tileI, boat.tileJ);
+    let node = null, bestD = 40;
+    for (const f of this.fishNodes) {
+      if (!this.isAlive(f) || this.map.regionAt(f.i, f.j) !== region) continue;
+      const d = Math.hypot(f.i - boat.x, f.j - boat.y);
+      if (d < bestD) { bestD = d; node = f; }
+    }
+    if (!node) return false;
+    this.commandFish([boat], node);
+    return true;
+  }
+
+  /** Tersanenin yanındaki bir su karosu (tekne doğma noktası) */
+  findWaterSpot(b) {
+    for (let r = 1; r <= 4; r++) {
+      for (let j = b.originJ - r; j <= b.j + r; j++) {
+        for (let i = b.originI - r; i <= b.i + r; i++) {
+          if (rectDist(i, j, b) === r && this.isNavigable(i, j)) return { i, j };
+        }
+      }
+    }
+    return null;
+  }
+
+  _spreadSpots(ci, cj, n, ok = null) {
+    ok ??= (i, j) => this.map.isWalkable(i, j);
+    const out = [];
+    for (let r = 0; r <= 9 && out.length < n; r++) {
+      for (let dj = -r; dj <= r && out.length < n; dj++) {
+        for (let di = -r; di <= r && out.length < n; di++) {
+          if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+          if (ok(ci + di, cj + dj)) out.push({ i: ci + di, j: cj + dj });
+        }
+      }
+    }
+    return out;
+  }
+
+  assignGather(unit, target, keepCarry = false) {
+    if (target.isBuilding) {
+      // Çiftlikte aynı anda tek köylü çalışır (AoE kuralı)
+      if (target.farmer && target.farmer !== unit && !target.farmer.dead && target.farmer.task?.target === target) {
+        const other = this.findNearestResource('farm', target.centerI, target.centerJ, 12, unit);
+        if (!other) { this.moveToTarget(unit, target); unit.state = 'move'; return; }
+        target = other;
+      }
+      target.farmer = unit;
+    }
+    const type = target.isBuilding ? 'food' : target.resType;
+    if (!keepCarry && unit.carryType !== type) unit.carry = 0;
+    unit.state = 'gather';
+    unit.task = { target };
+    unit.lastKind = target.isBuilding ? 'farm' : target.kind;
+    unit.lastPos = { i: target.i, j: target.j };
+    const cap = UNITS.villager.carry * this.players[unit.owner].modifiers.carry;
+    if (unit.carry >= cap && unit.carryType === type) {
+      unit.phase = 'toDrop';
+      this.sendToDropsite(unit);
+    } else {
+      unit.phase = 'toNode';
+      if (!this.moveToTarget(unit, target)) unit.stop();
+    }
+  }
+
+  commandGather(units, target) {
+    for (const u of units) { if (u.type !== 'villager') continue; u.stop(); this.assignGather(u, target); }
+  }
+
+  commandBuild(units, building) {
+    for (const u of units) {
+      if (u.type !== 'villager') continue;
+      u.stop();
+      u.state = 'build';
+      u.phase = 'toSite';
+      u.task = { target: building };
+      if (!this.moveToTarget(u, building)) u.stop();
+    }
+  }
+
+  commandDeposit(units, building) {
+    for (const u of units) {
+      if (u.type === 'villager' && u.carry > 0 && building.def.dropsite?.includes(u.carryType)) {
+        const node = u.state === 'gather' ? u.task?.target : null;
+        u.stop();
+        u.state = 'gather';
+        u.task = node ? { target: node } : null;
+        u.phase = 'toDrop';
+        u.dropTarget = building;
+        this.moveToTarget(u, building);
+      } else {
+        this.commandMove([u], building.i + 1, building.j + 1);
+      }
+    }
+  }
+
+  /** İnşaat bittiğinde köylü ne yapsın? (AoE davranışı) */
+  afterBuild(unit, b) {
+    unit.stop();
+    if (b.type === 'farm' && (!b.farmer || b.farmer.dead || b.farmer.task?.target !== b)) {
+      this.assignGather(unit, b);
+      return;
+    }
+    let pending = null, pd = 10;
+    for (const o of this.buildings) {
+      if (o.owner !== unit.owner || o.complete || o.type === 'farm') continue;
+      const d = rectDist(unit.tileI, unit.tileJ, o);
+      if (d < pd) { pd = d; pending = o; }
+    }
+    if (pending) { this.commandBuild([unit], pending); return; }
+    const auto = b.def.autoGather;
+    if (auto) {
+      const kinds = { wood: ['tree'], food: ['berry', 'farm'], gold: ['gold', 'stone'] }[auto];
+      for (const kind of kinds) {
+        const node = this.findNearestResource(kind, Math.round(b.centerI), Math.round(b.centerJ), 9, unit);
+        if (node) { this.assignGather(unit, node); return; }
+      }
+    }
+  }
+
+  // ───────────── Tamir ─────────────
+  /** Hasarlı (tamamlanmış) bina mı? Çiftlik tamir edilmez. */
+  needsRepair(b) { return b.isBuilding && b.complete && !b.destroyed && b.type !== 'farm' && b.hp < b.maxHp; }
+
+  commandRepair(units, b) {
+    for (const u of units) {
+      if (u.type !== 'villager') continue;
+      u.stop();
+      u.state = 'repair';
+      u.phase = 'toSite';
+      u.task = { target: b };
+      if (!this.moveToTarget(u, b)) u.stop();
+    }
+  }
+
+  /** Binanın yanındaki en yakın köylüleri (önce boşta olanlar) tamire gönderir */
+  callRepairers(b, count = 4) {
+    const vs = this.units.filter((u) => u.owner === b.owner && u.type === 'villager' && u.state !== 'repair')
+      .sort((a, c) => (a.state === 'idle' ? 0 : 50) + rectEuclid(a.x, a.y, b) - ((c.state === 'idle' ? 0 : 50) + rectEuclid(c.x, c.y, b)));
+    const picked = vs.slice(0, count);
+    if (!picked.length) { this.notify('Tamir edecek köylü yok.', 'warn'); return; }
+    this.commandRepair(picked, b);
+    this.notify(`${picked.length} köylü ${b.name.toLocaleLowerCase('tr')} tamirine gidiyor.`, 'info');
+  }
+
+  /**
+   * Bir köylünün bu tick'teki tamir katkısı. İnşaattaki gibi azalan verim: n köylü toplamda (n + 2) / 3 kat hızlı.
+   * Bedel, onarılan cana orantılı olarak bina maliyetinden düşülür. Kaynak yetmezse false (köylü durur).
+   */
+  repairTick(u, b, dt) {
+    const n = Math.max(1, b.repairers), factor = (n + 2) / (3 * n);
+    const hp = Math.min(b.maxHp - b.hp, (b.maxHp / b.def.buildTime) * REPAIR.HP_RATE * factor * dt);
+    if (hp <= 0) return false;
+    const p = this.players[b.owner], cost = {};
+    for (const [k, v] of Object.entries(b.def.cost)) cost[k] = (v * REPAIR.COST * hp) / b.maxHp;
+    if (!p.spend(cost)) {
+      if (b.owner === PLAYER && this.time - (this._repairWarnAt ?? -99) > 6) {
+        this._repairWarnAt = this.time;
+        this.notify('Tamir için yetersiz kaynak.', 'warn');
+      }
+      return false;
+    }
+    b.hp += hp;
+    if (b.hp >= b.maxHp - 1e-6) {
+      b.hp = b.maxHp;
+      if (b.owner === PLAYER) { this.notify(`${b.name} tamir edildi.`, 'good'); this.sound('bell', b.centerI, b.centerJ, 0.5); }
+    }
+    return true;
+  }
+
+  // ───────────── Köylüleri çağır / sığınma ─────────────
+  garrisonCap(b) { return b.def.garrison ?? 0; }
+
+  /** Çan çalar: en yakın köylüler binaya koşup içeri sığınır (kapasite kadar). */
+  ringBell(b) {
+    const cap = this.garrisonCap(b);
+    const coming = this.units.filter((u) => u.state === 'garrison' && u.task?.target === b).length;
+    let room = cap - b.garrison.length - coming;
+    if (room <= 0) { this.notify('Bina dolu.', 'warn'); return; }
+    const vs = this.units.filter((u) => u.owner === b.owner && u.type === 'villager' && u.state !== 'garrison')
+      .sort((a, c) => rectEuclid(a.x, a.y, b) - rectEuclid(c.x, c.y, b));
+    if (!vs.length) { this.notify('Çağrılacak köylü yok.', 'warn'); return; }
+    for (const u of vs) {
+      if (room-- <= 0) break;
+      u.stop();
+      u.state = 'garrison';
+      u.task = { target: b };
+      if (!this.moveToTarget(u, b)) u.stop();
+    }
+    if (b.owner === PLAYER) { this.notify(`Köylüler ${b.name.toLocaleLowerCase('tr')} içine sığınıyor!`, 'warn'); this.sound('bell'); this.sound('bell', null, null, 0.7); }
+  }
+
+  /** Tek köylüyü sığınağa gönder (kayıttan yüklerken) */
+  ringBellUnit(u, b) {
+    u.stop();
+    u.state = 'garrison';
+    u.task = { target: b };
+    if (!this.moveToTarget(u, b)) u.stop();
+  }
+
+  /** Haritadaki balık sürüleri (Renderer'ın su altı çizimi için) */
+  collectFish() {
+    const out = [], map = this.map;
+    for (let j = 0; j < map.height; j++) for (let i = 0; i < map.width; i++) { const o = map.objects[j][i]; if (o?.kind === 'fish') out.push(o); }
+    return out;
+  }
+
+  enterGarrison(u, b) {
+    if (b.garrison.length >= this.garrisonCap(b) || !b.complete) { u.stop(); return; }
+    u.stop();
+    u.garrisoned = b;
+    u.path = [];
+    this.units = this.units.filter((x) => x !== u);
+    b.garrison.push(u);
+    this.recountPopulation();
+  }
+
+  /** Herkesi dışarı çıkar: köylüler binanın çevresine çıkar ve son topladıkları kaynağa geri döner */
+  ungarrison(b) {
+    if (!b.garrison.length) return;
+    for (const u of b.garrison) {
+      const spot = this.findSpawnSpot(b);
+      u.garrisoned = null;
+      if (spot) { u.x = u.prevX = spot.i; u.y = u.prevY = spot.j; }
+      u.stop();
+      this.units.push(u);
+      if (!b.destroyed && u.lastKind) this.retarget(u);
+    }
+    b.garrison = [];
+    this.recountPopulation();
+  }
+
+  // ───────────── Kaynak düğümleri ─────────────
+  takeFromNode(node, amount) {
+    if (node.isBuilding) {
+      const got = Math.min(amount, node.food);
+      const step = Math.floor((1 - node.food / node.def.farmFood) * 10);
+      node.food -= got;
+      // Çiftlik tükendikçe sararır: zemin yalnızca %10'luk adımlarda yeniden çizilir
+      if (Math.floor((1 - node.food / node.def.farmFood) * 10) !== step) this.map.groundVersion++;
+      if (node.food <= 1e-6) {
+        this.removeBuilding(node);
+        if (node.owner === PLAYER) this.notify('Bir çiftlik tükendi.', 'warn');
+      }
+      return got;
+    }
+    const got = Math.min(amount, node.amount);
+    node.amount -= got;
+    if (node.amount <= 1e-6) {
+      this.map.removeObject(node);
+      if (node.kind === 'tree') {
+        this.map.addObject(new StaticObject('stump', node.i, node.j, { blocks: false, offX: node.offX, offY: node.offY, scale: node.scale * 0.9, flip: node.flip }));
+      }
+    }
+    return got;
+  }
+
+  // ───────────── Binalar ─────────────
+  addBuilding(type, oi, oj, owner, complete = false) {
+    const b = new Building(type, oi, oj, { complete, owner });
+    this.map.addObject(b);
+    this.buildings.push(b);
+    if (type === 'farm') this.map.groundVersion++; // çiftlik zemin katmanında çizilir
+    return b;
+  }
+
+  checkBuildable(type, owner = PLAYER) {
+    const def = BUILDINGS[type], p = this.players[owner];
+    if (def.age > p.age) return `${AGES[def.age].name} gerekli`;
+    for (const req of def.requires ?? []) {
+      if (!this.buildings.some((b) => b.owner === owner && b.type === req && b.complete)) return `Önce ${BUILDINGS[req].name} gerekli`;
+    }
+    if (!p.canAfford(def.cost)) return 'Yetersiz kaynak';
+    return null;
+  }
+
+  /** Konum kuralı: ayak izi boş + (tersane ise) su kenarı. Hata metni veya null döner. */
+  checkPlacement(type, oi, oj) {
+    const def = BUILDINGS[type];
+    if (!this.map.canPlace(oi, oj, def.size)) return 'Buraya inşa edilemez.';
+    if (def.coastal && !this.map.isCoastal(oi, oj, def.size)) return `${def.name} su kenarına kurulmalı.`;
+    return null;
+  }
+
+  placeBuilding(type, oi, oj, builders) {
+    const def = BUILDINGS[type];
+    const err = this.checkBuildable(type);
+    if (err) { this.notify(err, 'warn'); return null; }
+    // Bina yalnızca köylüler tarafından kurulabilir (tersane dahil)
+    if (!builders?.some((u) => u.type === 'villager')) { this.notify('Yalnızca köylüler inşa edebilir.', 'warn'); return null; }
+    const perr = this.checkPlacement(type, oi, oj);
+    if (perr) { this.notify(perr, 'warn'); return null; }
+    this.player.spend(def.cost);
+    const b = this.addBuilding(type, oi, oj, PLAYER, false);
+    if (b.blocks) {
+      for (const u of this.units) {
+        if (rectDist(u.tileI, u.tileJ, b) === 0) {
+          const spot = this.map.findWalkableNear(u.tileI, u.tileJ, 8);
+          if (spot) { u.x = u.prevX = spot.i; u.y = u.prevY = spot.j; u.path = []; }
+        }
+      }
+    }
+    if (builders?.length) this.commandBuild(builders, b);
+    return b;
+  }
+
+  /**
+   * Çit hattı: karolar sırayla yerleştirilir; geçersiz karolar atlanır, kaynak bitince durur.
+   * İlk parçaya köylüler gönderilir; bitirince kendiliğinden yakındaki sonraki parçaya geçerler.
+   */
+  placeWallLine(tiles, builders) {
+    const def = BUILDINGS.wall;
+    const err = this.checkBuildable('wall');
+    if (err) { this.notify(err, 'warn'); return 0; }
+    let first = null, n = 0;
+    for (const t of tiles) {
+      if (this.checkPlacement('wall', t.i, t.j)) continue;
+      if (!this.player.spend(def.cost)) { this.notify('Yetersiz kaynak: çitin bir kısmı kurulamadı.', 'warn'); break; }
+      const b = this.addBuilding('wall', t.i, t.j, PLAYER, false);
+      first ??= b;
+      n++;
+    }
+    if (first && builders?.length) this.commandBuild(builders, first);
+    return n;
+  }
+
+  removeBuilding(b) {
+    b.destroyed = true;
+    if (b.type === 'farm') this.map.groundVersion++;
+    this.map.removeObject(b);
+    this.buildings = this.buildings.filter((o) => o !== b);
+    this.recountPopulation();
+  }
+
+  onBuildingComplete(b) {
+    this.recountPopulation();
+    this.map.version++;
+    if (b.type === 'farm') this.map.groundVersion++;
+    if (b.owner === PLAYER && b.type !== 'farm') {
+      this.notify(`${b.name} tamamlandı.`, 'good');
+      this.sound('bell', b.centerI, b.centerJ, 0.7);
+    }
+    if (b.type === 'wonder' && b.owner === PLAYER) this._win('Harika tamamlandı! ZAFER!');
+    if (b.type === 'dock' && b.owner === PLAYER) {
+      const regions = this.map.regionsAround(b);
+      if (!this.fishNodes.some((f) => this.isAlive(f) && regions.has(this.map.regionAt(f.i, f.j)))) this.notify('Bu tersanenin açıldığı suda balık sürüsü yok.', 'warn');
+    }
+  }
+
+  /**
+   * Binanın çevresinde doğma noktası seçer. Ön köşeye en yakın karo bazen su/bina arasında sıkışmış
+   * küçük bir cebe düşer; birim oradan çıkamaz. Bu yüzden her adayın bağlı olduğu bölgenin büyüklüğü
+   * sınırlı bir BFS ile ölçülür ve "cep" olmayan ilk aday seçilir.
+   */
+  findSpawnSpot(b) {
+    const cands = [];
+    for (let r = 1; r <= 4; r++) {
+      for (let j = b.originJ - r; j <= b.j + r; j++) {
+        for (let i = b.originI - r; i <= b.i + r; i++) {
+          if (rectDist(i, j, b) !== r || !this.map.isWalkable(i, j)) continue;
+          cands.push({ i, j, score: r * 100 - (i + j) }); // yakın + ön taraf (ekranda alt) önce
+        }
+      }
+    }
+    cands.sort((a, c) => a.score - c.score);
+    for (const c of cands) if (this._regionSize(c.i, c.j, 120) >= 120) return c;
+    return cands[0] ?? this.map.findWalkableNear(b.i + 1, b.j + 1, b.size + 6);
+  }
+
+  _regionSize(si, sj, limit) {
+    const map = this.map, W = map.width, seen = new Set([sj * W + si]), q = [si, sj];
+    for (let k = 0; k < q.length && seen.size < limit; k += 2) {
+      const i = q[k], j = q[k + 1];
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ni = i + di, nj = j + dj, key = nj * W + ni;
+        if (seen.has(key) || !map.isWalkable(ni, nj)) continue;
+        seen.add(key);
+        q.push(ni, nj);
+      }
+    }
+    return seen.size;
+  }
+
+  spawnUnitNear(b, type) {
+    const naval = UNITS[type]?.naval;
+    const spot = naval ? this.findWaterSpot(b) : this.findSpawnSpot(b);
+    if (!spot) return null;
+    const u = type === 'villager' ? new Villager(spot.i, spot.j, b.owner)
+      : naval ? new Boat(spot.i, spot.j, b.owner) : new Soldier(type, spot.i, spot.j, b.owner);
+    const hpBonus = this.players[b.owner].bonus[type]?.hp ?? 0;
+    u.maxHp += hpBonus;
+    u.hp = u.maxHp;
+    this.units.push(u);
+    return u;
+  }
+
+  // ───────────── Üretim kuyruğu ─────────────
+  checkQueue(b, kind, id) {
+    const p = this.players[b.owner];
+    if (!b.complete) return 'Bina henüz tamamlanmadı';
+    if (b.queue.length >= 10) return 'Kuyruk dolu';
+    if (kind === 'unit') return p.canAfford(UNITS[id].cost) ? null : 'Yetersiz kaynak';
+    if (kind === 'age') {
+      const next = p.nextAge;
+      if (!next) return 'Son çağdasınız';
+      if (this.buildings.some((o) => o.owner === b.owner && o.queue.some((q) => q.kind === 'age'))) return 'Çağ araştırması sürüyor';
+      return p.canAfford(next.cost) ? null : 'Yetersiz kaynak';
+    }
+    if (kind === 'tech') {
+      const t = TECHS[id];
+      if (p.techs.has(id)) return 'Araştırıldı';
+      if (t.age > p.age) return `${AGES[t.age].name} gerekli`;
+      if (t.requires && !p.techs.has(t.requires)) return `Önce ${TECHS[t.requires].name}`;
+      if (this.buildings.some((o) => o.owner === b.owner && o.queue.some((q) => q.kind === 'tech' && q.id === id))) return 'Araştırılıyor';
+      return p.canAfford(t.cost) ? null : 'Yetersiz kaynak';
+    }
+    return 'Bilinmeyen';
+  }
+
+  enqueue(b, kind, id) {
+    const err = this.checkQueue(b, kind, id);
+    if (err) { this.notify(err, 'warn'); return false; }
+    const p = this.players[b.owner];
+    let cost, time;
+    if (kind === 'unit') { cost = UNITS[id].cost; time = UNITS[id].trainTime; }
+    else if (kind === 'age') { const n = p.nextAge; cost = n.cost; time = n.time; id = n.id; }
+    else { cost = TECHS[id].cost; time = TECHS[id].time; }
+    p.spend(cost);
+    b.queue.push({ kind, id, total: time, remaining: time, cost, started: kind !== 'unit' });
+    return true;
+  }
+
+  cancelQueue(b, index) {
+    const item = b.queue[index];
+    if (!item) return;
+    b.queue.splice(index, 1);
+    this.players[b.owner].refund(item.cost);
+    this.recountPopulation();
+  }
+
+  onQueueComplete(b, item) {
+    const p = this.players[b.owner];
+    if (item.kind === 'unit') {
+      const u = this.spawnUnitNear(b, item.id);
+      if (u && u.naval && b.rally?.target?.kind === 'fish' && this.isAlive(b.rally.target)) this.commandFish([u], b.rally.target);
+      else if (u && u.naval && b.rally?.i !== undefined) this.commandMove([u], b.rally.i, b.rally.j);
+      else if (u && u.naval) this.retargetBoat(u);
+      else if (u && b.rally) {
+        const t = b.rally.target;
+        if (t && this.isAlive(t)) {
+          if (t.owner && t.owner !== u.owner) this.commandAttack([u], t);
+          else if (u.type === 'villager' && (t.isResource || (t.isBuilding && t.type === 'farm' && t.complete))) this.assignGather(u, t);
+          else if (u.type === 'villager' && t.isBuilding && !t.complete) this.commandBuild([u], t);
+          else this.commandMove([u], Math.round(t.centerI ?? t.i) + 1, Math.round(t.centerJ ?? t.j) + 1);
+        } else if (b.rally.i !== undefined) {
+          this.commandMove([u], b.rally.i, b.rally.j);
+        }
+      }
+      if (b.owner === PLAYER) this.sound('bell', b.centerI, b.centerJ, 0.35);
+      this.recountPopulation();
+    } else if (item.kind === 'tech') {
+      const t = TECHS[item.id];
+      p.applyTech(item.id, t);
+      // Can bonusu mevcut birimlere de uygulanır
+      for (const [type, stats] of Object.entries(t.bonus ?? {})) {
+        if (!stats.hp) continue;
+        for (const u of this.units) if (u.owner === b.owner && u.type === type) { u.maxHp += stats.hp; u.hp += stats.hp; }
+      }
+      if (b.owner === PLAYER) { this.notify(`${t.name} araştırıldı.`, 'good'); this.sound('bell', null, null, 0.6); }
+    } else if (item.kind === 'age') {
+      p.advanceAge();
+      this.map.version++; // tüm binaların görünümü yeni çağa geçer
+      if (b.owner === PLAYER) { this.notify(`Yeni çağ: ${p.ageDef.name}!`, 'age'); this.sound('fanfare'); }
+    }
+  }
+
+  /** Kendiliğinden gelir (tersane balıkçıları). Kesirli birikir, istatistiğe de yazılır. */
+  _passiveIncome(dt) {
+    for (const b of this.buildings) {
+      const inc = b.def.income;
+      if (!inc || !b.complete) continue;
+      const p = this.players[b.owner];
+      for (const [res, rate] of Object.entries(inc)) p.add(res, rate * (p.modifiers.fish ?? 1) * dt);
+    }
+  }
+
+  // ───────────── Pazar ─────────────
+  trade(action, res) {
+    const p = this.player, lot = MARKET.lot;
+    if (action === 'sell') {
+      if (p.resources[res] < lot) { this.notify(`Yetersiz ${RESOURCE_NAMES[res].toLowerCase()}`, 'warn'); return; }
+      p.resources[res] -= lot; p.add('gold', MARKET.sell);
+    } else {
+      if (p.resources.gold < MARKET.buy) { this.notify('Yetersiz altın', 'warn'); return; }
+      p.resources.gold -= MARKET.buy; p.add(res, lot);
+    }
+    p.version++;
+  }
+
+  // ═════════════════════ SAVAŞ ═════════════════════
+  /** Birimden hedefe uzaklık: birim → merkezler arası; bina → ayak izi kenarına */
+  distTo(u, t) {
+    return t.isUnit ? Math.hypot(t.x - u.x, t.y - u.y) : rectEuclid(u.x, u.y, t);
+  }
+
+  inAttackRange(u, t) {
+    const range = this.stat(u, 'range');
+    const d = this.distTo(u, t);
+    if (range <= 0) return t.isUnit ? d <= 1.5 : d <= 0.8; // yakın dövüş: bitişik (çapraz dahil)
+    return d <= range;
+  }
+
+  /** Saldırı pozisyonuna git: yakın dövüşte bitişik karo, okçuda menzil içindeki herhangi bir karo */
+  moveToAttack(u, t) {
+    const range = this.stat(u, 'range');
+    let fn;
+    if (range <= 0) {
+      fn = t.isUnit
+        ? (i, j) => Math.max(Math.abs(i - t.tileI), Math.abs(j - t.tileJ)) <= 1
+        : (i, j) => rectDist(i, j, t) <= 1;
+    } else {
+      const r = range - 0.35;
+      fn = t.isUnit ? (i, j) => Math.hypot(i - t.x, j - t.y) <= r : (i, j) => rectEuclid(i, j, t) <= r;
+    }
+    const ti = t.isUnit ? t.tileI : Math.round(t.centerI), tj = t.isUnit ? t.tileJ : Math.round(t.centerJ);
+    return this.moveToGoal(u, fn, ti, tj, 5000);
+  }
+
+  performAttack(u, t) {
+    const dmg = this.stat(u, 'attack');
+    if (this.stat(u, 'range') > 0) {
+      this.spawnArrow(u.x, u.y, 22, t, dmg, u);
+      this.sound('bow', u.x, u.y, 0.5);
+    } else {
+      this.damage(u, t, dmg, 'melee');
+      if (u.def.siege) this.sound('ram', u.x, u.y, 0.8);
+      else this.sound(t.isUnit ? 'sword' : 'hammer', u.x, u.y, t.isUnit ? 0.6 : 0.45);
+    }
+  }
+
+  /** Ok: hedefe doğru kavisli uçar (hedef hareket ederse onu izler), varınca hasar verir */
+  spawnArrow(x, y, z, target, damage, attacker, owner = attacker?.owner) {
+    const tx = target.isUnit ? target.x : target.centerI, ty = target.isUnit ? target.y : target.centerJ;
+    const d = Math.hypot(tx - x, ty - y);
+    this.projectiles.push({ sx: x, sy: y, sz: z, tx, ty, target, damage, attacker, owner, p: 0, dur: Math.max(0.25, d / 9), d });
+  }
+
+  _updateProjectiles(dt) {
+    if (!this.projectiles.length) return;
+    const keep = [];
+    for (const pr of this.projectiles) {
+      if (this.isAlive(pr.target)) {
+        pr.tx = pr.target.isUnit ? pr.target.x : pr.target.centerI;
+        pr.ty = pr.target.isUnit ? pr.target.y : pr.target.centerJ;
+      }
+      pr.p += dt / pr.dur;
+      if (pr.p >= 1) {
+        if (this.isAlive(pr.target)) {
+          this.damage(pr.attacker?.dead ? null : pr.attacker, pr.target, pr.damage, 'pierce', pr.owner);
+          this.sound('hit', pr.tx, pr.ty, 0.35);
+        }
+      } else keep.push(pr);
+    }
+    this.projectiles = keep;
+  }
+
+  /**
+   * Hasar formülü (AoE): hasar = max(1, saldırı − zırh)
+   *   yakın dövüş → yakın dövüş zırhı, ok → ok (pierce) zırhı; binalara karşı birimin bina çarpanı uygulanır.
+   */
+  damage(attacker, target, base, kind, owner = attacker?.owner) {
+    if (!this.isAlive(target)) return;
+    let amount = base, armor;
+    if (target.isUnit) armor = this.stat(target, kind);
+    else {
+      armor = target.def.armor?.[kind] ?? 0;
+      if (attacker?.isUnit) amount *= attacker.def.bldgMul ?? 1;
+    }
+    const dmg = Math.max(1, amount - armor);
+    target.hp -= dmg;
+    if (target.owner === PLAYER || owner === PLAYER) this.lastCombatAt = this.time;
+    if (target.owner === PLAYER) this._underAttack(target);
+    if (target.hp <= 0) {
+      if (target.isUnit) this.killUnit(target, owner);
+      else this.destroyBuilding(target);
+      return;
+    }
+    // Karşılık ver: boştaki birim saldırana döner
+    if (target.isUnit && attacker?.isUnit && !attacker.dead && attacker.owner !== target.owner) {
+      if (target.state === 'idle') target.attack(attacker);
+      else if (target.state === 'guard') target.attack(attacker, 'guard');
+    }
+  }
+
+  killUnit(u, killerOwner) {
+    u.dead = true;
+    this.units = this.units.filter((x) => x !== u);
+    this.corpses.push({ type: u.type, owner: u.owner, x: u.x, y: u.y, facing: u.facing, dir: u.dir, t: 0, naval: !!u.naval });
+    this.players[u.owner].stats.losses++;
+    if (killerOwner && this.players[killerOwner]) this.players[killerOwner].stats.kills++;
+    this.sound('death', u.x, u.y, 0.6);
+    for (const b of this.buildings) if (b.farmer === u) b.farmer = null;
+    this.recountPopulation();
+  }
+
+  destroyBuilding(b) {
+    this.ungarrison(b); // içeridekiler yıkıntıdan kaçar
+    this.removeBuilding(b);
+    this.map.addObject(new StaticObject('ruins', b.i, b.j, { size: b.size, blocks: false }));
+    this.sound('collapse', b.centerI, b.centerJ, 0.8);
+    if (b.owner === PLAYER) this.notify(`${b.name} yıkıldı!`, 'warn');
+    else this.notify(`Düşman ${b.name.toLocaleLowerCase('tr')} yıkıldı!`, 'good');
+    if (b.type === 'townCenter') {
+      if (b.owner === ENEMY) this._win('Düşman Kasaba Merkezi yıkıldı! ZAFER!');
+      else this._lose();
+    }
+  }
+
+  _win(text) {
+    if (this.victory || this.defeat) return;
+    this.victory = true;
+    this.notify(text, 'good');
+    this.sound('fanfare');
+  }
+
+  _lose() {
+    if (this.victory || this.defeat) return;
+    this.defeat = true;
+    this.notify('Kasaba Merkeziniz yıkıldı. YENİLGİ.', 'warn');
+    this.sound('defeat');
+  }
+
+  _underAttack(target) {
+    if (this.time - this._attackAlertAt < 15) return;
+    this._attackAlertAt = this.time;
+    const i = target.isUnit ? target.x : target.centerI, j = target.isUnit ? target.y : target.centerJ;
+    this.notify('Saldırı altındasınız!', 'warn');
+    this.sound('horn');
+    this.alert(i, j);
+  }
+
+  /** Görüş alanındaki en yakın düşman (önce birimler; istenirse ardından binalar). Mekânsal ızgarayla aranır. */
+  findEnemyNear(u, radius, includeBuildings) {
+    let best = null, bestD = radius;
+    if (!u.def.siege) {
+      const melee = (u.def.range ?? 0) <= 0;
+      this.grid.each(u.x, u.y, radius, (o) => {
+        if (o.owner === u.owner || o.dead || (melee && o.naval)) return;
+        const d = Math.hypot(o.x - u.x, o.y - u.y);
+        if (d < bestD) { bestD = d; best = o; }
+      });
+    }
+    if (best || !includeBuildings) return best;
+    bestD = radius;
+    for (const b of this.buildings) {
+      if (b.owner === u.owner || b.type === 'farm' || b.def.wall || b.def.gate) continue;
+      const d = rectEuclid(u.x, u.y, b);
+      if (d < bestD) { bestD = d; best = b; }
+    }
+    return best;
+  }
+
+  /** Kasaba Merkezi ve kuleler menzile giren düşmana ok atar */
+  _buildingAttacks(dt) {
+    for (const b of this.buildings) {
+      const atk = b.def.attack;
+      if (!atk || !b.complete) continue;
+      b.atkCd -= dt;
+      if (b.atkCd > 0) continue;
+      const bonus = b.type === 'watchTower' ? this.players[b.owner].bonus.tower ?? {} : {};
+      const range = atk.range + (bonus.range ?? 0);
+      let best = null, bestD = range;
+      this.grid.each(b.centerI, b.centerJ, range + b.size, (u) => {
+        if (u.owner === b.owner || u.dead) return;
+        const d = rectEuclid(u.x, u.y, b);
+        if (d < bestD) { bestD = d; best = u; }
+      });
+      if (!best) { b.atkCd = 0.3; continue; }
+      b.atkCd = atk.reload;
+      // İçeri sığınan her 3 köylü bir ok daha attırır (AoE'deki gibi)
+      const shots = 1 + Math.floor(b.garrison.length / 3);
+      for (let k = 0; k < shots; k++) {
+        this.spawnArrow(b.centerI + (k ? (Math.random() - 0.5) * b.size * 0.6 : 0), b.centerJ, 40 + b.size * 14, best, atk.damage + (bonus.attack ?? 0), null, b.owner);
+      }
+      this.sound('bow', b.centerI, b.centerJ, 0.4);
+    }
+  }
+}
+
+export { rectDist, rectEuclid, formatCost };

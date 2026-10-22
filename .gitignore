@@ -1,0 +1,8 @@
+# Yerel araç/editör dosyaları
+.claude/
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
