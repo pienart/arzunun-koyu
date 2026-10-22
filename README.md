@@ -66,8 +66,9 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
   (bina seçili → Taşı; bedel maliyetin %30'u).
 - **Gizemli Geçit:** Haritanın uç bölgelerinde, kütüklerle örtülü iki toprak tümsek. Birinin üstüne giren birim diğerinden
   çıkar; geçitler her dakika yer değiştirir.
-- **Düşman:** Sizden ~%5 hızlı gelişir (çağ atladığınızda o da atlar); saldırılar rastgele aralıklarla, her seferinde daha
-  kalabalık ve her dalgada farklı bir yönden gelir.
+- **Düşman:** Sizden ~%5 hızlı gelişir (çağ atladığınızda o da atlar); ilk 20 dakikadan sonra saldırılar rastgele aralıklarla
+  gelir ve her dalga sertleşir: 1. dalga küçük bir akın, sonra her seferinde daha kalabalık; 3. dalgadan koçbaşı, 4.'den atlı,
+  6.'dan mancınık eklenir ve askerler her dalgada %6 daha güçlüdür (saldırı ve can). Her dalga köye farklı bir yönden gelir.
 - **Oyun sonu:** Zafer veya yenilgide tüm kayıtlar silinir; menüde "Devam Et" çıkmaz, oyun sıfırdan başlar.
 - **Çağ atlama süresi:** Feodal 90 sn, Kale 140 sn, İmparatorluk 200 sn.
 - **Çağ şartları:** Kaynak yetmez. Feodal için 3 asker + 2 ev, kereste kampı, değirmen ve kışla; Kale için 8 asker +
@@ -164,7 +165,9 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
   olasılıkları vardır: yağmur (hava kararır, yağmur sesi), kar (rüzgâr sesi), sis.
 - **Canlılık:** gündüz kuş sürüleri (yerde gölgeleri kayar), Kasaba Merkezi çevresinde gezinip yem gagalayan tavuklar,
   balık sürülerinin su altı gölgeleri, ara sıra sudan sıçrayan balıklar, ev ve atölyelerin bacalarından duman.
-- **Zafer:** Düşman Kasaba Merkezi'ni yıkın veya Harika inşa edin. **Yenilgi:** Kasaba Merkeziniz yıkılırsa.
+- **Zafer / yenilgi:** Oyun YALNIZCA bir taraf diğerinin Kasaba Merkezi'ni yıkınca biter. Koca Ayak (ve başka hiçbir şey)
+  bir Kasaba Merkezi'ni yıkamaz: en fazla %25 cana indirir, sonra başka hedefe ya da mağarasına yönelir. Harika artık
+  oyunu bitirmez (huzur verir).
 - **Ses (üç kanal + ana ses):** **Müzik** (köy teması; çatışma başlayınca savaş temasına çapraz geçiş),
   **Atmosfer** (gündüz kuşlar ↔ gece cırcır böcekleri karanlığa göre; yağmur ve kış rüzgârı havaya göre; kamp ateşi
   çıtırtısı kameranın ateşe uzaklığına göre) ve **Efektler** (balta, kazma, çekiç, kılıç, ok, ölüm, bina çökmesi, çan,

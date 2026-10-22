@@ -108,15 +108,28 @@ export class Wild {
     w.alert(this.cave.centerI ?? this.cave.i, this.cave.centerJ ?? this.cave.j);
   }
 
-  /** Taraf seç ve onun kasaba merkezine (yoksa herhangi bir binasına) saldırı yürüyüşü */
+  /** Bu köyde yaratığın yıkabileceği bir şey kaldı mı? (Kasaba Merkezi'ni yalnızca karşı taraf yıkabilir) */
+  _breakable(side) {
+    return this.world.buildings.find((b) => b.owner === side && !(b.type === 'townCenter' && b.hp <= b.maxHp * 0.25 + 1)) ?? null;
+  }
+
+  /** Kasaba Merkezi dibe indi (yaratık daha fazla zarar veremez) → başka hedefe/eve */
+  onTownCenterFloored(tc) {
+    const y = this.yeti;
+    if (!y || y.dead || y.home || this._flooredAt === this.world.time) return;
+    this._flooredAt = this.world.time;
+    y.stop();
+    this._hunt(tc.owner);
+  }
+
+  /** Taraf seç ve o köyde kalan, yıkılabilir binaya saldırı yürüyüşü; iki köyde de kalmadıysa mağaraya dön */
   _hunt(side) {
     const w = this.world, y = this.yeti;
-    let target = side === PLAYER ? w.townCenter : w.enemyAI.tc;
-    if (!w.isAlive(target)) target = w.buildings.find((b) => b.owner === side);
-    if (!target) { // o köy yok edildi → diğer köy
+    let target = this._breakable(side);
+    if (!target) { // bu köyde yıkacak yer kalmadı → diğer köy
       side = side === PLAYER ? ENEMY : PLAYER;
-      target = w.buildings.find((b) => b.owner === side);
-      if (!target) return;
+      target = this._breakable(side);
+      if (!target) { this._sendHome(); return; }
     }
     const changed = side !== this.side || !this._announced;
     this.side = side;
@@ -130,7 +143,7 @@ export class Wild {
     y.stop();
     y.home = true;
     if (!door || !w.moveToGoal(y, (i, j) => i === door.i && j === door.j, door.i, door.j, 30000)) this.enterCave(y);
-    w.notify('Kar eriyor: Koca Ayak mağarasına çekiliyor.', 'info');
+    w.notify('Koca Ayak yıkacak bir şey bulamadı ve mağarasına çekiliyor.', 'info');
   }
 
   /** Yaratık mağaraya girdi: haritadan kalkar (bir sonraki kışa kadar) */

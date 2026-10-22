@@ -199,7 +199,8 @@ export class World {
   stat(u, key) {
     const p = this.players[u.owner];
     const base = key === 'melee' || key === 'pierce' ? u.def.armor[key] : u.def[key];
-    const v = base + (p.bonus[u.type]?.[key] ?? 0);
+    let v = base + (p.bonus[u.type]?.[key] ?? 0);
+    if (key === 'attack' && u.waveDmg) v *= u.waveDmg; // düşman dalgası her seferinde sertleşir
     // Güç İksiri: askerlerin saldırısı +%50
     return key === 'attack' && u.isMilitary && (p.effects.strength ?? 0) > this.time ? v * 1.5 : v;
   }
@@ -1066,7 +1067,8 @@ export class World {
       this.notify(`${b.name} tamamlandı.`, 'good');
       this.sound('bell', b.centerI, b.centerJ, 0.7);
     }
-    if (b.type === 'wonder' && b.owner === PLAYER) this._win('Harika tamamlandı! ZAFER!');
+    // Harika oyunu bitirmez: oyun yalnızca bir taraf diğerinin Kasaba Merkezi'ni yıkınca biter
+    if (b.type === 'wonder' && b.owner === PLAYER) { this.notify('Harika tamamlandı! Halkınız gururla dolu (huzur +).', 'good'); this.sound('fanfare'); }
     if (b.type === 'dock' && b.owner === PLAYER) {
       const regions = this.map.regionsAround(b);
       if (!this.fishNodes.some((f) => this.isAlive(f) && regions.has(this.map.regionAt(f.i, f.j)))) this.notify('Bu tersanenin açıldığı suda balık sürüsü yok.', 'warn');
@@ -1347,7 +1349,17 @@ export class World {
       // Yaratık surlara karşı çok güçlü (wallMul), diğer binalara karşı yavaş (bldgMul)
       if (attacker?.isUnit) amount *= (target.def.wall || target.def.gate) && attacker.def.wallMul ? attacker.def.wallMul : attacker.def.bldgMul ?? 1;
     }
-    const dmg = Math.max(1, amount - armor);
+    let dmg = Math.max(1, amount - armor);
+    // Kasaba Merkezi'ni YALNIZCA karşı taraf (oyuncu ↔ düşman) yıkabilir: yaratık ve diğerleri en fazla %25 cana indirir.
+    // Böylece savaşmadan zafer/yenilgi olmaz.
+    if (target.isBuilding && target.type === 'townCenter') {
+      const rival = (target.owner === PLAYER && owner === ENEMY) || (target.owner === ENEMY && owner === PLAYER);
+      if (!rival) {
+        const floor = target.maxHp * 0.25;
+        dmg = Math.min(dmg, Math.max(0, target.hp - floor));
+        if (dmg <= 0) { this.wild.onTownCenterFloored?.(target); return; }
+      }
+    }
     target.hp -= dmg;
     if (target.owner === PLAYER || owner === PLAYER) this.lastCombatAt = this.time;
     if (target.owner === PLAYER) this._underAttack(target);
@@ -1440,7 +1452,7 @@ export class World {
     else this.notify(`Düşman ${b.name.toLocaleLowerCase('tr')} yıkıldı!`, 'good');
     if (b.type === 'townCenter') {
       if (b.owner === ENEMY) this._win('Düşman Kasaba Merkezi yıkıldı! ZAFER!');
-      else this._lose();
+      else if (b.owner === PLAYER) this._lose();
     }
   }
 
@@ -1513,6 +1525,7 @@ export class World {
     let best = null, bestD = radius;
     for (const b of this.buildings) {
       if (b.owner === u.owner || b.type === 'farm' || b.def.wall || b.def.gate) continue;
+      if (u.owner === WILD && b.type === 'townCenter' && b.hp <= b.maxHp * 0.25 + 1) continue; // yaratık yıkamaz
       const d = rectEuclid(u.x, u.y, b);
       if (d < bestD) { bestD = d; best = b; }
     }

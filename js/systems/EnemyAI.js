@@ -92,11 +92,12 @@ export class EnemyAI {
   get countdown() { return Math.max(0, this.waveTimer); }
 
   serialize() {
-    return { waveTimer: this.waveTimer, wave: this.wave, enabled: this.enabled, econT: this.econT, trainT: this.trainT,
+    return { waveTimer: this.waveTimer, wave: this.wave, dirBase: this.dirBase, enabled: this.enabled, econT: this.econT, trainT: this.trainT,
       tc: this.tc?.id, barracks: this.barracks?.id, range: this.range?.id };
   }
 
   restore(s, byId) {
+    if (s.dirBase !== undefined) this.dirBase = s.dirBase;
     Object.assign(this, { waveTimer: s.waveTimer, wave: s.wave, enabled: s.enabled, econT: s.econT ?? 3, trainT: s.trainT ?? 20 });
     this.tc = byId.get(s.tc) ?? null;
     this.barracks = byId.get(s.barracks) ?? null;
@@ -129,15 +130,20 @@ export class EnemyAI {
     this.wave++;
     const n = this.wave;
     const mul = w.diff.waveMul;
-    // Her dalga kademeli olarak büyür (oyuncunun ordusu büyüdükçe dalga da ~%5 fazlasıyla büyür)
+    // Her dalga kademeli olarak büyür ve sertleşir: 1. dalga küçük bir akın, sonra her seferinde daha kalabalık,
+    // 3. dalgadan itibaren koçbaşı, 4.'den atlı, 6.'dan mancınık; her dalgada askerler %6 daha güçlü (saldırı ve can).
     const myArmy = w.units.filter((u) => u.owner === PLAYER && u.isMilitary).length;
-    let militia = Math.max(1, Math.round(Math.min(26, 2 + n * 1.5) * mul));
-    let archers = n >= 2 ? Math.round(Math.min(14, Math.floor(n * 0.8) + 1) * mul) : 0;
+    let militia = Math.max(2, Math.round(Math.min(30, 2 + n * 1.8) * mul));
+    let archers = n >= 2 ? Math.round(Math.min(16, Math.floor(n * 0.9) + 1) * mul) : 0;
+    const rams = n >= 3 ? Math.min(4, Math.floor((n - 1) / 2)) : 0;
+    const cavalry = n >= 4 ? Math.round(Math.min(10, n - 2) * mul) : 0;
+    const catapults = n >= 6 ? Math.min(3, Math.floor((n - 4) / 2)) : 0;
+    const power = 1 + 0.06 * (n - 1);
     const want = Math.round(myArmy * 1.05 * 0.6);
     if (militia + archers < want) militia += Math.min(10, want - militia - archers);
     // Biriken kaynakla ek askerler (köylü üretimi için 100 yiyecek yedekte kalır)
     let bought = 0;
-    while (bought < 8) {
+    while (bought < Math.min(8, n)) { // hazineden alım da kademeli: 1. dalgada en fazla 1
       const type = bought % 3 === 2 ? 'archer' : 'militia', cost = UNITS[type].cost;
       if ((this.player.resources.food - (cost.food ?? 0)) < 100 || !this.player.spend(cost)) break;
       if (type === 'archer') archers++; else militia++;
@@ -151,12 +157,21 @@ export class EnemyAI {
     const ang = this.dirBase + (n - 1) * (Math.PI / 3.2);
     const st = w.map.findWalkableNear(Math.round(ti + Math.cos(ang) * 18), Math.round(tj + Math.sin(ang) * 18), 6) ?? { i: ti, j: tj };
     const spawnFrom = (type) => (type === 'archer' && w.isAlive(this.range) ? this.range : w.isAlive(this.barracks) ? this.barracks : this.tc);
-    const list = [...Array(militia).fill('militia'), ...Array(archers).fill('archer')].slice(0, 40);
+    const list = [...Array(rams).fill('ram'), ...Array(catapults).fill('catapult'), ...Array(cavalry).fill('cavalry'),
+      ...Array(militia).fill('militia'), ...Array(archers).fill('archer')].slice(0, 50);
+    let sent = 0;
     for (const type of list) {
       const u = w.spawnUnitNear(spawnFrom(type), type);
-      if (u) { u.nextGoal = { i: ti, j: tj }; u.attackMoveTo(w, st.i, st.j, true); }
+      if (!u) continue;
+      u.maxHp = Math.round(u.maxHp * power); u.hp = u.maxHp;
+      u.waveDmg = power; // saldırı çarpanı (World.stat)
+      u.nextGoal = { i: ti, j: tj };
+      u.attackMoveTo(w, st.i, st.j, true);
+      sent++;
     }
-    w.notify(`Düşman saldırısı başladı! (Dalga ${n}: ${militia} milis${archers ? `, ${archers} okçu` : ''}${bought ? ` — ${bought} tanesi düşman hazinesinden` : ''})`, 'warn');
+    this.lastWave = { n, sent, at: w.time };
+    const parts = [`${militia} milis`, archers && `${archers} okçu`, cavalry && `${cavalry} atlı`, rams && `${rams} koçbaşı`, catapults && `${catapults} mancınık`].filter(Boolean).join(', ');
+    w.notify(`Düşman saldırısı! Dalga ${n} (${sent} asker: ${parts}) — güç +%${Math.round((power - 1) * 100)}${bought ? ` · ${bought} tanesi düşman hazinesinden` : ''}`, 'warn');
     w.sound('horn');
   }
 
