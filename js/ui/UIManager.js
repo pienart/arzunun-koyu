@@ -19,12 +19,16 @@ const UNIT_DESC = {
   cart: 'İmparatorluk Çağı. Kaynağa gider, 60 birim yük alır ve yalnızca Kasaba Merkezi\'ne boşaltır.',
 };
 
+/** Oyuncunun (Türk köyü) bina görseli: önce `tr_` seti, yoksa ortak görsel */
 function buildingFile(type, tier) {
   if (type === 'farm') return MANIFEST.textures.farm.file;
-  type = BUILDINGS[type]?.sprite ?? type;
-  for (let t = tier; t >= 0; t--) if (MANIFEST.sprites[`${type}_${t}`]) return MANIFEST.sprites[`${type}_${t}`].file;
-  for (let t = tier + 1; t <= 3; t++) if (MANIFEST.sprites[`${type}_${t}`]) return MANIFEST.sprites[`${type}_${t}`].file;
-  return spriteFile(type) ?? spriteFile('foundation');
+  const base = BUILDINGS[type]?.sprite ?? type;
+  for (const n of [`tr_${base}`, base]) {
+    for (let t = tier; t >= 0; t--) if (MANIFEST.sprites[`${n}_${t}`]) return MANIFEST.sprites[`${n}_${t}`].file;
+    for (let t = tier + 1; t <= 3; t++) if (MANIFEST.sprites[`${n}_${t}`]) return MANIFEST.sprites[`${n}_${t}`].file;
+    if (MANIFEST.sprites[n]) return MANIFEST.sprites[n].file;
+  }
+  return spriteFile('foundation');
 }
 
 const ICON = (k, cls = 'ri') => `<img class="${cls}" src="${iconFile(k)}" alt="">`;

@@ -775,7 +775,7 @@ export class Renderer {
       const owner = obj.owner ?? PLAYER;
       // Sur/kapı kendi kademesiyle (taş sur, kale suru), diğer binalar sahibinin çağıyla çizilir
       const tier = obj.def?.tiers ? obj.tier : this.world.players[owner].tier;
-      const nightKey = obj.def?.dayNight && this._night && obj.progress >= 1 ? sp.get(`${obj.def.sprite}_night`) : null;
+      const nightKey = obj.def?.dayNight && this._night && obj.progress >= 1 ? sp.buildingNight(obj.type, owner) : null;
       const s = obj.progress !== undefined && obj.progress < 1 ? sp.get('foundation') : nightKey ?? sp.building(obj.type, tier, owner);
       const baseW = obj.size * TW * CONFIG.BUILDING_FIT * (obj.def?.fit ?? 1); // ince tabanlı süsler (fener, heykel) küçültülür
       const w = baseW / s.baseRatio, h = w * s.aspect;
@@ -783,7 +783,7 @@ export class Renderer {
       const x = cx - s.anchorX * w, y = cy + HH - h + 2;
       const fcY = cy + HH - obj.size * HH; // ayak izi merkezinin y'si
       // Animasyonlu bina (yel değirmeni): sprite anahtarına ait kare dizisi varsa
-      const bkey = obj.progress !== undefined && obj.progress >= 1 && !nightKey ? sp.buildingKey(obj.type, tier) : null;
+      const bkey = obj.progress !== undefined && obj.progress >= 1 && !nightKey ? sp.buildingKey(obj.type, tier, owner) : null;
       const anim = bkey && sp.anims[bkey] ? bkey : null;
       // İki katmanlı gölge: temas gölgesi (ambient occlusion) + güneşin sol-üstten düşürdüğü sağa uzanan gölge
       return { obj, s, x, y, w, h, cx, cy, baseW, flip: false, anim, shadows: [
@@ -1089,8 +1089,9 @@ export class Renderer {
   _drawAnimatedBuilding(ctx, L, frame, px) {
     const sp = this.sprites;
     const frames = sp.anims[L.anim], meta = sp.animMeta[L.anim], ref = meta.ref ?? [0, 0, 1, 1];
-    const key = frames[Math.floor(((frame.time / 2.2) % 1) * frames.length) % frames.length];
-    const s = L.obj.owner === ENEMY ? sp.recolored(key) : sp.sprites[key];
+    const key = frames[Math.floor(((frame.time / (meta.period ?? 2.2)) % 1) * frames.length) % frames.length];
+    let s = L.obj.owner === ENEMY ? sp.recolored(key) : sp.sprites[key];
+    if (this._snowy) s = sp.snowy(s);
     const W = L.w / ref[2], H = L.h / ref[3];
     this._blit(ctx, s, L.x - ref[0] * W, L.y - ref[1] * H, W, H, false, px);
   }
@@ -1314,18 +1315,20 @@ export class Renderer {
    * Gece katmanı (ekran uzayında, yarım çözünürlük):
    *   1) mavi-lacivert karanlık   2) ışık kaynaklarında karanlık 'destination-out' ile oyulur
    *   3) ışıklar 'lighter' ile sıcak bir parıltı ekler
-   * Işıklar: yangınlar, kamp ateşi ve geceleri pencerelerinden ışık sızan kendi binalarınız.
+   * Işıklar: yangınlar, kamp ateşi ve geceleri pencerelerinden ışık sızan binalar (kendi binalarınız ve
+   * o an görüş alanınızdaki düşman binaları: düşman köyü de gece ışıklarıyla seçilir).
    */
   _drawNight(ctx, frame) {
     const d = frame.darkness ?? 0;
     if (d < 0.01) return;
     const t = frame.time;
-    // Evlerin pencereleri (yalnızca ekrandaki tamamlanmış kendi binaları)
-    const v = this._viewRect(80);
+    // Pencereler: ekrandaki tamamlanmış kendi binaları ve görüş alanındaki düşman binaları
+    const v = this._viewRect(80), fog = this.world.fog;
     for (const b of this.world.buildings) {
-      if (!b.complete || b.type === 'farm' || b.owner !== PLAYER || b.def.ground || b.def.wall) continue;
+      if (!b.complete || b.type === 'farm' || b.def.ground || b.def.wall) continue;
       const cx = (b.centerI - b.centerJ) * HW, cy = (b.centerI + b.centerJ) * HH;
       if (cx < v.l || cx > v.r || cy < v.t || cy > v.b) continue;
+      if (b.owner !== PLAYER && (b.owner !== ENEMY || !fog?.seesObject(b))) continue;
       if (b.def.lamp) { this._lights.push({ x: cx, y: cy - 40, r: 125, warm: true, flicker: 0.96 + 0.04 * cnoise(t * 0.7 + b.id), strength: 0.9 }); continue; }
       if (b.def.decor) continue;
       this._lights.push({ x: cx, y: cy - b.size * 6, r: 40 + b.size * 26, warm: true, flicker: 0.95 + 0.05 * cnoise(t * 0.8 + b.id), strength: 0.55 });

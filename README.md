@@ -166,6 +166,15 @@ oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penc
   - **Düşman hedef önceliği:** Düşman askerleri (ve yaratık) her zaman önce **surları/kapıları**, sonra **askerleri**,
     sonra **köylüleri**, en son diğer binaları hedefler.
   - Kasaba Merkezi ve kuleler menzile giren düşmana ok atar. Hasar alan binalar yanar; yıkılan binanın yerinde yıkıntı kalır.
+- **İki millet, iki üslup:** Sizin köyünüz **Türk köyüdür** ve her çağda kendine özgü yapılar kullanır:
+  **Karanlık Çağ = Oğuz** (keçe yurt, ahşap, kilim desenleri, tuğ), **Feodal = Selçuklu** (kumtaşı ve tuğla, geometrik
+  süs, firuze çini, taç kapı; medrese, kervansaray, darüşşifa), **Kale = Osmanlı** (kesme taş, beyaz sıva, kırmızı kiremit,
+  kurşun kubbe, selvi; külliye, tophane, saray). Düşman ayrı bir millettir: Batı tarzı taş/ahşap yapıları kırmızı
+  sancaklarla çizilir. Gece pencerelerden ışık sızar (görüş alanınızdaki düşman köyü de geceleri ışıklarıyla seçilir).
+- **Hareketli yapılar:** Bitmiş binalar canlıdır (inşaat hâli sabittir): yel değirmeni kanatları döner, su değirmeninin
+  çarkı ve suyu akar, altın eleme oluğunda su akar, iskelede tekne dalgada sallanır, Kasaba Merkezi'nde tuğ ve sancaklar
+  dalgalanır, ocaktan duman tüter, madende ve simya atölyesinde ateş yanar, kervansarayda develer kıpırdar, harikadaki
+  fıskiye fışkırır. Kışın bu kareler de karla örtülür.
 - **Düşman (kırmızı):** Haritanın uzak ama karadan ulaşılabilir bir köşesinde üs kurar (Kasaba Merkezi, Kışla, Okçuluk Alanı,
   2 kule, nöbetçiler). **Ekonomisi vardır:** köylüleri üssün çevresinde kaynak toplar, düşman zamanla yeni köylü yetiştirir
   ve biriken kaynakla her dalgaya ek asker satın alır → düşman köylülerine baskın yapmak dalgaları küçültür.

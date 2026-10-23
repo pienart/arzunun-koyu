@@ -1,6 +1,6 @@
 import { CONFIG } from '../config.js';
 import { ValueNoise2D } from '../world/Noise.js';
-import { ENEMY, BUILDINGS } from '../data/gameData.js';
+import { ENEMY, PLAYER, BUILDINGS } from '../data/gameData.js';
 import { UNIT_PREFIX, WALK_DIRS, VEHICLE_HEIGHT } from '../data/animData.js';
 
 /** Takım rengi taşıyan (düşman sürümü kırmızıya boyanan) görseller */
@@ -243,21 +243,32 @@ export class SpriteFactory {
   get(key) { return this.sprites[key]; }
 
   /** Binanın o çağdaki sprite anahtarı (animasyonu var mı diye bakmak için) */
-  buildingKey(type, tier) {
-    type = BUILDINGS[type]?.sprite ?? type;
-    for (let t = tier; t >= 0; t--) if (this.sprites[`${type}_${t}`]) return `${type}_${t}`;
-    for (let t = tier + 1; t <= 3; t++) if (this.sprites[`${type}_${t}`]) return `${type}_${t}`;
+  /**
+   * Binanın o çağdaki sprite anahtarı. OYUNCU (Türk köyü) önce kendi setine bakar: `tr_<görsel>_<çağ>`
+   * (Oğuz → Selçuklu → Osmanlı); yoksa ortak görsele düşer. DÜŞMAN ortak (Batı tarzı) görseli kırmızıya boyanmış kullanır.
+   * O çağ için görsel yoksa en yakın çağınki; hiç kademesi yoksa tek görsel (ör. ateş çukuru → kamp ateşi).
+   */
+  buildingKey(type, tier, owner = PLAYER) {
+    const base = BUILDINGS[type]?.sprite ?? type;
+    for (const n of owner === PLAYER ? [`tr_${base}`, base] : [base]) {
+      for (let t = tier; t >= 0; t--) if (this.sprites[`${n}_${t}`]) return `${n}_${t}`;
+      for (let t = tier + 1; t <= 3; t++) if (this.sprites[`${n}_${t}`]) return `${n}_${t}`;
+      if (this.sprites[n] && !this.anims[n]) return n;
+    }
     return null;
   }
 
   building(type, tier, owner) {
-    type = BUILDINGS[type]?.sprite ?? type; // görsel adı tür adından farklı olabilir (çit → palisade)
-    let key = null;
-    for (let t = tier; t >= 0 && !key; t--) if (this.sprites[`${type}_${t}`]) key = `${type}_${t}`;
-    for (let t = tier + 1; t <= 3 && !key; t++) if (this.sprites[`${type}_${t}`]) key = `${type}_${t}`;
-    if (!key && this.sprites[type]) key = type; // tek görselli bina (ateş çukuru → kamp ateşi)
+    const key = this.buildingKey(type, tier, owner);
     if (!key) return this.sprites.foundation;
     return owner === ENEMY ? this.recolored(key) : this.sprites[key];
+  }
+
+  /** Gece görseli (hayvan çiftliği): oyuncu için önce Türk seti */
+  buildingNight(type, owner) {
+    const base = BUILDINGS[type]?.sprite ?? type;
+    if (owner === PLAYER && this.buildingKey(type, 0, owner)?.startsWith('tr_')) return this.sprites[`tr_${base}_night`] ?? null; // Türk yapısına başka üslubun gece görseli karışmasın
+    return this.sprites[`${base}_night`] ?? null;
   }
 
   /**
@@ -306,6 +317,8 @@ export class SpriteFactory {
     if (this._snowWarm) return;
     this._snowWarm = true;
     const list = Object.keys(this.manifest.sprites).filter((k) => !/^(vil|mil|arc|cav|boat|ram|yeti)_/.test(k));
+    // Hareketli binaların kareleri (değirmen kanadı, iskele, ocak ateşi...) de kışın karlı çizilir
+    for (const [k, frames] of Object.entries(this.anims)) if (/^(tr_)?[a-zA-Z]+_\d$/.test(k)) list.push(...frames);
     const step = () => {
       const t0 = performance.now();
       while (list.length && performance.now() - t0 < 6) {

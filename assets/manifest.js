@@ -980,6 +980,384 @@ export const MANIFEST = {
       "h": 127,
       "anchorX": 0.3467,
       "baseW": 105.0
+    },
+    "tr_townCenter_0": {
+      "file": "assets/sprites/tr_townCenter_0.webp",
+      "w": 640,
+      "h": 601,
+      "anchorX": 0.4992,
+      "baseW": 640.0
+    },
+    "tr_house_0": {
+      "file": "assets/sprites/tr_house_0.webp",
+      "w": 520,
+      "h": 344,
+      "anchorX": 0.5029,
+      "baseW": 510.0
+    },
+    "tr_townCenter_1": {
+      "file": "assets/sprites/tr_townCenter_1.webp",
+      "w": 640,
+      "h": 634,
+      "anchorX": 0.4992,
+      "baseW": 638.0
+    },
+    "tr_house_1": {
+      "file": "assets/sprites/tr_house_1.webp",
+      "w": 494,
+      "h": 520,
+      "anchorX": 0.5132,
+      "baseW": 480.0
+    },
+    "tr_townCenter_2": {
+      "file": "assets/sprites/tr_townCenter_2.webp",
+      "w": 640,
+      "h": 582,
+      "anchorX": 0.4961,
+      "baseW": 614.0
+    },
+    "tr_house_2": {
+      "file": "assets/sprites/tr_house_2.webp",
+      "w": 492,
+      "h": 520,
+      "anchorX": 0.501,
+      "baseW": 488.0
+    },
+    "tr_alchemyLab_2": {
+      "file": "assets/sprites/tr_alchemyLab_2.webp",
+      "w": 479,
+      "h": 560,
+      "anchorX": 0.5,
+      "baseW": 468.0
+    },
+    "tr_animalFarm_0": {
+      "file": "assets/sprites/tr_animalFarm_0.webp",
+      "w": 640,
+      "h": 539,
+      "anchorX": 0.5055,
+      "baseW": 632.0
+    },
+    "tr_archeryRange_0": {
+      "file": "assets/sprites/tr_archeryRange_0.webp",
+      "w": 640,
+      "h": 561,
+      "anchorX": 0.4984,
+      "baseW": 639.0
+    },
+    "tr_archeryRange_1": {
+      "file": "assets/sprites/tr_archeryRange_1.webp",
+      "w": 640,
+      "h": 618,
+      "anchorX": 0.4992,
+      "baseW": 640.0
+    },
+    "tr_archeryRange_2": {
+      "file": "assets/sprites/tr_archeryRange_2.webp",
+      "w": 640,
+      "h": 503,
+      "anchorX": 0.5117,
+      "baseW": 624.0
+    },
+    "tr_barracks_0": {
+      "file": "assets/sprites/tr_barracks_0.webp",
+      "w": 640,
+      "h": 551,
+      "anchorX": 0.4992,
+      "baseW": 640.0
+    },
+    "tr_barracks_1": {
+      "file": "assets/sprites/tr_barracks_1.webp",
+      "w": 640,
+      "h": 606,
+      "anchorX": 0.4992,
+      "baseW": 640.0
+    },
+    "tr_barracks_2": {
+      "file": "assets/sprites/tr_barracks_2.webp",
+      "w": 640,
+      "h": 563,
+      "anchorX": 0.4984,
+      "baseW": 615.0
+    },
+    "tr_dock_0": {
+      "file": "assets/sprites/tr_dock_0.webp",
+      "w": 640,
+      "h": 590,
+      "anchorX": 0.5109,
+      "baseW": 625.0
+    },
+    "tr_dock_1": {
+      "file": "assets/sprites/tr_dock_1.webp",
+      "w": 640,
+      "h": 606,
+      "anchorX": 0.5078,
+      "baseW": 629.0
+    },
+    "tr_dock_2": {
+      "file": "assets/sprites/tr_dock_2.webp",
+      "w": 640,
+      "h": 639,
+      "anchorX": 0.4992,
+      "baseW": 640.0
+    },
+    "tr_gate_0": {
+      "file": "assets/sprites/tr_gate_0.webp",
+      "w": 175,
+      "h": 220,
+      "anchorX": 0.4971,
+      "baseW": 175.0
+    },
+    "tr_gate_1": {
+      "file": "assets/sprites/tr_gate_1.webp",
+      "w": 180,
+      "h": 220,
+      "anchorX": 0.4972,
+      "baseW": 180.0
+    },
+    "tr_gate_2": {
+      "file": "assets/sprites/tr_gate_2.webp",
+      "w": 158,
+      "h": 220,
+      "anchorX": 0.4968,
+      "baseW": 158.0
+    },
+    "tr_goldPanning_1": {
+      "file": "assets/sprites/tr_goldPanning_1.webp",
+      "w": 530,
+      "h": 560,
+      "anchorX": 0.4991,
+      "baseW": 530.0
+    },
+    "tr_granary_0": {
+      "file": "assets/sprites/tr_granary_0.webp",
+      "w": 550,
+      "h": 640,
+      "anchorX": 0.5055,
+      "baseW": 501.0
+    },
+    "tr_granary_1": {
+      "file": "assets/sprites/tr_granary_1.webp",
+      "w": 640,
+      "h": 567,
+      "anchorX": 0.4992,
+      "baseW": 640.0
+    },
+    "tr_greenhouse_1": {
+      "file": "assets/sprites/tr_greenhouse_1.webp",
+      "w": 572,
+      "h": 640,
+      "anchorX": 0.4991,
+      "baseW": 572.0
+    },
+    "tr_hospital_1": {
+      "file": "assets/sprites/tr_hospital_1.webp",
+      "w": 640,
+      "h": 548,
+      "anchorX": 0.4914,
+      "baseW": 630.0
+    },
+    "tr_lumberCamp_0": {
+      "file": "assets/sprites/tr_lumberCamp_0.webp",
+      "w": 560,
+      "h": 493,
+      "anchorX": 0.4991,
+      "baseW": 560.0
+    },
+    "tr_lumberCamp_1": {
+      "file": "assets/sprites/tr_lumberCamp_1.webp",
+      "w": 560,
+      "h": 508,
+      "anchorX": 0.4991,
+      "baseW": 560.0
+    },
+    "tr_lumberCamp_2": {
+      "file": "assets/sprites/tr_lumberCamp_2.webp",
+      "w": 560,
+      "h": 492,
+      "anchorX": 0.5,
+      "baseW": 559.0
+    },
+    "tr_market_0": {
+      "file": "assets/sprites/tr_market_0.webp",
+      "w": 640,
+      "h": 517,
+      "anchorX": 0.5031,
+      "baseW": 603.0
+    },
+    "tr_market_1": {
+      "file": "assets/sprites/tr_market_1.webp",
+      "w": 640,
+      "h": 557,
+      "anchorX": 0.4992,
+      "baseW": 622.0
+    },
+    "tr_market_2": {
+      "file": "assets/sprites/tr_market_2.webp",
+      "w": 640,
+      "h": 584,
+      "anchorX": 0.4984,
+      "baseW": 639.0
+    },
+    "tr_mill_0": {
+      "file": "assets/sprites/tr_mill_0.webp",
+      "w": 409,
+      "h": 560,
+      "anchorX": 0.4988,
+      "baseW": 409.0
+    },
+    "tr_mill_1": {
+      "file": "assets/sprites/tr_mill_1.webp",
+      "w": 392,
+      "h": 560,
+      "anchorX": 0.4758,
+      "baseW": 374.0
+    },
+    "tr_mill_2": {
+      "file": "assets/sprites/tr_mill_2.webp",
+      "w": 394,
+      "h": 560,
+      "anchorX": 0.4734,
+      "baseW": 374.0
+    },
+    "tr_miningCamp_0": {
+      "file": "assets/sprites/tr_miningCamp_0.webp",
+      "w": 560,
+      "h": 477,
+      "anchorX": 0.4991,
+      "baseW": 560.0
+    },
+    "tr_miningCamp_1": {
+      "file": "assets/sprites/tr_miningCamp_1.webp",
+      "w": 560,
+      "h": 479,
+      "anchorX": 0.4991,
+      "baseW": 560.0
+    },
+    "tr_miningCamp_2": {
+      "file": "assets/sprites/tr_miningCamp_2.webp",
+      "w": 560,
+      "h": 482,
+      "anchorX": 0.5,
+      "baseW": 559.0
+    },
+    "tr_palisade_0": {
+      "file": "assets/sprites/tr_palisade_0.webp",
+      "w": 144,
+      "h": 220,
+      "anchorX": 0.4965,
+      "baseW": 144.0
+    },
+    "tr_palisade_1": {
+      "file": "assets/sprites/tr_palisade_1.webp",
+      "w": 217,
+      "h": 220,
+      "anchorX": 0.4977,
+      "baseW": 217.0
+    },
+    "tr_palisade_2": {
+      "file": "assets/sprites/tr_palisade_2.webp",
+      "w": 219,
+      "h": 220,
+      "anchorX": 0.5251,
+      "baseW": 207.0
+    },
+    "tr_scienceCenter_1": {
+      "file": "assets/sprites/tr_scienceCenter_1.webp",
+      "w": 640,
+      "h": 639,
+      "anchorX": 0.4977,
+      "baseW": 638.0
+    },
+    "tr_siegeWorkshop_2": {
+      "file": "assets/sprites/tr_siegeWorkshop_2.webp",
+      "w": 640,
+      "h": 582,
+      "anchorX": 0.4992,
+      "baseW": 640.0
+    },
+    "tr_stable_0": {
+      "file": "assets/sprites/tr_stable_0.webp",
+      "w": 640,
+      "h": 548,
+      "anchorX": 0.4938,
+      "baseW": 633.0
+    },
+    "tr_stable_1": {
+      "file": "assets/sprites/tr_stable_1.webp",
+      "w": 640,
+      "h": 540,
+      "anchorX": 0.4992,
+      "baseW": 640.0
+    },
+    "tr_stable_2": {
+      "file": "assets/sprites/tr_stable_2.webp",
+      "w": 640,
+      "h": 596,
+      "anchorX": 0.5094,
+      "baseW": 627.0
+    },
+    "tr_tavern_1": {
+      "file": "assets/sprites/tr_tavern_1.webp",
+      "w": 640,
+      "h": 582,
+      "anchorX": 0.5227,
+      "baseW": 610.0
+    },
+    "tr_university_2": {
+      "file": "assets/sprites/tr_university_2.webp",
+      "w": 621,
+      "h": 640,
+      "anchorX": 0.496,
+      "baseW": 599.0
+    },
+    "tr_vegetableBed_0": {
+      "file": "assets/sprites/tr_vegetableBed_0.webp",
+      "w": 560,
+      "h": 442,
+      "anchorX": 0.5473,
+      "baseW": 506.0
+    },
+    "tr_watchTower_0": {
+      "file": "assets/sprites/tr_watchTower_0.webp",
+      "w": 220,
+      "h": 560,
+      "anchorX": 0.5227,
+      "baseW": 205.0
+    },
+    "tr_watchTower_1": {
+      "file": "assets/sprites/tr_watchTower_1.webp",
+      "w": 175,
+      "h": 560,
+      "anchorX": 0.5057,
+      "baseW": 154.0
+    },
+    "tr_watchTower_2": {
+      "file": "assets/sprites/tr_watchTower_2.webp",
+      "w": 184,
+      "h": 560,
+      "anchorX": 0.4185,
+      "baseW": 129.0
+    },
+    "tr_waterMill_0": {
+      "file": "assets/sprites/tr_waterMill_0.webp",
+      "w": 529,
+      "h": 560,
+      "anchorX": 0.4991,
+      "baseW": 529.0
+    },
+    "tr_wineCellar_1": {
+      "file": "assets/sprites/tr_wineCellar_1.webp",
+      "w": 560,
+      "h": 436,
+      "anchorX": 0.5018,
+      "baseW": 557.0
+    },
+    "tr_wonder_2": {
+      "file": "assets/sprites/tr_wonder_2.webp",
+      "w": 700,
+      "h": 621,
+      "anchorX": 0.4886,
+      "baseW": 683.0
     }
   },
   "icons": {
@@ -1852,6 +2230,272 @@ export const MANIFEST = {
         0.9556,
         0.9746
       ]
+    },
+    "tr_mill_0": {
+      "file": "assets/anims/tr_mill_0.webp",
+      "frames": 12,
+      "w": 218,
+      "h": 300,
+      "anchorX": 0.506,
+      "ref": [
+        0.0301,
+        0.0518,
+        0.954,
+        0.9482
+      ],
+      "period": 2.0
+    },
+    "tr_mill_1": {
+      "file": "assets/anims/tr_mill_1.webp",
+      "frames": 12,
+      "w": 215,
+      "h": 300,
+      "anchorX": 0.4727,
+      "ref": [
+        0.0303,
+        0.048,
+        0.9299,
+        0.952
+      ],
+      "period": 2.0
+    },
+    "tr_mill_2": {
+      "file": "assets/anims/tr_mill_2.webp",
+      "frames": 12,
+      "w": 222,
+      "h": 300,
+      "anchorX": 0.4726,
+      "ref": [
+        0.041,
+        0.0397,
+        0.9117,
+        0.9603
+      ],
+      "period": 2.0
+    },
+    "tr_waterMill_0": {
+      "file": "assets/anims/tr_waterMill_0.webp",
+      "frames": 12,
+      "w": 284,
+      "h": 300,
+      "anchorX": 0.4991,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "period": 3.0
+    },
+    "tr_goldPanning_1": {
+      "file": "assets/anims/tr_goldPanning_1.webp",
+      "frames": 12,
+      "w": 284,
+      "h": 300,
+      "anchorX": 0.4991,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "period": 2.958
+    },
+    "tr_animalFarm_0": {
+      "file": "assets/anims/tr_animalFarm_0.webp",
+      "frames": 12,
+      "w": 356,
+      "h": 300,
+      "anchorX": 0.5055,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        0.9986
+      ],
+      "period": 2.958
+    },
+    "tr_dock_0": {
+      "file": "assets/anims/tr_dock_0.webp",
+      "frames": 12,
+      "w": 325,
+      "h": 300,
+      "anchorX": 0.5109,
+      "ref": [
+        0.0,
+        0.0013,
+        1.0,
+        0.9987
+      ],
+      "period": 3.0
+    },
+    "tr_dock_1": {
+      "file": "assets/anims/tr_dock_1.webp",
+      "frames": 12,
+      "w": 317,
+      "h": 300,
+      "anchorX": 0.5071,
+      "ref": [
+        0.0,
+        0.0,
+        0.9987,
+        1.0
+      ],
+      "period": 2.958
+    },
+    "tr_dock_2": {
+      "file": "assets/anims/tr_dock_2.webp",
+      "frames": 12,
+      "w": 300,
+      "h": 300,
+      "anchorX": 0.4992,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "period": 2.958
+    },
+    "tr_townCenter_0": {
+      "file": "assets/anims/tr_townCenter_0.webp",
+      "frames": 12,
+      "w": 321,
+      "h": 300,
+      "anchorX": 0.5004,
+      "ref": [
+        0.0023,
+        0.0,
+        0.9977,
+        0.9988
+      ],
+      "period": 2.833
+    },
+    "tr_townCenter_1": {
+      "file": "assets/anims/tr_townCenter_1.webp",
+      "frames": 12,
+      "w": 313,
+      "h": 300,
+      "anchorX": 0.4838,
+      "ref": [
+        0.0,
+        0.0,
+        0.9691,
+        1.0
+      ],
+      "period": 2.958
+    },
+    "tr_townCenter_2": {
+      "file": "assets/anims/tr_townCenter_2.webp",
+      "frames": 12,
+      "w": 330,
+      "h": 300,
+      "anchorX": 0.4961,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "period": 2.917
+    },
+    "tr_miningCamp_0": {
+      "file": "assets/anims/tr_miningCamp_0.webp",
+      "frames": 12,
+      "w": 352,
+      "h": 300,
+      "anchorX": 0.4991,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "period": 2.875
+    },
+    "tr_miningCamp_1": {
+      "file": "assets/anims/tr_miningCamp_1.webp",
+      "frames": 12,
+      "w": 350,
+      "h": 300,
+      "anchorX": 0.4991,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "period": 2.917
+    },
+    "tr_miningCamp_2": {
+      "file": "assets/anims/tr_miningCamp_2.webp",
+      "frames": 12,
+      "w": 303,
+      "h": 300,
+      "anchorX": 0.5,
+      "ref": [
+        0.0,
+        0.1345,
+        1.0,
+        0.8655
+      ],
+      "period": 2.917
+    },
+    "tr_alchemyLab_2": {
+      "file": "assets/anims/tr_alchemyLab_2.webp",
+      "frames": 12,
+      "w": 251,
+      "h": 300,
+      "anchorX": 0.5,
+      "ref": [
+        0.0,
+        0.0224,
+        1.0,
+        0.9776
+      ],
+      "period": 2.958
+    },
+    "tr_tavern_1": {
+      "file": "assets/anims/tr_tavern_1.webp",
+      "frames": 12,
+      "w": 330,
+      "h": 300,
+      "anchorX": 0.5227,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "period": 2.958
+    },
+    "tr_lumberCamp_0": {
+      "file": "assets/anims/tr_lumberCamp_0.webp",
+      "frames": 12,
+      "w": 340,
+      "h": 300,
+      "anchorX": 0.4991,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "period": 2.958
+    },
+    "tr_wonder_2": {
+      "file": "assets/anims/tr_wonder_2.webp",
+      "frames": 12,
+      "w": 384,
+      "h": 340,
+      "anchorX": 0.4886,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "period": 2.875
     }
   }
 };

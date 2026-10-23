@@ -78,8 +78,17 @@ for _p, _src in [('vil', 'vil_idle'), ('mil', 'mil_idle'), ('arc', 'arc_idle'), 
 ONESHOT = {k for k in SPECS if k.endswith('_death')}
 # Ölüm videosunun kullanılacak aralığı (kare): üretilen videoların bazılarında düşüş geç başlıyor
 ONESHOT_RANGE = {'vil_death': (27, 58), 'arc_death': (38, 72)}
+# Türk köyü yapıları (tr_*): yel değirmeni kanatları kendi döngüsünü bulur; diğerleri (bayrak, duman, ocak ateşi,
+# su, iskeledeki tekne) videonun tamamını kullanır (başlangıç = bitiş karesi). Süre None → döngü uzunluğundan.
+for _k in ['tr_mill_0', 'tr_mill_1', 'tr_mill_2']:
+    SPECS[_k] = (_k, 12, 2.0, (12, 72))
+for _k in ['tr_waterMill_0', 'tr_goldPanning_1', 'tr_animalFarm_0', 'tr_dock_0', 'tr_dock_1', 'tr_dock_2',
+           'tr_townCenter_0', 'tr_townCenter_1', 'tr_townCenter_2', 'tr_miningCamp_0', 'tr_miningCamp_1',
+           'tr_miningCamp_2', 'tr_alchemyLab_2', 'tr_tavern_1', 'tr_lumberCamp_0', 'tr_wonder_2']:
+    SPECS[_k] = (_k, 12, None, (56, 72))
 # Büyük animasyonlar küçültülür (bellek): en fazla bu yükseklikte kare
-MAXH = {'mill_0': 300, 'mill_1': 300, 'mill_2': 300, 'animalFarm_0': 320}
+MAXH = {'mill_0': 300, 'mill_1': 300, 'mill_2': 300, 'animalFarm_0': 320,
+        **{k: (340 if k == 'tr_wonder_2' else 300) for k in SPECS if k.startswith('tr_')}}
 
 
 def load_manifest_sprites():
@@ -192,6 +201,8 @@ def process(key, sprites):
         'ref': [round(float((xs0.min() - x0) / (x1 - x0)), 4), round(float((ys0.min() - y0) / (y1 - y0)), 4),
                 round(float(w0 / (x1 - x0)), 4), round(float(h0 / (y1 - y0)), 4)],
     }
+    if key.startswith('tr_'):
+        meta['period'] = round(period if period else cyc / 24, 3)  # döngü süresi (sn); oyunda bina animasyon hızı
     print(f'{key}: döngü {cyc} kare / {len(raw)} -> {n_out} kare, {fw}x{fh}, anchorX {meta["anchorX"]}')
     return meta
 
