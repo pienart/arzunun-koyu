@@ -1,4 +1,6 @@
 import { CONFIG } from '../config.js';
+
+const STEALTH_R = 2; // gizli birimler (araştırmacı) ancak bu kadar yakından fark edilir
 import { BUILDINGS, UNITS, TECHS, AGES, MARKET, RESOURCE_NAMES, RESOURCE_TYPES, START, PLAYER, ENEMY, WILD, REPAIR, DIFFICULTY, LEVELS, ITEMS, HAPPINESS, UPKEEP, PLUNDER, RESOURCE_NODES, formatCost } from '../data/gameData.js';
 import { TileId, TileRegistry } from '../world/TileTypes.js';
 import { SpatialGrid } from './SpatialGrid.js';
@@ -8,7 +10,7 @@ import { GameMap, StaticObject, ResourceNode } from '../world/GameMap.js';
 const StaticObjectNode = (kind, i, j, amount) => new ResourceNode(kind, i, j, { amount, blocks: false });
 import { Building } from '../entities/Building.js';
 import { Villager } from '../entities/Villager.js';
-import { Architect, Cart } from '../entities/Workers.js';
+import { Architect, Cart, Prospector } from '../entities/Workers.js';
 import { Soldier } from '../entities/Soldier.js';
 import { Player } from './Player.js';
 import { Pathfinder } from './Pathfinder.js';
@@ -1007,6 +1009,7 @@ export class World {
       this.grid.each(b.centerI, b.centerJ, 9, (o) => {
         if (o.owner === b.owner || o.dead || o.def.animal) return;
         const d = rectEuclid(o.x, o.y, b);
+        if (o.def.stealth && d > STEALTH_R) return;
         if (d < bd) { bd = d; foe = o; }
       });
       if (!foe && b._hitBy && this.isAlive(b._hitBy) && this.time - b._hitAt < 3) foe = b._hitBy;
@@ -1193,6 +1196,7 @@ export class World {
   checkBuildable(type, owner = PLAYER) {
     const def = BUILDINGS[type], p = this.players[owner];
     if (def.age > p.age) return `${AGES[def.age].name} gerekli`;
+    if ((def.buildAge ?? 0) > p.age) return `${AGES[def.buildAge].name} gerekli`; // ör. ikinci Kasaba Merkezi
     for (const req of def.requires ?? []) {
       if (!this.buildings.some((b) => b.owner === owner && b.type === req && b.complete)) return `Önce ${BUILDINGS[req].name} gerekli`;
     }
@@ -1326,6 +1330,7 @@ export class World {
     if (!spot) return null;
     const u = type === 'villager' ? new Villager(spot.i, spot.j, b.owner)
       : type === 'architect' ? new Architect(spot.i, spot.j, b.owner) : type === 'cart' ? new Cart(spot.i, spot.j, b.owner)
+      : type === 'prospector' ? new Prospector(spot.i, spot.j, b.owner)
       : naval ? new Boat(spot.i, spot.j, b.owner) : new Soldier(type, spot.i, spot.j, b.owner);
     const hpBonus = this.players[b.owner].bonus[type]?.hp ?? 0;
     u.maxHp += hpBonus;
@@ -1671,7 +1676,13 @@ export class World {
     if (b.owner === PLAYER) this.notify(`${b.name} yıkıldı!`, 'warn');
     else this.notify(`Düşman ${b.name.toLocaleLowerCase('tr')} yıkıldı!`, 'good');
     if (b.type === 'townCenter') {
-      if (b.owner === ENEMY) this._win('Düşman Kasaba Merkezi yıkıldı! ZAFER!');
+      // Başka (tamamlanmış) Kasaba Merkezi varsa oyun sürer; o artık ana merkezdir
+      const next = this.buildings.find((o) => o.owner === b.owner && o.type === 'townCenter' && o.complete && o !== b);
+      if (next) {
+        if (b.owner === PLAYER && this.townCenter === b) this.townCenter = next;
+        if (b.owner === ENEMY && this.enemyAI.tc === b) this.enemyAI.tc = next;
+        if (b.owner === PLAYER) this.notify('Ana Kasaba Merkezi yıkıldı; yönetim diğer Kasaba Merkezi\'ne geçti.', 'warn');
+      } else if (b.owner === ENEMY) this._win('Düşman Kasaba Merkezi yıkıldı! ZAFER!');
       else if (b.owner === PLAYER) this._lose();
     }
   }
@@ -1708,6 +1719,7 @@ export class World {
       this.grid.each(u.x, u.y, radius, (o) => {
         if (o.owner === u.owner || o.dead || o.def.animal || (melee && o.naval)) return;
         const d = Math.hypot(o.x - u.x, o.y - u.y);
+        if (o.def.stealth && d > STEALTH_R) return; // gizli birim (araştırmacı) yakından fark edilir
         if (d < bestD) { bestD = d; best = o; }
       });
     }
@@ -1739,6 +1751,7 @@ export class World {
     this.grid.each(u.x, u.y, radius, (o) => {
       if (o.owner === u.owner || o.dead || o.def.animal || (melee && o.naval)) return;
       const d = Math.hypot(o.x - u.x, o.y - u.y);
+      if (o.def.stealth && d > STEALTH_R) return;
       if (o.isMilitary) { if (d < sd) { sd = d; sol = o; } } else if (d < vd) { vd = d; vil = o; }
     });
     if (sol || vil || !includeBuildings) return sol ?? vil;
@@ -1765,6 +1778,7 @@ export class World {
       this.grid.each(b.centerI, b.centerJ, range + b.size, (u) => {
         if (u.owner === b.owner || u.dead || u.def.animal) return;
         const d = rectEuclid(u.x, u.y, b);
+        if (u.def.stealth && d > STEALTH_R) return;
         if (d < bestD) { bestD = d; best = u; }
       });
       if (!best) { b.atkCd = 0.3; continue; }

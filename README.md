@@ -89,6 +89,13 @@ oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penc
   şartları), sonra kaynaklar, sağda köylü ve asker seçimi, saat, yardım ve en sağda menü. Biten kaynak sarı görünür,
   yetmediğinde kutusu kırmızı yanıp söner. Nüfusun üzerine gelince köylü ve her asker türünün sayısı görünür. Aynı
   uyarı ekrandayken tekrar yazılmaz. Gece/gündüz seçimi **Ayarlar**'dadır (L kısayolu da çalışır).
+- **İkinci Kasaba Merkezi:** Feodal Çağ'dan itibaren köylüler bir Kasaba Merkezi daha kurabilir (en fazla 2). Ana merkez
+  yıkılırsa yönetim diğerine geçer; yenilgi ancak hiç Kasaba Merkezi kalmayınca olur (düşman için de aynı).
+- **Araştırmacı (Üniversite):** Kamuflajlı, 8 yönlü animasyonlu arabasıyla gelir. Seçince **Odun / Yiyecek / Altın /
+  Taş / Deri Ara** komutları çıkar: seçilen kaynağı haritanın her yerinde bulur (düşman köyü hariç), 200'lük yüklerle
+  en yakın kabul eden binaya getirir, kaynak bitince kendiliğinden yenisini arar. Deri için yabani hayvan avlar (deri
+  hemen gelir, eti toplayıp getirir). Düşman birimleri, kuleleri ve otağları onu ancak 2 karo yakından fark eder;
+  yine de saldırıya uğrarsa öldürülebilir. Elle başka bir emir verince arama biter.
 - **Asker seçimi:** Asker düğmesi tüm askerleri seçer; altındaki ikonlar savaştakileri, boştakileri ya da tümünü seçer.
 - **Yapı menüsü filtresi:** Köylü seçiliyken yapılar sekmelerle süzülür: Tümü (varsayılan), Kurulmayan, Bina, Gıda,
   Kaynak, Askeri, Bilim.

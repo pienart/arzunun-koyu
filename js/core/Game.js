@@ -364,6 +364,7 @@ export class Game {
   // ═════════════════════ KOMUTLAR ═════════════════════
   _onRightClick(sx, sy) {
     if (this.placement) { this.placement = null; return; }
+    for (const u of this.myUnits) if (u.searchKind) u.searchKind = null; // araştırmacı: elle emir → arama biter
     const w = this.camera.screenToWorld(sx, sy);
     const t = worldToTile(w.x, w.y);
     const units = this.myUnits;
@@ -418,7 +419,7 @@ export class Game {
     if (units.length && this.world.map.inBounds(i, j)) this.world.commandMove(units, i, j);
   }
 
-  stopSelected() { for (const u of this.myUnits) u.stop(); }
+  stopSelected() { for (const u of this.myUnits) { u.stop(); if (u.searchKind) u.searchKind = null; } }
 
   selectNextIdle() {
     const idle = this.world.units.filter((u) => u.owner === PLAYER && u.type === 'villager' && u.state === 'idle');

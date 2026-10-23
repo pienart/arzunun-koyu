@@ -86,6 +86,12 @@ for _k in ['tr_waterMill_0', 'tr_goldPanning_1', 'tr_animalFarm_0', 'tr_dock_0',
            'tr_townCenter_0', 'tr_townCenter_1', 'tr_townCenter_2', 'tr_miningCamp_0', 'tr_miningCamp_1',
            'tr_miningCamp_2', 'tr_alchemyLab_2', 'tr_tavern_1', 'tr_lumberCamp_0', 'tr_wonder_2']:
     SPECS[_k] = (_k, 12, None, (56, 72))
+# Araştırmacı arabası (Üniversite): 8 yönlü yürüyüş (yan + 4 yön; batı yönleri aynalanır), videonun tamamı döngü
+for _d in ['', '_s', '_n', '_se', '_ne']:
+    SPECS['pro_walk' + _d] = ('pro_idle', 14, 0.9, (60, 72))
+# İlk karenin hedef yüksekliği (px): yönler aynı boya zorlanmaz, ham görsellerdeki oranı korur (önden bakan araba
+# yandan bakandan uzun görünür). Varsayılan: kaynak sprite yüksekliği.
+TARGET_H = {'pro_walk_se': 308, 'pro_walk_ne': 269, 'pro_walk_s': 355, 'pro_walk_n': 320}
 # Büyük animasyonlar küçültülür (bellek): en fazla bu yükseklikte kare
 MAXH = {'mill_0': 300, 'mill_1': 300, 'mill_2': 300, 'animalFarm_0': 320,
         **{k: (340 if k == 'tr_wonder_2' else 300) for k in SPECS if k.startswith('tr_')}}
@@ -178,7 +184,7 @@ def process(key, sprites):
     ys0, xs0 = np.nonzero(a0)
     h0 = ys0.max() - ys0.min() + 1
     src = sprites[src_key]
-    scale = src['h'] / h0
+    scale = TARGET_H.get(key, src['h']) / h0
     if key in MAXH:
         scale = min(scale, MAXH[key] / (y1 - y0))
     # Taban noktası: kaynaktaki ayak merkezi, ilk karenin kutusuna göre konumlanır

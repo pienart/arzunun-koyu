@@ -97,6 +97,7 @@ export class EnemyAI {
       ['house', houseNeed],
       ['barracks', 1 + Math.min(3, a + (this._rich() ? 1 : 0))],
       ['lumberCamp', 1], ['mill', 1], ['miningCamp', 1],
+      ['townCenter', a >= 1 && this._rich() ? 2 : 1],
       ['farm', 4 + a * 3],
       ['archeryRange', 1 + (a >= 2 ? 1 : 0)],
       ['stable', a >= 1 ? 1 + (a >= 3 ? 1 : 0) : 0],

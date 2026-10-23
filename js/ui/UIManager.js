@@ -7,12 +7,13 @@ import { SidePanel, Inventory } from './Panels.js';
 const $ = (sel) => document.querySelector(sel);
 const spriteFile = (key) => MANIFEST.sprites[key]?.file;
 const iconFile = (key) => MANIFEST.icons[key]?.file;
-const UNIT_PORTRAIT = { villager: 'vil_idle', militia: 'mil_idle', archer: 'arc_idle', cavalry: 'cav_idle', ram: 'ram_e', fishingBoat: 'boat_e', commander: 'mil_idle', yeti: 'yeti_idle', architect: 'arch_idle', cart: 'cart_e', catapult: 'catapult_e', warWagon: 'warWagon_e' };
+const UNIT_PORTRAIT = { villager: 'vil_idle', militia: 'mil_idle', archer: 'arc_idle', cavalry: 'cav_idle', ram: 'ram_e', fishingBoat: 'boat_e', commander: 'mil_idle', yeti: 'yeti_idle', architect: 'arch_idle', prospector: 'pro_idle', cart: 'cart_e', catapult: 'catapult_e', warWagon: 'warWagon_e' };
 /** Komut butonlarına sırayla atanan kısayollar (WASD kamera, H/G/L/M/N/B/X/P başka işlere ayrılı) */
 const HOTKEYS = ['KeyQ', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyF', 'KeyC', 'KeyV', 'KeyZ', 'KeyJ']; // E, O kamera · K mini harita
 const UNIT_DESC = {
   villager: 'Kaynak toplar, bina inşa eder ve tamir eder.', fishingBoat: 'Balık sürülerinden yiyecek toplar ve tersaneye getirir.',
   architect: 'Patika, çiçek tarhı ve süs ağacı yapar: şehri güzelleştirir. Patikada birimler %35 hızlı yürür.',
+  prospector: 'Kamuflajlı arabasıyla seçtiğiniz kaynağı (deri dahil) tüm haritada arar, bulur ve büyük yüklerle (200) getirir. Düşman onu ancak çok yakından fark eder.',
   commander: 'Tek olur; ölürse buradan yenisi atanır. "Devriye At" ile çitle çevrili köyü sürekli dolaşır, içeri giren düşmanı, çitteki gedikleri ve ağır hasarı ekranda uyarır.',
   catapult: 'Kale Çağı. Uzaktan (9 karo) taş atar; isabet noktasındaki herkese ve binalara alan hasarı verir (binalara ×3).',
   warWagon: 'İmparatorluk Çağı. İçine 50 asker alır, yayalardan hızlı gider. Askerleri seçip arabaya sağ tıklayın; "İndir" ile indirin.',
@@ -47,7 +48,7 @@ function enemyPortrait(sprites, key) {
 /** Köylü yapı menüsü filtreleri */
 const BUILD_TABS = { all: 'Tümü', missing: 'Kurulmayan', home: 'Bina', food: 'Gıda', res: 'Kaynak', army: 'Askeri', sci: 'Bilim' };
 const BUILD_CAT = {
-  house: 'home', granary: 'home', market: 'home', tavern: 'home', wineCellar: 'home', firePit: 'home', wonder: 'home',
+  townCenter: 'home', house: 'home', granary: 'home', market: 'home', tavern: 'home', wineCellar: 'home', firePit: 'home', wonder: 'home',
   mill: 'food', farm: 'food', vegetableBed: 'food', animalFarm: 'food', greenhouse: 'food', dock: 'food', waterMill: 'food',
   lumberCamp: 'res', miningCamp: 'res', goldPanning: 'res',
   wall: 'army', gate: 'army', barracks: 'army', otag: 'army', archeryRange: 'army', stable: 'army', watchTower: 'army', siegeWorkshop: 'army', hospital: 'army',
@@ -600,6 +601,18 @@ export class UIManager {
             cost: w.costOf(type), time: def.buildTime, desc: def.desc + (def.limit ? ` (En fazla ${def.limit} adet.)` : ''),
             count: () => this._countOf(type, def.limit),
             check: () => w.checkBuildable(type), onClick: () => g.startPlacement(type),
+          });
+        }
+      }
+      const pros = sel.filter((u) => u.type === 'prospector');
+      if (pros.length) {
+        for (const r of ['wood', 'food', 'gold', 'stone', 'hide']) {
+          specs.push({
+            img: iconFile(r === 'hide' ? 'it_hide' : r), label: `${RESOURCE_NAMES[r]} Ara`, title: `${RESOURCE_NAMES[r]} Ara`,
+            desc: r === 'hide' ? 'Araştırmacı haritadaki en yakın yabani hayvanı bulup avlar: deri hemen gelir, eti toplayıp getirir; sonra sıradakini arar.'
+              : `Araştırmacı haritanın her yerinde en yakın ${RESOURCE_NAMES[r].toLowerCase()} kaynağını bulur, 200'lük yüklerle getirir ve kaynak bitince yenisini arar.`,
+            cls: pros.every((u) => u.searchKind === r) ? 'on' : '',
+            check: () => null, onClick: () => { for (const u of pros) u.search(w, r); this._sig = null; },
           });
         }
       }

@@ -4,7 +4,7 @@ import { Villager } from '../entities/Villager.js';
 import { Soldier } from '../entities/Soldier.js';
 import { Boat } from '../entities/Boat.js';
 import { Yeti } from '../entities/Yeti.js';
-import { Architect, Cart } from '../entities/Workers.js';
+import { Architect, Cart, Prospector } from '../entities/Workers.js';
 import { Animal } from '../entities/Animal.js';
 import { UNITS, PLAYER, ENEMY, RESOURCE_NODES } from '../data/gameData.js';
 
@@ -158,7 +158,7 @@ export const SaveGame = {
     // Birimler
     const make = (s) => {
       const def = UNITS[s.type];
-      const u = def?.animal ? new Animal(s.type, s.x, s.y, { i: Math.round(s.x), j: Math.round(s.y) }) : s.type === 'yeti' ? new Yeti(s.x, s.y) : s.type === 'architect' ? new Architect(s.x, s.y, s.owner) : s.type === 'cart' ? new Cart(s.x, s.y, s.owner) : s.type === 'villager' ? new Villager(s.x, s.y, s.owner) : def?.naval ? new Boat(s.x, s.y, s.owner) : new Soldier(s.type, s.x, s.y, s.owner);
+      const u = def?.animal ? new Animal(s.type, s.x, s.y, { i: Math.round(s.x), j: Math.round(s.y) }) : s.type === 'yeti' ? new Yeti(s.x, s.y) : s.type === 'architect' ? new Architect(s.x, s.y, s.owner) : s.type === 'cart' ? new Cart(s.x, s.y, s.owner) : s.type === 'prospector' ? new Prospector(s.x, s.y, s.owner) : s.type === 'villager' ? new Villager(s.x, s.y, s.owner) : def?.naval ? new Boat(s.x, s.y, s.owner) : new Soldier(s.type, s.x, s.y, s.owner);
       u.maxHp = s.maxHp; u.hp = s.hp; u.dir = s.dir ?? 0;
       if ('carry' in u) { u.carry = s.carry; if (s.carryType) u.carryType = s.carryType; }
       u.lastKind = s.lastKind; u.lastPos = s.lastPos;

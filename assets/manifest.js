@@ -1358,6 +1358,13 @@ export const MANIFEST = {
       "h": 621,
       "anchorX": 0.4886,
       "baseW": 683.0
+    },
+    "pro_idle": {
+      "file": "assets/sprites/pro_idle.webp",
+      "w": 320,
+      "h": 220,
+      "anchorX": 0.4656,
+      "baseW": 277.0
     }
   },
   "icons": {
@@ -2496,6 +2503,71 @@ export const MANIFEST = {
         1.0
       ],
       "period": 2.875
+    },
+    "pro_walk": {
+      "file": "assets/anims/pro_walk.webp",
+      "frames": 14,
+      "w": 324,
+      "h": 222,
+      "anchorX": 0.4616,
+      "ref": [
+        0.0,
+        0.0035,
+        0.9915,
+        0.9929
+      ]
+    },
+    "pro_walk_se": {
+      "file": "assets/anims/pro_walk_se.webp",
+      "frames": 14,
+      "w": 296,
+      "h": 309,
+      "anchorX": 0.4637,
+      "ref": [
+        0.0,
+        0.0013,
+        0.996,
+        0.9974
+      ]
+    },
+    "pro_walk_ne": {
+      "file": "assets/anims/pro_walk_ne.webp",
+      "frames": 14,
+      "w": 284,
+      "h": 271,
+      "anchorX": 0.4618,
+      "ref": [
+        0.0014,
+        0.0073,
+        0.9889,
+        0.9927
+      ]
+    },
+    "pro_walk_s": {
+      "file": "assets/anims/pro_walk_s.webp",
+      "frames": 14,
+      "w": 136,
+      "h": 358,
+      "anchorX": 0.4656,
+      "ref": [
+        0.0,
+        0.0,
+        1.0,
+        0.9912
+      ]
+    },
+    "pro_walk_n": {
+      "file": "assets/anims/pro_walk_n.webp",
+      "frames": 14,
+      "w": 140,
+      "h": 322,
+      "anchorX": 0.4656,
+      "ref": [
+        0.0,
+        0.0061,
+        1.0,
+        0.9939
+      ]
     }
   }
 };

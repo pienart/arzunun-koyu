@@ -24,11 +24,12 @@ export const ANIMS = {
   cav_attack: { hit: 0.42 },
   yeti_walk:  { stride: 1.6 },
   arch_walk:  { stride: 1.3 },
+  pro_walk:   { stride: 2.4 },
   arch_build: { period: 2.0, hit: 0.5 },
   yeti_attack: { hit: 0.55 },
 };
 
-export const UNIT_PREFIX = { villager: 'vil', militia: 'mil', archer: 'arc', cavalry: 'cav', ram: 'ram', fishingBoat: 'boat', yeti: 'yeti', architect: 'arch', commander: 'mil', cart: 'cart', catapult: 'catapult', warWagon: 'warWagon', gazelle: 'gazelle', deer: 'deer', rabbit: 'rabbit', horse: 'horse' };
+export const UNIT_PREFIX = { villager: 'vil', militia: 'mil', archer: 'arc', cavalry: 'cav', ram: 'ram', fishingBoat: 'boat', yeti: 'yeti', architect: 'arch', commander: 'mil', cart: 'cart', catapult: 'catapult', warWagon: 'warWagon', prospector: 'pro', gazelle: 'gazelle', deer: 'deer', rabbit: 'rabbit', horse: 'horse' };
 
 /** Yönlü SABİT görselli birimler (araç/tekne): dünya birimi cinsinden boy; kare yok, Renderer sallar/iter */
 // Yabani hayvanlar da 8 yönlü sabit görselle çizilir (yürürken sekerek ilerler)

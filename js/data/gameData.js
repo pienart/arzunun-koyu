@@ -49,9 +49,9 @@ export const BUILDINGS = {
   townCenter: {
     name: 'Kasaba Merkezi', size: 4, hp: 2400, cost: { wood: 275, stone: 100 }, buildTime: 60, age: 0,
     popProvided: 5, dropsite: ['food', 'wood', 'gold', 'stone'], trains: ['villager', 'cart'],
-    canAdvanceAge: true, sprite: 'townCenter', buildable: false, armor: { melee: 2, pierce: 8 }, garrison: 15,
+    canAdvanceAge: true, sprite: 'townCenter', buildAge: 1, limit: 2, armor: { melee: 2, pierce: 8 }, garrison: 15,
     attack: { damage: 5, range: 6, reload: 2 },
-    desc: 'Köylü üretir, çağ atlatır, tüm kaynakları kabul eder ve yaklaşan düşmana ok atar.',
+    desc: 'Köylü üretir, çağ atlatır, tüm kaynakları kabul eder ve yaklaşan düşmana ok atar. Feodal Çağ\'dan itibaren köylüler bir tane daha kurabilir.',
   },
   house: {
     name: 'Ev', size: 2, hp: 550, cost: { wood: 25 }, buildTime: 12, age: 0, popProvided: 5, sprite: 'house',
@@ -191,7 +191,7 @@ export const BUILDINGS = {
   },
   university: {
     name: 'Üniversite', size: 3, hp: 1800, cost: { wood: 250, stone: 150, gold: 100 }, buildTime: 45, age: 2, sprite: 'university',
-    trains: ['architect'], limit: 1, armor: { melee: 1, pierce: 8 },
+    trains: ['architect', 'prospector'], limit: 1, armor: { melee: 1, pierce: 8 },
     desc: 'Mimar yetiştirir. Mimarlar patika, çiçek tarhı ve süs ağacıyla şehri güzelleştirir.',
   },
   alchemyLab: {
@@ -244,7 +244,7 @@ export const BUILDINGS = {
 };
 
 /** Köylünün inşa menüsündeki sıra */
-export const BUILD_MENU = ['house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 'vegetableBed', 'animalFarm', 'greenhouse', 'granary', 'dock', 'waterMill', 'goldPanning', 'wall', 'gate', 'firePit', 'barracks', 'otag', 'archeryRange', 'stable', 'watchTower', 'hospital', 'tavern', 'wineCellar', 'scienceCenter', 'market', 'siegeWorkshop', 'university', 'alchemyLab', 'wonder'];
+export const BUILD_MENU = ['townCenter', 'house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 'vegetableBed', 'animalFarm', 'greenhouse', 'granary', 'dock', 'waterMill', 'goldPanning', 'wall', 'gate', 'firePit', 'barracks', 'otag', 'archeryRange', 'stable', 'watchTower', 'hospital', 'tavern', 'wineCellar', 'scienceCenter', 'market', 'siegeWorkshop', 'university', 'alchemyLab', 'wonder'];
 /** Mimarın süsleme menüsü */
 export const DECOR_MENU = ['path', 'hedge', 'flowerBed', 'cherryTree', 'bench', 'lampPost', 'well', 'statue', 'fountain'];
 
@@ -263,6 +263,13 @@ export const UNITS = {
   architect: {
     name: 'Mimar', cost: { food: 60, gold: 60 }, trainTime: 15, pop: 1, hp: 30, speed: 1.9, carry: 0,
     attack: 1, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 5, bldgMul: 1, decorBuilder: true, civil: true,
+  },
+  // Araştırmacı (Üniversite): kendi kamuflajlı arabasıyla seçilen kaynağı haritanın her yerinde arar, bulur, çok yük
+  // taşır ve en yakın kabul eden binaya boşaltır; biten kaynağın yerine kendiliğinden yenisini arar. Deri için av yapar.
+  // Gizli: düşman birimleri ve kuleleri onu yalnızca 2 karo içinde fark eder (yine de öldürülebilir).
+  prospector: {
+    name: 'Araştırmacı', cost: { food: 120, wood: 100, gold: 80 }, trainTime: 30, pop: 1, hp: 90, speed: 2.4, carry: 200,
+    attack: 4, armor: { melee: 1, pierce: 3 }, range: 0, reload: 1.6, los: 8, bldgMul: 0, gatherer: true, civil: true, gatherMul: 2.5, stealth: true,
   },
   // Yük arabası (İmparatorluk Çağı, Kasaba Merkezi): kaynaktan çok yük alır, YALNIZCA Kasaba Merkezi'ne boşaltır
   cart: {
