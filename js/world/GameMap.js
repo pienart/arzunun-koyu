@@ -3,6 +3,8 @@ import { ValueNoise2D, mulberry32 } from './Noise.js';
 import { RESOURCE_NODES } from '../data/gameData.js';
 import { CONFIG } from '../config.js';
 
+const RES_GAP = 10; // farklı kaynak kümeleri (ve tesisler) arasında en az bu kadar karo
+
 /**
  * Haritaya yerleşen hareketsiz nesnelerin ortak tabanı.
  * (i, j) = ÇAPA karo: kapladığı alanın en ÖNDEKİ (ekranda en alttaki) karosu.
@@ -274,6 +276,12 @@ export class GameMap {
     }
   }
 
+  /** Başka bir kaynak kümesine (ya da tesise) en az RES_GAP karo uzak mı? Küme kendi içinde sıkı kalabilir */
+  _nearOtherRes(i, j, gap = RES_GAP) {
+    for (const [a, b] of this._resCells ?? []) if (Math.abs(a - i) < gap && Math.abs(b - j) < gap && Math.hypot(a - i, b - j) < gap) return true;
+    return false;
+  }
+
   /** Karo, bir köyün (oyuncu ya da düşman) başlangıç çitinin içinde (ya da üstünde) mi? */
   _inVillage(i, j) {
     return !!this.bases?.some((c) => Math.max(Math.abs(i - c.i), Math.abs(j - c.j)) <= CONFIG.START_WALL_R + 1);
@@ -356,8 +364,9 @@ export class GameMap {
       if ((this._sites ?? []).some((s) => Math.hypot(s.i - oi, s.j - oj) < 34)) continue;
       let ok = true;
       for (let j = oj - 1; ok && j < oj + 4; j++) for (let i = oi - 1; ok && i < oi + 4; i++) ok = this._freeLand(i, j) && this.terrain[j][i] !== TileId.SAND;
-      if (!ok) continue;
+      if (!ok || this._nearOtherRes(oi + 1, oj + 1, 11)) continue;
       (this._sites ??= []).push({ i: oi, j: oj, kind });
+      (this._resCells ??= []).push([oi + 1, oj + 1]);
       this.addObject(new ResourceNode(kind, oi + 2, oj + 2, { size: 3 }));
       return true;
     }
@@ -410,7 +419,7 @@ export class GameMap {
         cj = 10 + ((rand() * (this.height - 20)) | 0);
         if (this.bases.some((c) => Math.hypot(ci - c.i, cj - c.j) < 30)) continue;
       }
-      if (!this._freeLand(ci, cj)) continue;
+      if (!this._freeLand(ci, cj) || this._nearOtherRes(ci, cj)) continue;
       const tooClose = (this._clusters ?? []).some((c) => {
         const d = Math.hypot(c.i - ci, c.j - cj);
         return center ? d < 6 : d < (c.kind === kind ? 36 : 16);
@@ -425,12 +434,13 @@ export class GameMap {
         const step = kind === 'tree' ? 1 : 2;
         const ni = bi + (((rand() * 3) | 0) - 1) * step, nj = bj + (((rand() * 3) | 0) - 1) * step;
         const key = `${ni},${nj}`;
-        if (seen.has(key) || !this._freeLand(ni, nj)) continue;
+        if (seen.has(key) || !this._freeLand(ni, nj) || this._nearOtherRes(ni, nj)) continue;
         if (step > 1 && cells.some(([a, b]) => Math.max(Math.abs(a - ni), Math.abs(b - nj)) < 2)) continue;
         seen.add(key);
         cells.push([ni, nj]);
       }
       (this._clusters ??= []).push({ i: ci, j: cj, kind });
+      (this._resCells ??= []).push(...cells);
       for (const [i, j] of cells) {
         this.addObject(new ResourceNode(kind, i, j, {
           variant: kind === 'tree' ? ((rand() * 3) | 0) : 0,

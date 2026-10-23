@@ -435,6 +435,14 @@ export class Game {
     this.select(list);
   }
 
+  /** Asker seçimi: 'fighting' savaştakiler · 'idle' boştakiler · 'all' tümü (araçlar ve komutan hariç) */
+  selectSoldiers(mode = 'all') {
+    const list = this.world.units.filter((u) => u.owner === PLAYER && u.isMilitary && !u.def.vehicle && u.type !== 'commander' && !u.garrisoned && !u.dead &&
+      (mode === 'all' || (mode === 'fighting' ? u.state === 'attack' || u.state === 'attackMove' : u.state === 'idle' || u.state === 'guard')));
+    if (!list.length) { this.ui.toast({ fighting: 'Savaşta asker yok.', idle: 'Boşta asker yok.', all: 'Asker yok.' }[mode], 'info'); return; }
+    this.select(list);
+  }
+
   // ═════════════════════ KONTROL GRUPLARI ═════════════════════
   /** Ctrl+N: seçimi gruba ata · Shift+N: gruba ekle · N: grubu seç · N'ye iki kez: kamerayı gruba götür */
   _group(n, e) {

@@ -484,3 +484,42 @@ body.touch #help { display: none !important; }
 .cmd .cnt:empty { display: none; }
 .cmd .cnt.full { color: #ff9a85; }
 .title .wildtag { font-size: 11px; padding: 1px 6px; margin-left: 6px; border-radius: 3px; background: #3d5a2a; color: #d9f2c4; vertical-align: middle; }
+
+/* Üst bar: saat (gece/gündüz seçimi Ayarlar'da), asker seçimi, çağ bedeli */
+#clock { display: flex; align-items: center; gap: 5px; height: 32px; padding: 0 10px; color: #ffd36b;
+  background: rgba(0, 0, 0, 0.38); border: 1px solid var(--gold-dim); border-radius: 4px; font: 700 13px Georgia, serif; }
+#clock b { color: var(--ink); }
+#clock .moon { display: none; color: #dfe8ff; }
+#clock.night .sun { display: none; }
+#clock.night .moon { display: inline; }
+#armyWrap { position: relative; display: flex; align-items: center; height: 44px; }
+#armyBtn { display: flex; align-items: center; gap: 4px; height: 34px; padding: 0 10px 0 4px; cursor: pointer;
+  background: rgba(0, 0, 0, 0.38); border: 1px solid var(--gold-dim); border-radius: 4px; color: var(--ink); font: 700 15px Georgia, serif; }
+#armyBtn img { height: 30px; }
+#armyBtn.war { border-color: #ff8a70; box-shadow: 0 0 8px rgba(255, 120, 90, 0.6); }
+#armyMenu { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; padding: 5px;
+  background: rgba(24, 16, 9, 0.94); border: 1px solid var(--gold-dim); border-radius: 6px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  opacity: 0; visibility: hidden; transition: opacity 0.12s, visibility 0.12s; z-index: 8; }
+#armyWrap:hover #armyMenu, #armyWrap:focus-within #armyMenu { opacity: 1; visibility: visible; }
+#armyMenu button { width: 36px; height: 36px; display: grid; place-items: center; cursor: pointer; color: var(--ink);
+  background: rgba(0, 0, 0, 0.4); border: 1px solid var(--gold-dim); border-radius: 4px; }
+#armyMenu button:hover { border-color: #ffd36b; color: #ffe08a; background: rgba(255, 211, 107, 0.12); }
+.age { min-width: 0; }
+.agecost { font-size: 11px; color: #e8dcc0; white-space: nowrap; line-height: 1.1; }
+.agecost img { width: 13px; height: 13px; vertical-align: -2px; }
+.agecost .miss { color: #ff9a85; }
+/* Kaynak kutusu: biterken sarı, yetersiz kaldığında kırmızı yanıp söner */
+.res.low b { color: #ffd84a; }
+.res.low { border-color: #c9a227; }
+.res.flash { animation: resflash 0.35s ease-in-out 4; }
+@keyframes resflash { 0%, 100% { background: rgba(0, 0, 0, 0.38); border-color: var(--gold-dim); } 50% { background: rgba(190, 30, 20, 0.75); border-color: #ff5a45; } }
+.res.flash b { color: #ffb0a0; }
+/* Yapı menüsü filtre sekmeleri */
+.btabs { display: flex; flex-wrap: wrap; gap: 3px; width: 100%; margin-bottom: 4px; }
+.btabs button { padding: 2px 9px; font: 700 12px Georgia, serif; color: var(--ink); cursor: pointer;
+  background: rgba(0, 0, 0, 0.4); border: 1px solid var(--gold-dim); border-radius: 10px; }
+.btabs button.on { color: #2a1a08; background: #e8c66a; border-color: #ffe08a; }
+.btabs button:hover:not(.on) { border-color: #ffd36b; }
+#commands .btabs { grid-column: 1 / -1; height: auto; align-self: start; }
+#commands:has(.btabs) { grid-auto-rows: auto; }
+#commands:has(.btabs) .cmd { height: 62px; }

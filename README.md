@@ -77,6 +77,24 @@ oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penc
 - **Mobil (telefon/tablet):** Dokun = seç, uzun bas = komut (topla/inşa et/saldır/yürü), tek parmak = kaydır,
   iki parmak = kıstır-büyüt. Sol alttaki düğmeler: **Kutu** (sürükleyerek birlik seç), **Komut** (dokunuş = komut),
   **İptal**. Dar ekranda üst bar kaydırılabilir, alt panel küçülür, mini harita sağ üstte, inşaat listesi onun altında.
+- **Eşit başlangıç:** Siz ve düşman AYNI başlarsınız: yalnızca Kasaba Merkezi, 3 köylü, bir komutan ve her kaynaktan 1000
+  (deri 100). Düşman bedava asker, bedava çağ ya da güç artışı almaz; binalarını, ordusunu ve çağını kaynak harcayarak
+  kurar. Farkı **acelecilik**tir: ilk saldırısı erken gelir (Normal ~9–11 dk, Zor ~7 dk, Kolay ~12 dk) ve yalnızca
+  kendi ürettiği orduyla saldırır (ordusu küçükse bekler).
+- **Üretim kuyruğu:** Çağla kademeli büyür: 10 → 11 → 11 → 12 (son çağ).
+- **Seviyeler (1–100):** Kaynak toplayan ve işleyen yapılar (kereste/maden kampı, değirmen, çiftlik, sebze yatağı, sera,
+  hayvan çiftliği, ambar, tersane, su değirmeni, altın eleme) 100 seviyeye kadar yükselir; her seviye üretimi ve
+  kapasiteyi %5 artırır (çiftlik 1200 → seviye 100'de 7140 yiyecek). Çiftlik 1200, sebze yatağı 1000 yiyecek taşır.
+- **Üst bar:** Solda çağ (altında sonraki çağın bedeli; üzerine gelince her kaynaktan gereken/eldeki, asker ve bina
+  şartları), sonra kaynaklar, sağda köylü ve asker seçimi, saat, yardım ve en sağda menü. Biten kaynak sarı görünür,
+  yetmediğinde kutusu kırmızı yanıp söner. Nüfusun üzerine gelince köylü ve her asker türünün sayısı görünür. Aynı
+  uyarı ekrandayken tekrar yazılmaz. Gece/gündüz seçimi **Ayarlar**'dadır (L kısayolu da çalışır).
+- **Asker seçimi:** Asker düğmesi tüm askerleri seçer; altındaki ikonlar savaştakileri, boştakileri ya da tümünü seçer.
+- **Yapı menüsü filtresi:** Köylü seçiliyken yapılar sekmelerle süzülür: Tümü (varsayılan), Kurulmayan, Bina, Gıda,
+  Kaynak, Askeri, Bilim.
+- **Kaynak aralığı:** Farklı kaynak kümeleri ve tesisler arasında en az 10 karo vardır.
+- **Koca Ayak:** Kışın mağaradan iki yaratık çıkar: biri sizin, biri düşmanın köyüne aynı anda saldırır.
+- **Gizemli Geçit:** Uçları 5 dakikada bir yer değiştirir.
 - **Üs yerleşimi:** Harita üretilirken köyünüz haritanın bir köşesine, düşman köyü karşı köşeye konur (aralarında
   ~150 karo). İki köyün çit karesi tamamen karaya çevrilir: çit suya, kaynağa ya da başka bir engele denk gelmez,
   **kusursuz bir kare** olarak kurulur. İki köy arasında karadan yol yoksa sığ bir kum geçidi açılır.

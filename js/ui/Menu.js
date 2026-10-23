@@ -60,6 +60,9 @@ export class Menu {
           <label>Grafik kalitesi</label>
           <div class="seg" data-set="quality">${Object.entries(QUALITY).map(([k, q]) => `<button data-v="${k}">${q.name}</button>`).join('')}</div>
           <p class="hint">Düşük: daha az piksel ve parçacık (zayıf bilgisayarlar için). Su efekti kalitesi yeniden yüklemede değişir.</p>
+          <label>Gece / gündüz (L)</label>
+          <div class="seg" data-daynight><button data-v="auto">Otomatik</button><button data-v="day">Hep gündüz</button><button data-v="night">Hep gece</button></div>
+          <p class="hint">Otomatik: sunucu saatine göre (16:00'da kararır, 06:15'te aydınlanır).</p>
           <label class="chk"><input type="checkbox" data-set="weather"> Hava efektleri (yağmur, kar, sis)</label>
           <label class="chk"><input type="checkbox" data-set="life"> Canlılık (kuşlar, tavuklar, balıklar, baca dumanı)</label>
           <label class="chk"><input type="checkbox" data-set="autosave"> 2 dakikada bir otomatik kayıt</label>
@@ -144,9 +147,22 @@ export class Menu {
   }
 
   _syncSettings() {
+    if (!this._dnBound) {
+      this._dnBound = true;
+      this.views.settings.querySelector('[data-daynight]').addEventListener('click', (e) => {
+        const v = e.target.closest('button[data-v]')?.dataset.v;
+        if (!v || !this.game?.dayNight) return;
+        this.game.click();
+        this.game.ui.setDayNight(v);
+        this._syncSettings();
+      });
+    }
     const d = Settings.data;
     this.views.settings.querySelectorAll('[data-set="quality"] button').forEach((b) => b.classList.toggle('on', b.dataset.v === d.quality));
     for (const k of ['weather', 'life', 'autosave', 'showFps']) this.views.settings.querySelector(`[data-set="${k}"]`).checked = !!d[k];
+    const dn = this.game?.dayNight, seg = this.views.settings.querySelector('[data-daynight]');
+    seg.classList.toggle('disabled', !dn);
+    seg.querySelectorAll('button').forEach((b) => { b.disabled = !dn; b.classList.toggle('on', !!dn && b.dataset.v === dn.mode); });
     const a = this.game?.audio;
     for (const inp of this.views.settings.querySelectorAll('[data-snd]')) {
       inp.disabled = !a;

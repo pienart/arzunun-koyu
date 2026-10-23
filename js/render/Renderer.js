@@ -672,7 +672,7 @@ export class Renderer {
       if (b.complete) {
         g.fillStyle = this._pattern('farm', level, 2.7); // ~3 sıra / karo
         g.fill();
-        const used = 1 - b.food / b.def.farmFood; // tükendikçe sararır
+        const used = Math.max(0, 1 - b.food / this.world.farmCap(b)); // tükendikçe sararır
         if (used > 0.45) { g.fillStyle = `rgba(170,140,60,${(used - 0.45) * 0.7})`; g.fill(); }
       } else {
         g.fillStyle = this._pattern('dirt', level, CONFIG.TEXTURE_TILES);

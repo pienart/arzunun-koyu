@@ -74,7 +74,7 @@ export const BUILDINGS = {
   },
   farm: {
     name: 'Çiftlik', size: 3, hp: 480, cost: { wood: 60 }, buildTime: 10, age: 0, requires: ['mill'],
-    walkable: true, farmFood: 300, armor: { melee: 0, pierce: 0 }, levels: true, desc: 'Köylüler üzerinde çalışarak yiyecek üretir (300 yiyecek).',
+    walkable: true, farmFood: 1200, armor: { melee: 0, pierce: 0 }, levels: true, desc: 'Köylüler üzerinde çalışarak yiyecek üretir (1200 yiyecek; her seviye kapasiteyi artırır).',
   },
   dock: {
     name: 'Tersane', size: 3, hp: 1500, cost: { wood: 150 }, buildTime: 35, age: 0, coastal: true,
@@ -137,17 +137,17 @@ export const BUILDINGS = {
   },
   vegetableBed: {
     name: 'Sebze Yatağı', size: 2, hp: 300, cost: { wood: 50 }, buildTime: 10, age: 0, sprite: 'vegetableBed',
-    farmFood: 250, winterOk: true, farmMul: 1.2, armor: { melee: 0, pierce: 3 },
-    desc: 'Küçük, verimli bostan (250 yiyecek, çiftlikten %20 hızlı). Örtülü olduğu için kışın da hasat edilir.',
+    farmFood: 1000, winterOk: true, farmMul: 1.2, levels: true, armor: { melee: 0, pierce: 3 },
+    desc: 'Küçük, verimli bostan (1000 yiyecek, çiftlikten %20 hızlı). Örtülü olduğu için kışın da hasat edilir.',
   },
   waterMill: {
     name: 'Su Değirmeni', size: 2, hp: 700, cost: { wood: 150 }, buildTime: 25, age: 0, coastal: true, sprite: 'waterMill',
-    income: { food: 0.2 }, incomeMod: 'farm', armor: { melee: 0, pierce: 7 },
+    income: { food: 0.2 }, incomeMod: 'farm', levels: true, armor: { melee: 0, pierce: 7 },
     desc: 'Su kenarına kurulur; un öğütür: kendiliğinden az miktarda yiyecek (dakikada 12).',
   },
   goldPanning: {
     name: 'Altın Eleme Tesisi', size: 2, hp: 700, cost: { wood: 150, stone: 50 }, buildTime: 30, age: 1, coastal: true, sprite: 'goldPanning',
-    income: { gold: 0.25 }, incomeMod: 'gold', armor: { melee: 0, pierce: 7 },
+    income: { gold: 0.25 }, incomeMod: 'gold', levels: true, armor: { melee: 0, pierce: 7 },
     desc: 'Feodal Çağ\'dan itibaren su kenarına kurulur: kumdan altın eler (dakikada 15 altın).',
   },
   hospital: {
@@ -392,7 +392,11 @@ export const TECHS = {
  *   kamp/değirmen: bırakılan kaynak · çiftlik: toplama hızı ve yiyecek kapasitesi · tersane: balıkçı geliri ve bırakılan balık
  * Yükseltme bedeli = bina maliyeti × costMul × mevcut seviye + altın; süresi time × seviye.
  */
-export const LEVELS = { MAX_LEVEL: 3, bonus: 0.25, costMul: 1.5, gold: 60, time: 20 };
+/**
+ * SEVİYELER (1–100): kaynak toplayan / işleyen yapılar. Her seviye üretimi ve kapasiteyi %5 artırır (seviye 100'de ×5,95).
+ * Bedel: yapının maliyeti × costMul × seviye + altın × seviye · süre: time + timePer × seviye (sn)
+ */
+export const LEVELS = { MAX_LEVEL: 100, bonus: 0.05, costMul: 0.4, gold: 15, time: 8, timePer: 1.5 };
 
 /** Mağara ve yaratık: kış başladıktan `delay` sn sonra çıkar; saldırdığı köyü yok edene kadar durmaz */
 export const WILD_DEF = { delay: 25, reward: { food: 500, gold: 300 } };
@@ -426,7 +430,7 @@ export const MARKET = { sell: 70, buy: 130, lot: 100 };
  */
 export const ENEMY_AI = {
   defenders: { militia: 4, archer: 2 },
-  ageAt: [0, 480, 960],
+  ageAt: [0, 420, 900, 1500], // en erken çağ atlama zamanı (sn); bedeli oyuncu gibi öder
   minDistance: 100,
 };
 
@@ -435,13 +439,15 @@ export const ENEMY_AI = {
  * Başlangıç kaynakları her zorlukta aynıdır (START).
  */
 export const DIFFICULTY = {
-  // firstWave: ilk saldırının en erken zamanı (sn; asla 20 dakikadan önce değil) — üstüne 0–5 dk rastgele eklenir.
+  // firstWave: ilk saldırının en erken zamanı (sn) — üstüne 0–2 dk rastgele eklenir.
   // interval : dalgalar arası ORTALAMA süre; her seferinde %60–%150 arası rastgele (saldırı zamanı tahmin edilemez).
   // enemyGather: düşman köylülerinin toplama çarpanı (normalde sizden %5 hızlı)
   // enemyStart: düşmanın başlangıç hazinesi (her kaynaktan)
-  easy:   { name: 'Kolay', firstWave: 1500, interval: 300, waveMul: 0.65, enemyGather: 0.75, enemyVillagers: 4, enemyStart: 1500 },
-  normal: { name: 'Normal', firstWave: 1200, interval: 240, waveMul: 1, enemyGather: 1.05, enemyVillagers: 6, enemyStart: 3500 },
-  hard:   { name: 'Zor', firstWave: 1200, interval: 180, waveMul: 1.4, enemyGather: 1.4, enemyVillagers: 9, enemyStart: 5000 },
+  // Düşman sizinle AYNI başlar (aynı bina, kaynak, köylü) ve aynı kurallarla oynar; zorluk yalnızca ne kadar
+  // ACELECİ saldırdığını belirler (ilk saldırı ve dalga aralığı). Saldırılar kendi ürettiği orduyla yapılır.
+  easy:   { name: 'Kolay', firstWave: 720, interval: 240, enemyGather: 1, enemyVillagers: 3 },
+  normal: { name: 'Normal', firstWave: 540, interval: 180, enemyGather: 1, enemyVillagers: 3 },
+  hard:   { name: 'Zor', firstWave: 420, interval: 130, enemyGather: 1, enemyVillagers: 3 },
 };
 
 /**
@@ -457,7 +463,7 @@ export const UPKEEP = { civil: 0.012, military: 0.02, winter: 1.3, winterGranary
 export const PLUNDER = 0.08;
 
 export const START = {
-  resources: { food: 5000, wood: 5000, gold: 5000, stone: 5000, hide: 0 },
+  resources: { food: 1000, wood: 1000, gold: 1000, stone: 1000, hide: 100 }, // oyuncu ve düşman aynı
   villagers: 3,
   popMax: 200,
 };

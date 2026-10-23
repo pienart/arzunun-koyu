@@ -1,4 +1,4 @@
-import { ENEMY, PLAYER, ENEMY_AI, BUILDINGS, UNITS } from '../data/gameData.js';
+import { ENEMY, PLAYER, ENEMY_AI, BUILDINGS, UNITS, START } from '../data/gameData.js';
 import { TileId } from '../world/TileTypes.js';
 
 /**
@@ -20,7 +20,7 @@ export class EnemyAI {
     this.world = world;
     this.player = world.players[ENEMY];
     // İlk saldırı: en erken 20 dk (zorluk) + 0–5 dk rastgele; sonrakiler rastgele aralıklarla
-    this.waveTimer = Math.max(1200, world.diff.firstWave) + Math.random() * 300;
+    this.waveTimer = world.diff.firstWave + Math.random() * 120; // aceleci: ilk saldırı erken
     this.wave = 0;
     this.econT = 6;           // ekonomi kararları (köylü üret, boşta olana iş ver) aralığı
     this.trainT = 25;         // sonraki köylü üretimi
@@ -37,28 +37,14 @@ export class EnemyAI {
     if (!spot) return; // ada çok küçükse düşmansız oyna
     this.enabled = true;
     this._clearArea(spot.i + 2, spot.j + 2, 7);
+    // Oyuncuyla AYNI başlangıç: yalnızca Kasaba Merkezi, aynı kaynaklar (START) ve aynı sayıda köylü.
+    // Kışla, okçuluk alanı, kule ve askerleri kendisi kaynak harcayarak kurar/üretir.
     this.tc = w.addBuilding('townCenter', spot.i, spot.j, ENEMY, true);
-    this.barracks = this._placeNear(this.tc, 'barracks', 3);
-    this.range = this._placeNear(this.tc, 'archeryRange', 3);
-    // Kuleler: oyuncuya bakan tarafta
-    const dir = this._dirToPlayer();
-    this.towers = [0, 1].map((k) => this._placeAt('watchTower',
-      Math.round(this.tc.centerI + dir.i * 6 + dir.j * (k ? 3 : -3)), Math.round(this.tc.centerJ + dir.j * 6 - dir.i * (k ? 3 : -3))));
-    // Nöbetçiler: kasaba merkezinin çevresinde halka
-    const { militia, archer } = ENEMY_AI.defenders;
-    const types = [...Array(militia).fill('militia'), ...Array(archer).fill('archer')];
-    types.forEach((type, k) => {
-      const a = (k / types.length) * Math.PI * 2;
-      const pi = Math.round(this.tc.centerI + Math.cos(a) * 4.5), pj = Math.round(this.tc.centerJ + Math.sin(a) * 4.5);
-      const u = w.spawnUnitNear(this.barracks ?? this.tc, type);
-      const post = w.map.isWalkable(pi, pj) ? { i: pi, j: pj } : w.map.findWalkableNear(pi, pj, 4);
-      if (u && post) u.guardAt(w, post.i, post.j);
-    });
-    // Düşman hazinesi: zorluğa göre (Normal 3500) — hemen bina kurup asker üretmeye başlar
-    const st = w.diff.enemyStart ?? 3000;
-    this.player.resources = { food: st, wood: st, gold: st * 0.8, stone: st * 0.6, hide: 0 };
-    // Ekonomi: başlangıç köylüleri
-    for (let k = 0; k < w.diff.enemyVillagers; k++) this._spawnWorker();
+    this.barracks = null; this.range = null; this.towers = [];
+    this.player.resources = { ...START.resources };
+    for (let k = 0; k < START.villagers; k++) this._spawnWorker();
+    const cmdr = w.spawnUnitNear(this.tc, 'commander'); // oyuncu gibi bir komutanla başlar (üssü korur)
+    if (cmdr) cmdr.guardAt?.(w, Math.round(this.tc.centerI + 3), Math.round(this.tc.centerJ + 3));
   }
 
   get villagers() { return this.world.units.filter((u) => u.owner === ENEMY && u.type === 'villager'); }
@@ -235,13 +221,10 @@ export class EnemyAI {
   update(dt) {
     const w = this.world;
     if (!this.enabled || !w.isAlive(this.tc)) return;
-    // Çağ atlama (zamana bağlı): +1 saldırı, +5 can (birim başına)
-    // Düşman sizden ~%5 hızlı gelişir: zamanı gelince ya da siz o çağa geçince (hangisi önce) çağ atlar
-    const nextAt = ENEMY_AI.ageAt[this.player.age + 1];
-    if (nextAt !== undefined && (w.time >= nextAt * 0.95 || w.player.age > this.player.age)) {
+    // Çağ atlama: en erken zamanı gelince ve çağ bedelini (oyuncuyla aynı) ödeyebiliyorsa — bedava bonus yok
+    const nextAt = ENEMY_AI.ageAt[this.player.age + 1], nextAge = this.player.nextAge;
+    if (nextAt !== undefined && nextAge && w.time >= nextAt && this.player.spend(nextAge.cost ?? {})) {
       this.player.advanceAge();
-      for (const type of ['militia', 'archer']) { this.player.addBonus(type, 'attack', 1); this.player.addBonus(type, 'hp', 5); }
-      this.player.addBonus('tower', 'attack', 1);
       w.map.version++; // düşman binaları yeni çağ görünümüne geçer
       w.notify(`Düşman yeni bir çağa geçti: ${this.player.ageDef.name}.`, 'info');
     }
@@ -256,57 +239,28 @@ export class EnemyAI {
     }
   }
 
+  /**
+   * Saldırı: düşman yalnızca KENDİ ürettiği orduyla saldırır (bedava asker ya da güç artışı yok). Ordusu henüz
+   * küçükse (en az 3 + dalga sayısı kadar asker yoksa) 30 sn sonra yeniden dener — aceleci ama sizden güçlü değil.
+   */
   launchWave() {
     const w = this.world;
+    const army = w.units.filter((u) => u.owner === ENEMY && u.isMilitary && !u.def.monster && !u.post && !u.garrisoned && (u.state === 'idle' || u.state === 'move'));
+    if (army.length < Math.min(12, 3 + this.wave)) { this.waveTimer = 30; return; }
     this.wave++;
     const n = this.wave;
-    const mul = w.diff.waveMul;
-    // Her dalga kademeli olarak büyür ve sertleşir: 1. dalga küçük bir akın, sonra her seferinde daha kalabalık,
-    // 3. dalgadan itibaren koçbaşı, 4.'den atlı, 6.'dan mancınık; her dalgada askerler %6 daha güçlü (saldırı ve can).
-    const myArmy = w.units.filter((u) => u.owner === PLAYER && u.isMilitary).length;
-    let militia = Math.max(2, Math.round(Math.min(30, 2 + n * 1.8) * mul));
-    let archers = n >= 2 ? Math.round(Math.min(16, Math.floor(n * 0.9) + 1) * mul) : 0;
-    const rams = n >= 3 ? Math.min(4, Math.floor((n - 1) / 2)) : 0;
-    const cavalry = n >= 4 ? Math.round(Math.min(10, n - 2) * mul) : 0;
-    const catapults = n >= 6 ? Math.min(3, Math.floor((n - 4) / 2)) : 0;
-    const power = 1 + 0.06 * (n - 1);
-    const want = Math.round(myArmy * 1.05 * 0.6);
-    if (militia + archers < want) militia += Math.min(10, want - militia - archers);
-    // Biriken kaynakla ek askerler (köylü üretimi için 100 yiyecek yedekte kalır)
-    let bought = 0;
-    while (bought < Math.min(8, n)) { // hazineden alım da kademeli: 1. dalgada en fazla 1
-      const type = bought % 3 === 2 ? 'archer' : 'militia', cost = UNITS[type].cost;
-      if ((this.player.resources.food - (cost.food ?? 0)) < 100 || !this.player.spend(cost)) break;
-      if (type === 'archer') archers++; else militia++;
-      bought++;
-    }
     const target = w.townCenter && w.isAlive(w.townCenter) ? w.townCenter : w.buildings.find((b) => b.owner === PLAYER);
     if (!target) return;
     const ti = Math.round(target.centerI), tj = Math.round(target.centerJ);
-    // Saldırı yönü her dalgada kademeli döner: önce köyün çevresinde (yaklaşık 18 karo) bir ara noktaya, sonra merkeze
+    // Saldırı yönü her dalgada kademeli döner: önce köyün çevresinde bir ara noktaya, sonra merkeze
     this.dirBase ??= Math.atan2(this.tc.centerJ - tj, this.tc.centerI - ti);
     const ang = this.dirBase + (n - 1) * (Math.PI / 3.2);
-    const st = w.map.findWalkableNear(Math.round(ti + Math.cos(ang) * 18), Math.round(tj + Math.sin(ang) * 18), 6) ?? { i: ti, j: tj };
-    const spawnFrom = (type) => (type === 'archer' && w.isAlive(this.range) ? this.range : w.isAlive(this.barracks) ? this.barracks : this.tc);
-    const list = [...Array(rams).fill('ram'), ...Array(catapults).fill('catapult'), ...Array(cavalry).fill('cavalry'),
-      ...Array(militia).fill('militia'), ...Array(archers).fill('archer')].slice(0, 50);
-    let sent = 0;
-    for (const type of list) {
-      const u = w.spawnUnitNear(spawnFrom(type), type);
-      if (!u) continue;
-      u.maxHp = Math.round(u.maxHp * power); u.hp = u.maxHp;
-      u.waveDmg = power; // saldırı çarpanı (World.stat)
-      u.nextGoal = { i: ti, j: tj };
-      u.attackMoveTo(w, st.i, st.j, true);
-      sent++;
-    }
-    // Kalıcı ordudan da birlikler katılır (nöbetçiler hariç): her dalgada daha fazlası
-    const reserve = w.units.filter((u) => u.owner === ENEMY && u.isMilitary && !u.def.monster && !u.post && (u.state === 'idle' || u.state === 'move'));
-    const join = reserve.slice(0, Math.min(reserve.length, 3 + n * 3));
-    for (const u of join) { u.nextGoal = { i: ti, j: tj }; u.attackMoveTo(w, st.i, st.j, true); sent++; }
-    this.lastWave = { n, sent, at: w.time };
-    const parts = [`${militia} milis`, archers && `${archers} okçu`, cavalry && `${cavalry} atlı`, rams && `${rams} koçbaşı`, catapults && `${catapults} mancınık`].filter(Boolean).join(', ');
-    w.notify(`Düşman saldırısı! Dalga ${n} (${sent} asker: ${parts}${join.length ? `, +${join.length} kalıcı ordudan` : ''}) — güç +%${Math.round((power - 1) * 100)}${bought ? ` · ${bought} tanesi düşman hazinesinden` : ''}`, 'warn');
+    const st = w.map.findWalkableNear(Math.round(ti + Math.cos(ang) * 24), Math.round(tj + Math.sin(ang) * 24), 6) ?? { i: ti, j: tj };
+    for (const u of army) { u.nextGoal = { i: ti, j: tj }; u.attackMoveTo(w, st.i, st.j, true); }
+    this.lastWave = { n, sent: army.length, at: w.time };
+    const by = {};
+    for (const u of army) by[u.def.name] = (by[u.def.name] ?? 0) + 1;
+    w.notify(`Düşman saldırısı! Dalga ${n}: ${army.length} asker (${Object.entries(by).map(([k, v]) => `${v} ${k.toLowerCase()}`).join(', ')}).`, 'warn');
     w.sound('horn');
   }
 

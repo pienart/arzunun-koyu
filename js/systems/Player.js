@@ -30,10 +30,16 @@ export class Player {
   get nextAge() { return AGES[this.age + 1] ?? null; }
   get tier() { return AGES[this.age].tier; }
 
+  /** Yetmeyen kaynakları kaydet (arayüz o kutuları kırmızı yakıp söndürür) */
+  noteShort(cost = {}) {
+    this.shortKeys = Object.entries(cost).filter(([k, v]) => (this.resources[k] ?? 0) < v).map(([k]) => k);
+    this.shortN = (this.shortN ?? 0) + 1;
+  }
+
   canAfford(cost = {}) { return Object.entries(cost).every(([k, v]) => this.resources[k] >= v); }
 
   spend(cost = {}) {
-    if (!this.canAfford(cost)) return false;
+    if (!this.canAfford(cost)) { this.noteShort(cost); return false; }
     for (const [k, v] of Object.entries(cost)) this.resources[k] -= v;
     this.version++;
     return true;

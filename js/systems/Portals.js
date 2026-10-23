@@ -1,6 +1,6 @@
 import { StaticObject } from '../world/GameMap.js';
 
-const MOVE_EVERY = 60;   // sn: geçitler her dakika yer değiştirir
+const MOVE_EVERY = 300;  // sn: geçitler 5 dakikada bir yer değiştirir
 const COOLDOWN = 4;      // aynı birim art arda ışınlanmasın
 
 /**

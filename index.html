@@ -7,18 +7,18 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>Arzu'nun Köyü</title>
   <!-- build:begin (tools/stamp.py üretir, elle düzenlemeyin) -->
-  <link rel="stylesheet" href="css/style.css?v=02dbc79b66" />
+  <link rel="stylesheet" href="css/style.css?v=8dd74225fd" />
   <script type="importmap">
   {
     "imports": {
       "./assets/manifest.js": "./assets/manifest.js?v=e4498ff473",
       "./js/audio/AudioManager.js": "./js/audio/AudioManager.js?v=a20ea13270",
-      "./js/build.js": "./js/build.js?v=5db39cd8c1",
+      "./js/build.js": "./js/build.js?v=d6e755d578",
       "./js/config.js": "./js/config.js?v=cd1e298154",
-      "./js/core/Game.js": "./js/core/Game.js?v=b85f1653a3",
+      "./js/core/Game.js": "./js/core/Game.js?v=6559b8e734",
       "./js/core/InputHandler.js": "./js/core/InputHandler.js?v=c64ba9e1bc",
       "./js/data/animData.js": "./js/data/animData.js?v=afd88d95f8",
-      "./js/data/gameData.js": "./js/data/gameData.js?v=f2e735dfd7",
+      "./js/data/gameData.js": "./js/data/gameData.js?v=13378a236d",
       "./js/entities/Animal.js": "./js/entities/Animal.js?v=87500af53a",
       "./js/entities/Boat.js": "./js/entities/Boat.js?v=12b4f81e0f",
       "./js/entities/Building.js": "./js/entities/Building.js?v=75a17d6c5a",
@@ -31,28 +31,28 @@
       "./js/render/Ambient.js": "./js/render/Ambient.js?v=9d4d732ec9",
       "./js/render/AssetLoader.js": "./js/render/AssetLoader.js?v=3ddda04556",
       "./js/render/Camera.js": "./js/render/Camera.js?v=7063eba6b5",
-      "./js/render/Renderer.js": "./js/render/Renderer.js?v=5a110447b2",
+      "./js/render/Renderer.js": "./js/render/Renderer.js?v=8354daef3d",
       "./js/render/SpriteFactory.js": "./js/render/SpriteFactory.js?v=ca4b478fbb",
       "./js/render/WaterRenderer.js": "./js/render/WaterRenderer.js?v=4354797a05",
       "./js/render/iso.js": "./js/render/iso.js?v=bd2b743a8e",
       "./js/systems/Animals.js": "./js/systems/Animals.js?v=9fcbff7aa7",
-      "./js/systems/DayNight.js": "./js/systems/DayNight.js?v=c726e51af4",
-      "./js/systems/EnemyAI.js": "./js/systems/EnemyAI.js?v=c0088f467e",
+      "./js/systems/DayNight.js": "./js/systems/DayNight.js?v=a0b72ad6b1",
+      "./js/systems/EnemyAI.js": "./js/systems/EnemyAI.js?v=05febd7743",
       "./js/systems/Fog.js": "./js/systems/Fog.js?v=0e987fa363",
       "./js/systems/Pathfinder.js": "./js/systems/Pathfinder.js?v=2fa78882f5",
-      "./js/systems/Player.js": "./js/systems/Player.js?v=e67dfb9f4e",
-      "./js/systems/Portals.js": "./js/systems/Portals.js?v=d4a31ae292",
+      "./js/systems/Player.js": "./js/systems/Player.js?v=356feb399e",
+      "./js/systems/Portals.js": "./js/systems/Portals.js?v=47bf829302",
       "./js/systems/SaveGame.js": "./js/systems/SaveGame.js?v=84fcbd4667",
       "./js/systems/Settings.js": "./js/systems/Settings.js?v=391123bf83",
       "./js/systems/SpatialGrid.js": "./js/systems/SpatialGrid.js?v=e0aff388bc",
       "./js/systems/Weather.js": "./js/systems/Weather.js?v=bbb922e703",
-      "./js/systems/Wild.js": "./js/systems/Wild.js?v=c2eb20db3c",
-      "./js/systems/World.js": "./js/systems/World.js?v=43b150ee57",
-      "./js/ui/Menu.js": "./js/ui/Menu.js?v=854f5e84ac",
+      "./js/systems/Wild.js": "./js/systems/Wild.js?v=71309b8209",
+      "./js/systems/World.js": "./js/systems/World.js?v=844c60d74e",
+      "./js/ui/Menu.js": "./js/ui/Menu.js?v=d34f6a2a04",
       "./js/ui/Minimap.js": "./js/ui/Minimap.js?v=4b72d131f7",
       "./js/ui/Panels.js": "./js/ui/Panels.js?v=252f3b178a",
-      "./js/ui/UIManager.js": "./js/ui/UIManager.js?v=338152a0b0",
-      "./js/world/GameMap.js": "./js/world/GameMap.js?v=cc32a58649",
+      "./js/ui/UIManager.js": "./js/ui/UIManager.js?v=5d0452752c",
+      "./js/world/GameMap.js": "./js/world/GameMap.js?v=ecb2e33619",
       "./js/world/Noise.js": "./js/world/Noise.js?v=8d5c455941",
       "./js/world/TileTypes.js": "./js/world/TileTypes.js?v=4af0f3c864"
     }
@@ -72,6 +72,11 @@
 
   <!-- Üst kaynak barı -->
   <header id="topbar" class="hud">
+    <!-- Solda çağ (üzerine gelince sonraki çağın bedeli), sonra kaynaklar; sağda köylü/asker seçimi, saat, yardım, menü -->
+    <div class="age" id="ageBox">
+      <img src="assets/icons/age.webp" alt="" />
+      <div><span id="ageName">Karanlık Çağ</span><div class="agecost" id="ageCost"></div><div class="ageprog"><i id="ageProg"></i></div></div>
+    </div>
     <div class="res" id="res-wood" data-res="wood"><img src="assets/icons/wood.webp" alt="" /><b>0</b></div>
     <div class="res" id="res-food" data-res="food"><img src="assets/icons/food.webp" alt="" /><b>0</b></div>
     <div class="res" id="res-gold" data-res="gold"><img src="assets/icons/gold.webp" alt="" /><b>0</b></div>
@@ -80,13 +85,6 @@
     <div class="res happy" id="res-happy"><img src="assets/icons/happy.webp" alt="" /><b>60</b><i class="hbar"><i></i></i></div>
     <div class="res" id="res-pop" title="Nüfus / Sınır"><img src="assets/icons/pop.webp" alt="" /><b>0/0</b></div>
     <div class="spacer"></div>
-    <button id="dayBtn" title="Gece/Gündüz (L)" aria-label="Gece ve gündüz modu">
-      <svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" fill="currentColor"/></svg>
-      <span><b>12:00</b><i>Otomatik</i></span>
-    </button>
-    <button id="helpBtn" title="Kontroller (X)" aria-label="Kontroller penceresi">?</button>
-    <button id="menuBtn" title="Menü (Esc / F10)" aria-label="Oyun menüsü"><span></span><span></span><span></span></button>
     <div id="idleWrap">
       <button id="idleBtn" title="Boşta köylüyü seç (.)"><img src="assets/sprites/vil_idle.webp" alt="" /><b>0</b></button>
       <!-- Üzerine gelince açılan köylü seçim ikonları (yazısız; açıklama fare ile üzerine gelince) -->
@@ -102,10 +100,27 @@
         </button>
       </div>
     </div>
-    <div class="age" id="ageBox" title="Mevcut çağ">
-      <img src="assets/icons/age.webp" alt="" />
-      <div><span id="ageName">Karanlık Çağ</span><div class="ageprog"><i id="ageProg"></i></div></div>
+    <div id="armyWrap">
+      <button id="armyBtn" title="Askerleri seç"><img src="assets/sprites/mil_idle.webp" alt="" /><b>0</b></button>
+      <div id="armyMenu" role="group" aria-label="Asker seçimi">
+        <button data-asel="fighting" data-tip="Savaştaki askerleri seç" aria-label="Savaştaki askerleri seç">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 3l9 9-2 2-9-9V3zM20 3v2l-9 9-2-2 9-9zM6 15l3 3-3 3-3-3zM18 15l3 3-3 3-3-3z" fill="currentColor"/></svg>
+        </button>
+        <button data-asel="idle" data-tip="Boştaki askerleri seç" aria-label="Boştaki askerleri seç">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="10" cy="7" r="3.2" fill="currentColor"/><path d="M4 19c0-4 2.7-7 6-7s6 3 6 7z" fill="currentColor"/><text x="15" y="10" font-size="9" font-weight="700" fill="#ffd36b" font-family="Georgia,serif">z</text></svg>
+        </button>
+        <button data-asel="all" data-tip="Tüm askerleri seç" aria-label="Tüm askerleri seç">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="5.5" cy="8" r="2.5" fill="currentColor"/><circle cx="12" cy="6.5" r="2.8" fill="currentColor"/><circle cx="18.5" cy="8" r="2.5" fill="currentColor"/><path d="M1.5 18c0-3 1.8-5 4-5s4 2 4 5zM7.5 18c0-3.6 2-6 4.5-6s4.5 2.4 4.5 6zM14.5 18c0-3 1.8-5 4-5s4 2 4 5z" fill="currentColor"/></svg>
+        </button>
+      </div>
     </div>
+    <div id="clock" title="Saat">
+      <svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" fill="currentColor"/></svg>
+      <b>12:00</b>
+    </div>
+    <button id="helpBtn" title="Kontroller (X)" aria-label="Kontroller penceresi">?</button>
+    <button id="menuBtn" title="Menü (Esc / F10)" aria-label="Oyun menüsü"><span></span><span></span><span></span></button>
   </header>
 
   <!-- Alt panel: seçim bilgisi · komutlar. Bir şey seçilince kendiliğinden açılır, seçim kalkınca kapanır;

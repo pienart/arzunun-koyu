@@ -675,10 +675,10 @@ export class World {
   takeFromNode(node, amount) {
     if (node.isBuilding) {
       const got = Math.min(amount, node.food);
-      const step = Math.floor((1 - node.food / node.def.farmFood) * 10);
+      const cap = this.farmCap(node), step = Math.floor((1 - node.food / cap) * 10);
       node.food -= got;
       // Çiftlik tükendikçe sararır: zemin yalnızca %10'luk adımlarda yeniden çizilir
-      if (Math.floor((1 - node.food / node.def.farmFood) * 10) !== step) this.map.groundVersion++;
+      if (Math.floor((1 - node.food / cap) * 10) !== step) this.map.groundVersion++;
       if (node.food <= 1e-6) {
         this.removeBuilding(node);
         if (node.owner === PLAYER) this.notify('Bir çiftlik tükendi.', 'warn');
@@ -700,12 +700,17 @@ export class World {
     return def.tiers ? def.tiers[Math.min(def.tiers.length - 1, this.players[owner].tier)].cost : def.cost;
   }
 
-  /** Üretim çarpanı: seviye başına +%25 (seviyesiz bina / yok → 1) */
+  /** Seviye yükseltme süresi (sn) */
+  levelTime(b) { return Math.round(LEVELS.time + LEVELS.timePer * b.level); }
+  /** Tarla kapasitesi: seviyeyle artar */
+  farmCap(b) { return (b.def.farmFood ?? 0) * this.levelMul(b); }
+
+  /** Üretim ve kapasite çarpanı: seviye başına +%5 (seviyesiz bina / yok → 1) */
   levelMul(b) { return b?.isBuilding && b.def.levels ? 1 + LEVELS.bonus * (b.level - 1) : 1; }
 
   upgradeCost(b) {
     const cost = {};
-    for (const [k, v] of Object.entries(b.def.cost)) cost[k] = Math.round(v * LEVELS.costMul * b.level);
+    for (const [k, v] of Object.entries(b.def.cost)) cost[k] = Math.max(1, Math.round(v * LEVELS.costMul * b.level));
     cost.gold = (cost.gold ?? 0) + LEVELS.gold * b.level;
     return cost;
   }
@@ -1330,10 +1335,13 @@ export class World {
   }
 
   // ───────────── Üretim kuyruğu ─────────────
+  /** Kuyruk uzunluğu çağla kademeli artar: 10 → 11 → 11 → 12 (son çağ) */
+  queueMax(owner = PLAYER) { return 10 + Math.round((2 * this.players[owner].age) / (AGES.length - 1)); }
+
   checkQueue(b, kind, id) {
     const p = this.players[b.owner];
     if (!b.complete) return 'Bina henüz tamamlanmadı';
-    if (b.queue.length >= 10) return 'Kuyruk dolu';
+    if (b.queue.length >= this.queueMax(b.owner)) return 'Kuyruk dolu';
     if (kind === 'unit') {
       if ((UNITS[id].age ?? 0) > p.age) return `${AGES[UNITS[id].age].name} gerekli`;
       if (UNITS[id].unique && (this.units.some((u) => u.owner === b.owner && u.type === id) || this.buildings.some((o) => o.owner === b.owner && o.queue.some((q) => q.id === id))))
@@ -1378,7 +1386,7 @@ export class World {
     let cost, time;
     if (kind === 'unit') { cost = UNITS[id].cost; time = UNITS[id].trainTime; }
     else if (kind === 'age') { const n = p.nextAge; cost = n.cost; time = n.time; id = n.id; }
-    else if (kind === 'level') { cost = this.upgradeCost(b); time = LEVELS.time * b.level; id = b.level + 1; }
+    else if (kind === 'level') { cost = this.upgradeCost(b); time = this.levelTime(b); id = b.level + 1; }
     else if (kind === 'craft') { cost = ITEMS[id].cost; time = ITEMS[id].time; }
     else { cost = TECHS[id].cost; time = TECHS[id].time; }
     p.spend(cost);
@@ -1437,7 +1445,7 @@ export class World {
       }
     } else if (item.kind === 'level') {
       b.level = Math.min(LEVELS.MAX_LEVEL, b.level + 1);
-      if (b.def.farmFood) { b.food += b.def.farmFood * 0.5; this.map.groundVersion++; } // yükseltilen tarla tazelenir
+      if (b.def.farmFood) { b.food += b.def.farmFood * LEVELS.bonus; this.map.groundVersion++; } // kapasite artışı tarlaya eklenir
       this.map.version++;
       if (b.owner === PLAYER) { this.notify(`${b.name} seviye ${b.level} oldu: üretim +%${Math.round(LEVELS.bonus * (b.level - 1) * 100)}.`, 'good'); this.sound('bell', b.centerI, b.centerJ, 0.6); }
     } else if (item.kind === 'age') {

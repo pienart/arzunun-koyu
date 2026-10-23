@@ -56,6 +56,13 @@ export class DayNight {
     return this.clockDarkness();
   }
 
+  setMode(mode) {
+    if (!MODES.includes(mode)) return this.mode;
+    this.mode = mode;
+    writePref('mi_daynight', this.mode);
+    return this.mode;
+  }
+
   cycleMode() {
     this.mode = MODES[(MODES.indexOf(this.mode) + 1) % MODES.length];
     writePref('mi_daynight', this.mode);
