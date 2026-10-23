@@ -7,12 +7,13 @@ import { SidePanel, Inventory } from './Panels.js';
 const $ = (sel) => document.querySelector(sel);
 const spriteFile = (key) => MANIFEST.sprites[key]?.file;
 const iconFile = (key) => MANIFEST.icons[key]?.file;
-const UNIT_PORTRAIT = { villager: 'vil_idle', militia: 'mil_idle', archer: 'arc_idle', cavalry: 'cav_idle', ram: 'ram_e', fishingBoat: 'boat_e', yeti: 'yeti_idle', architect: 'arch_idle', cart: 'cart_e', catapult: 'catapult_e', warWagon: 'warWagon_e' };
+const UNIT_PORTRAIT = { villager: 'vil_idle', militia: 'mil_idle', archer: 'arc_idle', cavalry: 'cav_idle', ram: 'ram_e', fishingBoat: 'boat_e', commander: 'mil_idle', yeti: 'yeti_idle', architect: 'arch_idle', cart: 'cart_e', catapult: 'catapult_e', warWagon: 'warWagon_e' };
 /** Komut butonlarına sırayla atanan kısayollar (WASD kamera, H/G/L/M/N/B/X/P başka işlere ayrılı) */
 const HOTKEYS = ['KeyQ', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyF', 'KeyC', 'KeyV', 'KeyZ', 'KeyJ', 'KeyK']; // E ve O kamera kısayolu
 const UNIT_DESC = {
   villager: 'Kaynak toplar, bina inşa eder ve tamir eder.', fishingBoat: 'Balık sürülerinden yiyecek toplar ve tersaneye getirir.',
   architect: 'Patika, çiçek tarhı ve süs ağacı yapar: şehri güzelleştirir. Patikada birimler %35 hızlı yürür.',
+  commander: 'Tek olur; ölürse buradan yenisi atanır. "Devriye At" ile çitle çevrili köyü sürekli dolaşır, içeri giren düşmanı, çitteki gedikleri ve ağır hasarı ekranda uyarır.',
   catapult: 'Kale Çağı. Uzaktan (9 karo) taş atar; isabet noktasındaki herkese ve binalara alan hasarı verir (binalara ×3).',
   warWagon: 'İmparatorluk Çağı. İçine 50 asker alır, yayalardan hızlı gider. Askerleri seçip arabaya sağ tıklayın; "İndir" ile indirin.',
   cart: 'İmparatorluk Çağı. Kaynağa gider, 60 birim yük alır ve yalnızca Kasaba Merkezi\'ne boşaltır.',
@@ -524,6 +525,14 @@ export class UIManager {
           });
         }
       }
+      const cmdr = sel.find((u) => u.def.patrol);
+      if (cmdr) {
+        specs.push({
+          img: iconFile('banner'), label: 'Devriye', title: 'Devriye At',
+          desc: 'Komutan çitle çevrili köyün içinde sürekli devriye atar: içeri giren düşmanı, çitteki gedikleri ve ağır hasarı ekranda uyarı olarak bildirir; gördüğü düşmanla savaşır.',
+          check: () => (w.enclosure ? null : 'Çitle çevrili alan yok'), onClick: () => { if (cmdr.startPatrol(w)) this.toast('Komutan devriyeye çıktı.', 'good'); },
+        });
+      }
       const wagon = sel.find((u) => u.def.transport);
       if (wagon) {
         specs.push({
@@ -588,6 +597,21 @@ export class UIManager {
           img: iconFile('banner'), label: 'Herkes Dışarı', title: 'Herkes Dışarı',
           desc: 'Sığınan köylüler dışarı çıkar ve en son topladıkları kaynağa geri döner.',
           check: () => (a.garrison.length ? null : 'İçeride kimse yok'), onClick: () => w.ungarrison(a),
+        });
+      }
+      if (def.wall) {
+        specs.push({
+          img: buildingFile('gate', tier), label: 'Kapı Aç', title: 'Kapıya Çevir',
+          cost: w.costOf('gate'), desc: 'Bu çit parçası kapıya dönüşür: birimleriniz buradan geçer, düşman geçemez.',
+          check: () => (p.canAfford(w.costOf('gate')) ? null : 'Yetersiz kaynak'),
+          onClick: () => { const gt = w.wallToGate(a); if (gt) g.select([gt]); },
+        });
+      }
+      if (def.wall || def.gate) {
+        specs.push({
+          img: iconFile('build'), label: 'Yık', title: def.gate ? 'Kapıyı Yık' : 'Çiti Yık',
+          desc: 'Bu parça yıkılır (geri ödeme yok). Bilerek açtığınız gedik için komutan uyarı vermez.',
+          check: () => null, onClick: () => { w.demolishWall(a); g.select([]); },
         });
       }
       if (!def.wall && !def.gate && !def.ground && a.type !== 'townCenter' && a.type !== 'wonder') {

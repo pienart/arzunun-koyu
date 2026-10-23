@@ -79,6 +79,7 @@ export class World {
     const s = this.map.spawn;
     this.townCenter = this.addBuilding('townCenter', s.i, s.j, PLAYER, true);
     for (let k = 0; k < START.villagers; k++) this.spawnUnitNear(this.townCenter, 'villager');
+    this.spawnUnitNear(this.townCenter, 'commander'); // başlangıç komutanı (devriye atabilir)
 
     this.campfire = this._placeCampfire();
 
@@ -279,11 +280,35 @@ export class World {
 
   // ───────────── Yol bulma yardımcıları ─────────────
   moveToGoal(unit, fn, hi, hj, maxNodes) {
-    const path = this.pathfinder.find(unit.tileI, unit.tileJ, fn, hi, hj, maxNodes, this.passFor(unit));
+    const pf = this.pathfinder, pass = this.passFor(unit);
+    let path = pf.find(unit.tileI, unit.tileJ, fn, hi, hj, maxNodes, pass);
+    // Hedefe varamayan (yarım) yol: çitle çevrili alanda birim çitin dibinde takılmasın → kendi kapılarından geçen yolu dene
+    if ((!path || pf.partial) && !unit.naval) {
+      const via = this._viaGate(unit, fn, hi, hj, pass);
+      if (via) path = via;
+    }
     if (!path) return false;
     unit.path = path;
     unit.goal = { fn, hi, hj };
     return true;
+  }
+
+  /**
+   * Kapıdan geçen iki aşamalı yol: (birim → kapı) + (kapı → hedef). Kapılar "birimden kapıya + kapıdan hedefe" kuş uçuşu
+   * uzaklığa göre sıralanır, en iyi iki kapı denenir. Kendi kapılarından birim geçebilir (passFor).
+   */
+  _viaGate(unit, fn, hi, hj, pass) {
+    const pf = this.pathfinder;
+    const gates = this.buildings.filter((b) => b.owner === unit.owner && b.def.gate && b.complete)
+      .sort((a, c) => (Math.hypot(a.i - unit.x, a.j - unit.y) + Math.hypot(a.i - hi, a.j - hj)) - (Math.hypot(c.i - unit.x, c.j - unit.y) + Math.hypot(c.i - hi, c.j - hj)));
+    for (const g of gates.slice(0, 2)) {
+      const p1 = pf.find(unit.tileI, unit.tileJ, (i, j) => i === g.i && j === g.j, g.i, g.j, 20000, pass);
+      if (!p1 || pf.partial) continue;
+      const p2 = pf.find(g.i, g.j, fn, hi, hj, 30000, pass);
+      if (!p2 || pf.partial) continue;
+      return p1.concat(p2);
+    }
+    return null;
   }
 
   repath(unit) {
@@ -727,6 +752,7 @@ export class World {
     const tc = this.townCenter, map = this.map;
     if (!tc) return;
     const ci = Math.round(tc.centerI), cj = Math.round(tc.centerJ), R = 19;
+    this.enclosure = { ci, cj, R, tiles: [] }; // devriye alanı ve çitin olması gereken karoları (gedik denetimi)
     const ring = [];
     for (let k = -R; k <= R; k++) ring.push([ci + k, cj - R], [ci + R, cj + k], [ci - k, cj + R], [ci - R, cj - k]);
     // Kapı: düşman yönündeki kenarın ortası
@@ -745,6 +771,7 @@ export class World {
       if (this.checkPlacement('wall', i, j)) continue; // su, maden, bina → atla
       const isGate = !gate && Math.abs(i - gi) + Math.abs(j - gj) <= 1;
       const b = this.addBuilding(isGate ? 'gate' : 'wall', i, j, PLAYER, true);
+      this.enclosure.tiles.push(key);
       if (isGate) gate = b;
     }
     if (!gate) { // kapı yeri suya denk geldiyse çitin herhangi bir parçasını kapıya çevir
@@ -940,6 +967,63 @@ export class World {
     this.commandMove([arch[0]], b.i + 1, b.j + 1);
     this.notify(`${b.name} taşındı (${formatCost(cost)}). Mimar yeni yere gidiyor.`, 'good');
     return true;
+  }
+
+  // ───────────── Çit / kapı ─────────────
+  /** Çit parçasını kapıya çevir (kapı bedeli ödenir, anında) */
+  wallToGate(b) {
+    if (!b?.def.wall || b.owner !== PLAYER || !b.complete) return null;
+    const cost = this.costOf('gate');
+    if (!this.player.spend(cost)) { this.notify('Kapı için yetersiz kaynak.', 'warn'); return null; }
+    const tier = b.tier, oi = b.originI, oj = b.originJ;
+    this.removeBuilding(b);
+    const g = this.addBuilding('gate', oi, oj, PLAYER, true);
+    this.applyTier(g, tier); g.hp = g.maxHp;
+    this.notify(`Çit kapıya çevrildi (${formatCost(cost)}). Birimleriniz buradan geçebilir.`, 'good');
+    this.sound('hammer', oi, oj, 0.6);
+    return g;
+  }
+
+  /** Kendi çit/kapı parçasını yık (geri ödeme yok); bilerek açılan gedik komutanın uyarı listesinden çıkar */
+  demolishWall(b) {
+    if (!b || b.owner !== PLAYER || !(b.def.wall || b.def.gate)) return;
+    if (this.enclosure) { const k = b.j * this.map.width + b.i; this.enclosure.tiles = this.enclosure.tiles.filter((t) => t !== k); }
+    this.removeBuilding(b);
+    this.sound('collapse', b.i, b.j, 0.4); // yıkıntı bırakmaz: yerine yeniden çit/kapı kurulabilir
+  }
+
+  insideEnclosure(i, j) {
+    const e = this.enclosure;
+    return !!e && Math.abs(i - e.ci) < e.R && Math.abs(j - e.cj) < e.R;
+  }
+
+  /**
+   * Komutanın devriye denetimi (saniyede bir): çevresinde
+   *   • çitle çevrili alanın İÇİNDE düşman/yaratık  • çitte gedik (olması gereken parça yok)  • ağır hasarlı çit
+   * varsa ekranda uyarı + mini haritada işaret. Aynı tür uyarı 20 sn'de bir.
+   */
+  patrolInspect(u) {
+    const e = this.enclosure;
+    if (!e) return;
+    const R = u.def.los + 4, now = this.time, warn = (kind, text, i, j, snd) => {
+      this._secAt ??= {};
+      if (now - (this._secAt[kind] ?? -99) < 20) return;
+      this._secAt[kind] = now;
+      this.notify(`Güvenlik ihlali! ${text}`, 'warn');
+      this.alert(i, j);
+      this.sound(snd);
+    };
+    let foe = null;
+    this.grid.each(u.x, u.y, R, (o) => { if (!foe && o.owner !== u.owner && !o.dead && !o.def.animal && this.insideEnclosure(o.tileI, o.tileJ)) foe = o; });
+    if (foe) warn('foe', `Köyün içinde ${foe.owner === WILD ? 'Koca Ayak' : 'düşman'} var (komutan gördü).`, foe.x, foe.y, 'horn');
+    const W = this.map.width;
+    for (const k of e.tiles) {
+      const i = k % W, j = (k / W) | 0;
+      if (Math.max(Math.abs(i - u.x), Math.abs(j - u.y)) > R) continue;
+      const o = this.map.occupancy[j][i];
+      if (!o || !o.isBuilding || !(o.def.wall || o.def.gate)) { warn('gap', 'Çitte gedik var: düşman buradan girebilir.', i, j, 'bell'); break; }
+      if (o.hp < o.maxHp * 0.5) { warn('dmg', 'Çit ağır hasarlı: tamir ettirin.', i, j, 'bell'); break; }
+    }
   }
 
   // ───────────── Çağ şartları ─────────────
@@ -1176,6 +1260,8 @@ export class World {
     if (b.queue.length >= 10) return 'Kuyruk dolu';
     if (kind === 'unit') {
       if ((UNITS[id].age ?? 0) > p.age) return `${AGES[UNITS[id].age].name} gerekli`;
+      if (UNITS[id].unique && (this.units.some((u) => u.owner === b.owner && u.type === id) || this.buildings.some((o) => o.owner === b.owner && o.queue.some((q) => q.id === id))))
+        return 'Zaten bir komutan var';
       return p.canAfford(UNITS[id].cost) ? null : 'Yetersiz kaynak';
     }
     if (kind === 'age') {

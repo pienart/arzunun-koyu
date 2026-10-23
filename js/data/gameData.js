@@ -82,7 +82,7 @@ export const BUILDINGS = {
     desc: 'Yalnızca köylüler su kenarına kurabilir. Balıkçı teknesi üretir; tekneler balık sürülerinden yiyecek toplar. Odun ve yiyecek bırakma noktasıdır.',
   },
   barracks: {
-    name: 'Kışla', size: 3, hp: 1200, cost: { wood: 175 }, buildTime: 30, age: 0, trains: ['militia'],
+    name: 'Kışla', size: 3, hp: 1200, cost: { wood: 175 }, buildTime: 30, age: 0, trains: ['militia', 'commander'],
     sprite: 'barracks', armor: { melee: 0, pierce: 7 },
     desc: 'Milis piyadesi yetiştirir.',
   },
@@ -262,6 +262,11 @@ export const UNITS = {
   cart: {
     name: 'Yük Arabası', cost: { wood: 150, gold: 80 }, trainTime: 25, pop: 1, hp: 140, speed: 2.3, carry: 60, age: 3,
     attack: 0, armor: { melee: 1, pierce: 4 }, range: 0, reload: 2, los: 5, bldgMul: 0, gatherer: true, vehicle: true, civil: true, gatherMul: 1.6, dropTC: true,
+  },
+  // Komutan: milisle aynı görünür; tek olur (ölürse Kışla'dan yenisi atanır). Yalnız o "Devriye" atabilir.
+  commander: {
+    name: 'Komutan', cost: { food: 150, gold: 100 }, trainTime: 30, pop: 1, hp: 90, speed: 1.7,
+    attack: 8, armor: { melee: 1, pierce: 2 }, range: 0, reload: 2, los: 8, bldgMul: 2, unique: true, patrol: true,
   },
   militia: {
     name: 'Milis', cost: { food: 60, gold: 20 }, trainTime: 12, pop: 1, hp: 45, speed: 1.6,

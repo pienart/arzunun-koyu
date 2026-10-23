@@ -79,6 +79,13 @@ oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penc
   **İptal**. Dar ekranda üst bar kaydırılabilir, alt panel küçülür, mini harita sağ üstte, inşaat listesi onun altında.
 - **Başlangıç çiti:** Köy, başlangıç kaynaklarını da içine alan ahşap bir çitle çevrili başlar; düşman yönünde bir kapı
   vardır. İstediğiniz zaman genişletebilir ya da yıkabilirsiniz (çit çağ atladıkça taş/kale suruna dönüşür).
+- **Çit seçenekleri:** Bir çit parçasını seçince **Kapı Aç** (kapı bedeliyle anında kapıya çevrilir) ve **Yık** (geri ödemesiz)
+  çıkar; kapılarda da **Yık** var. Birimler kapıların yerini bilir: hedef çitin öbür tarafındaysa önce en uygun kapıya, oradan
+  hedefe gider (çitin önünde takılıp kalmaz).
+- **Komutan ve devriye:** Oyun bir komutanla başlar (milisle aynı görünür, tek olur; ölürse Kışla'dan yenisi atanır).
+  Yalnız komutanın **Devriye At** komutu vardır: çitle çevrili köyün içinde sürekli dolaşır, gördüğü düşmanla savaşır ve
+  **güvenlik ihlallerini** (köyün içinde düşman/Koca Ayak, çitte gedik, ağır hasarlı çit) ekranda uyarı ve mini harita
+  işaretiyle bildirir. Bilerek yıktığınız çit parçası için uyarı vermez.
 - **Ev kapasitesi çağla artar:** Kasaba Merkezi her çağ atladığında evlerin kapasitesi %25 artar (5 → 6 → 8 → 9).
 - **Zoom sınırı:** En uzak zoom tüm haritanın ekrana sığdığı ölçektir; haritanın dışına uzaklaşılmaz.
 - **Çağ şartları:** Kaynak yetmez. Feodal için 3 asker + 2 ev, kereste kampı, değirmen ve kışla; Kale için 8 asker +

@@ -136,6 +136,7 @@ export class SpriteFactory {
       villager: CONFIG.VILLAGER_HEIGHT / manifest.sprites.vil_idle.h,
       militia: (CONFIG.VILLAGER_HEIGHT * 1.08) / manifest.sprites.mil_idle.h,
       archer: (CONFIG.VILLAGER_HEIGHT * 1.08) / manifest.sprites.mil_idle.h, // aynı sayfa → aynı ölçek
+      commander: (CONFIG.VILLAGER_HEIGHT * 1.08) / manifest.sprites.mil_idle.h, // milisle aynı görünür
       cavalry: manifest.sprites.cav_idle ? (CONFIG.VILLAGER_HEIGHT * 1.55) / manifest.sprites.cav_idle.h : 1,
       architect: manifest.sprites.arch_idle ? (CONFIG.VILLAGER_HEIGHT * 1.02) / manifest.sprites.arch_idle.h : 1,
       // Yabani hayvanlar: gerçekçi boy (UNITS[...].height, dünya birimi)

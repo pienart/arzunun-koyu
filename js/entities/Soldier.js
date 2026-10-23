@@ -21,7 +21,7 @@ export class Soldier extends Unit {
 
   get activity() {
     if (this.def.siege && this.state === 'attack') return 'Kapıya/duvara vuruyor';
-    return { attack: 'Savaşıyor', move: 'Yürüyor', attackMove: 'Saldırı yürüyüşü', guard: 'Nöbette' }[this.state] ?? 'Hazır';
+    return { attack: this.resume === 'patrol' ? 'Devriyede: çatışıyor' : 'Savaşıyor', move: 'Yürüyor', attackMove: 'Saldırı yürüyüşü', guard: 'Nöbette', patrol: 'Devriyede (güvenlik denetimi)', board: 'Arabaya biniyor' }[this.state] ?? 'Hazır';
   }
 
   get animState() {
@@ -48,6 +48,7 @@ export class Soldier extends Unit {
       case 'attackMove': this._updateAttackMove(dt, world); break;
       case 'guard': this._updateGuard(dt, world); break;
       case 'board': this._updateBoard(dt, world); break;
+      case 'patrol': this._updatePatrol(dt, world); break;
       default: break;
     }
   }
@@ -65,6 +66,41 @@ export class Soldier extends Unit {
       world.moveToGoal(this, (i, j) => Math.max(Math.abs(i - wg.tileI), Math.abs(j - wg.tileJ)) <= 1, wg.tileI, wg.tileJ, 4000);
     }
     this.followPath(dt, world);
+  }
+
+  /**
+   * Devriye (yalnız komutan): çitle çevrili alanın içinde, çitin 3 karo içerisinden geçen 8 noktalık halkada sürekli
+   * dolaşır; gördüğü düşmanla savaşıp devriyeye döner, saniyede bir güvenlik denetimi yapar (World.patrolInspect).
+   */
+  startPatrol(world) {
+    const e = world.enclosure;
+    if (!this.def.patrol || !e) return false;
+    const r = e.R - 3, c = [e.ci, e.cj];
+    this.patrolPts = [[-r, -r], [0, -r], [r, -r], [r, 0], [r, r], [0, r], [-r, r], [-r, 0]].map(([a, b]) => [c[0] + a, c[1] + b]);
+    let k = 0, best = Infinity;
+    this.patrolPts.forEach(([i, j], n) => { const d = Math.hypot(i - this.x, j - this.y); if (d < best) { best = d; k = n; } });
+    this.stop();
+    this.state = 'patrol';
+    this.patrolK = k;
+    this.inspectT = 0;
+    this._goPatrol(world);
+    return true;
+  }
+
+  _goPatrol(world) {
+    const [i, j] = this.patrolPts[this.patrolK];
+    const s = world.map.findWalkableNear(i, j, 4);
+    if (!s || !world.moveToGoal(this, (a, b) => a === s.i && b === s.j, s.i, s.j, 8000)) this.path = [];
+  }
+
+  _updatePatrol(dt, world) {
+    if (this._scan(world, false, 'patrol')) return;
+    this.inspectT -= dt;
+    if (this.inspectT <= 0) { this.inspectT = 1; world.patrolInspect(this); }
+    if (this.followPath(dt, world)) {
+      this.patrolK = (this.patrolK + 1) % this.patrolPts.length;
+      this._goPatrol(world);
+    }
   }
 
   attack(target, resume = null) {
@@ -86,6 +122,7 @@ export class Soldier extends Unit {
     this.target = null;
     if (r === 'attackMove' && this.moveGoal) this.attackMoveTo(world, this.moveGoal.i, this.moveGoal.j);
     else if (r === 'guard' && this.post) this.guardAt(world, this.post.i, this.post.j);
+    else if (r === 'patrol') this.startPatrol(world);
     else { this.stop(); this.scanT = 0; }
   }
 

@@ -96,7 +96,7 @@ export const SaveGame = {
         })),
         units: w.units.map(unit),
         players, enemy: w.enemyAI.serialize(), wild: w.wild.serialize(), weather: w.weather.serialize(), explored: game.fog.serialize(),
-        townCenter: w.townCenter?.id ?? null,
+        townCenter: w.townCenter?.id ?? null, enclosure: w.enclosure ?? null,
       },
     };
   },
@@ -180,6 +180,7 @@ export const SaveGame = {
     world.animals.adopt(world.units.filter((u) => u.def.animal));
     world.meat = world.collectKind('carcass');      // geçitler her dakika zaten yer değiştirir: yeni yerlerde başlar
     world.time = d.time;
+    world.enclosure = d.enclosure ?? null;
 
     // Görevleri yeniden ver
     for (const [u, s] of orders) {
@@ -191,6 +192,7 @@ export const SaveGame = {
         else if (s.state === 'repair' && t && world.isAlive(t)) world.commandRepair([u], t);
         else if (s.state === 'fish' && t && world.isAlive(t)) world.commandFish([u], t);
         else if (s.state === 'garrison' && t && world.isAlive(t)) world.ringBellUnit(u, t);
+        else if (s.state === 'patrol' && u.startPatrol) u.startPatrol(world);
         else if (s.state === 'guard' && s.post) u.guardAt(world, s.post.i, s.post.j);
         else if (s.state === 'attackMove' && s.moveGoal) u.attackMoveTo(world, s.moveGoal.i, s.moveGoal.j);
         else if (u.type === 'villager' && u.owner === ENEMY) world.enemyAI._giveJob(u);

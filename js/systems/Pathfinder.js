@@ -38,6 +38,7 @@ export class Pathfinder {
     const map = this.map, W = map.width;
     // pass(i, j) → 0: geçilemez, 1: normal, >1: geçilebilir ama pahalı (ör. düşmanın kırarak geçeceği çit)
     pass ??= (i, j) => (map.isWalkable(i, j) ? 1 : 0);
+    this.partial = false;           // true: hedefe ulaşılamadı, en yakın noktaya giden yarım yol döndü
     if (isGoal(si, sj)) return [];
     const s = ++this.search;
     const start = sj * W + si;
@@ -80,6 +81,7 @@ export class Pathfinder {
       }
     }
     // Hedefe ulaşılamadı: en yakın noktaya kadar git (RTS'lerde beklenen davranış)
+    this.partial = true;
     return best !== start ? this._build(best) : null;
   }
 
