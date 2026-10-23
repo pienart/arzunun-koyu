@@ -5,7 +5,7 @@ Sorun: tarayıcı ES modüllerini (ör. js/systems/Pathfinder.js) önbellekte tu
 eski kalır ve eski/yeni dosyalar birbirine uymaz (ör. tekneler karadan yol bulmaya çalışıp yerinde kalır).
 Çözüm: index.html'e bir "import map" yazılır:  "./js/x.js" → "./js/x.js?v=<özet>". Dosya değişince adresi de
 değişir, tarayıcı eskisini kullanamaz. Değişmeyen dosyalar önbellekten gelmeye devam eder.
-Ayrıca js/build.js (BUILD kimliği) yazılır; görsel ve ses adresleri ?v=BUILD alır.
+Ayrıca js/build.js (BUILD kimliği ve VERSION dosyasındaki sürüm) yazılır; görsel ve ses adresleri ?v=BUILD alır.
 
 Kullanım:  python tools/stamp.py      (baslat.bat / baslat.sh sunucuyu açmadan önce kendiliğinden çalıştırır)
 """
@@ -27,9 +27,12 @@ def main():
     files.append(ROOT / 'assets' / 'manifest.js')
     hashes = {p.relative_to(ROOT).as_posix(): digest(p) for p in files}
     build = hashlib.sha1(json.dumps(hashes, sort_keys=True).encode()).hexdigest()[:10]
+    vfile = ROOT / 'VERSION'
+    version = vfile.read_text(encoding='utf-8').strip() if vfile.exists() else '0.0.0'
     (ROOT / 'js' / 'build.js').write_text(
-        "// tools/stamp.py üretir: içerik özeti (görsel/ses adreslerine ?v= olarak eklenir)\n"
-        f"export const BUILD = '{build}';\n", encoding='utf-8')
+        "// tools/stamp.py üretir: içerik özeti (görsel/ses adreslerine ?v= olarak eklenir) ve sürüm (VERSION dosyası)\n"
+        f"export const BUILD = '{build}';\n"
+        f"export const VERSION = '{version}';\n", encoding='utf-8')
     hashes['js/build.js'] = digest(ROOT / 'js' / 'build.js')
     css = digest(ROOT / 'css' / 'style.css')
 

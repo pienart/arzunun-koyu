@@ -26,7 +26,8 @@ tarayıcı eski dosyaları kullanamaz (eski ve yeni dosyaların karışması ör
 yerinde kalmasına yol açıyordu). `tools/server.py` hem IPv4 hem IPv6 dinler: Windows'ta `localhost`'un IPv6 denemesindeki
 bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yüklenir).
 
-**Sürümler:** `VERSION` dosyası ve git etiketleri (`v1.0.0`, `v1.1.0`, …).
+**Sürümler:** `VERSION` dosyası ve git etiketleri (`v1.0.0`, `v1.1.0`, …). `tools/stamp.py` sürümü `js/build.js`'e yazar;
+oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penceresinde görür.
 
 ## Oynanış
 

@@ -1,6 +1,7 @@
 import { DIFFICULTY } from '../data/gameData.js';
 import { SaveGame } from '../systems/SaveGame.js';
 import { Settings, QUALITY } from '../systems/Settings.js';
+import { VERSION, BUILD } from '../build.js';
 
 const $ = (s) => document.querySelector(s);
 const fmtTime = (s) => `${Math.floor(s / 60)} dk ${String(Math.floor(s % 60)).padStart(2, '0')} sn`;
@@ -34,6 +35,7 @@ export class Menu {
           <button data-act="settings">Ayarlar</button>
           <button data-act="howto">Nasıl Oynanır?</button>
           <p class="saveinfo"></p>
+          <p class="version">v${VERSION}</p>
         </div>
         <div class="mview hidden" data-view="new">
           <h2>Yeni Oyun</h2>
@@ -69,6 +71,7 @@ export class Menu {
             ${[['master', 'Ana ses'], ['music', 'Müzik'], ['ambient', 'Atmosfer'], ['sfx', 'Efektler']].map(([k, n]) => `
               <label>${n}<input type="range" min="0" max="100" data-vol="${k}"><b></b></label>`).join('')}
           </div>
+          <p class="version">Arzu'nun Köyü · Sürüm <b>v${VERSION}</b> <span title="Yapı kimliği">(${BUILD})</span></p>
           <div class="row"><button data-act="back">Geri</button></div>
         </div>
         <div class="mview hidden" data-view="howto">
