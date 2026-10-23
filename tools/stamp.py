@@ -7,7 +7,7 @@ eski kalır ve eski/yeni dosyalar birbirine uymaz (ör. tekneler karadan yol bul
 değişir, tarayıcı eskisini kullanamaz. Değişmeyen dosyalar önbellekten gelmeye devam eder.
 Ayrıca js/build.js (BUILD kimliği ve VERSION dosyasındaki sürüm) yazılır; görsel ve ses adresleri ?v=BUILD alır.
 
-Kullanım:  python tools/stamp.py      (baslat.bat / baslat.sh sunucuyu açmadan önce kendiliğinden çalıştırır)
+Kullanım:  python tools/stamp.py      (kodu değiştirdikten sonra, commit'ten önce)
 """
 import hashlib
 import json

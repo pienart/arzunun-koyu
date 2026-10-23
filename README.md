@@ -7,20 +7,18 @@ Harici kütüphane yoktur. Grafikler ve ses efektleri bu proje için yapay zekâ
 
 Tarayıcılar ES modüllerini ve görselleri dosyadan (`file://`) açmaya izin vermez; oyun yerel bir sunucu üzerinden açılmalıdır.
 
-**En kolay yol**
-- **Windows:** `baslat.bat` dosyasına çift tıklayın. Python veya Node.js varsa onu kullanır; ikisi de yoksa Windows'ta yerleşik
-  PowerShell ile bağımlılıksız bir sunucu açar. Tarayıcı kendiliğinden `http://localhost:8080` adresinde açılır.
-- **macOS / Linux:** `sh baslat.sh`
+**Sunucu (Plesk):** Depo olduğu gibi yayınlanır; derleme adımı yoktur. `index.html` içindeki import map ve `js/build.js`
+her commit'ten önce `tools/stamp.py` ile güncellenir, yani sunucuda ayrıca bir şey çalıştırmak gerekmez.
 
 **Visual Studio / IIS Express:** Klasördeki `web.config`, IIS Express'in varsayılan olarak sunmadığı `.webp` ve `.mp3` türlerini
 tanımlar. Projeyi **bu klasör kök olacak şekilde** açın (Dosya → Aç → Web Sitesi / Klasör). "Görsel yüklenemedi: ….webp"
-hatası alırsanız `web.config` dosyasının proje kökünde olduğundan emin olun veya `baslat.bat` kullanın.
+hatası alırsanız `web.config` dosyasının proje kökünde olduğundan emin olun.
 
 **VS Code:** "Live Server" eklentisiyle `index.html` → "Open with Live Server".
 
 **Elle:** `python tools/stamp.py` ardından `python tools/server.py` veya `npx serve -l 8080 .`
 
-**Önbellek:** `baslat.bat`/`baslat.sh` her açılışta `tools/stamp.py`'yi çalıştırır: her JavaScript dosyasına içerik özetinden
+**Önbellek:** `tools/stamp.py` (kodu değiştirdikten sonra, commit'ten önce çalıştırılır) her JavaScript dosyasına içerik özetinden
 bir sürüm verilir (`index.html` içindeki import map) ve görsel/ses adreslerine `?v=` eklenir. Böylece oyun güncellenince
 tarayıcı eski dosyaları kullanamaz (eski ve yeni dosyaların karışması örneğin teknelerin karadan yol bulmaya çalışıp
 yerinde kalmasına yol açıyordu). `tools/server.py` hem IPv4 hem IPv6 dinler: Windows'ta `localhost`'un IPv6 denemesindeki
@@ -256,7 +254,7 @@ js/
 └── ui/                     UIManager (üst bar, alt panel, kısayollar), Menu (ana menü, duraklatma, ayarlar), Minimap
 assets/                     Sprite'lar (WebP), animasyon şeritleri (anims/), ikonlar, dokular, sesler (MP3), manifest.js
 tools/                      slice_sprites.py, process_audio.py, process_anim.py, key_sprite.py + ham varlıklar
-web.config · baslat.bat · baslat.ps1 · baslat.sh
+web.config
 ```
 
 **Takım rengi:** Düşman sprite'ları ayrı çizilmez. Açılışta mavi tonlu pikseller (ton 190°–260°) HSV uzayında kırmızıya döndürülür;
@@ -290,7 +288,7 @@ ve hazır olunca yer değiştirir. Kaydırırken yeni çizim önceden başlar. A
 yalnızca nesne katmanını yeniden çizer; zemin yalnızca çiftlik değişince yenilenir.
 Simülasyonda yakın düşman, kule hedefi ve birimlerin itmesi mekânsal ızgarayla hesaplanır (adım başına ~0,06 ms).
 Düşman renkli animasyon kareleri açılışı uzatmasın diye oyun başladıktan sonra arka planda hazırlanır.
-`baslat.bat`/`baslat.sh` önce `tools/stamp.py` (sürümlü modül adresleri), sonra `tools/server.py` (Cache-Control: no-cache) çalıştırır.
+Yerel geliştirmede `tools/stamp.py` (sürümlü modül adresleri) ve `tools/server.py` (Cache-Control: no-cache, IPv4+IPv6) kullanılır.
 
 ## Bilinen sınırlamalar / sonraki adımlar
 

@@ -8,7 +8,7 @@ import { BUILD } from '../build.js';
 export async function loadAssets(manifest, onProgress = () => {}) {
   if (location.protocol === 'file:') {
     throw new Error('Oyun dosyadan (file://) açılmış. Tarayıcılar bu durumda modülleri ve görselleri engeller. ' +
-      'Klasördeki baslat.bat (Windows) veya baslat.sh (macOS/Linux) dosyasını çalıştırın.');
+      'Oyunu bir web sunucusu üzerinden açın (Plesk, IIS Express / Visual Studio veya: python tools/server.py).');
   }
   const jobs = [];
   for (const group of ['sprites', 'icons', 'textures', 'anims']) {
@@ -48,10 +48,9 @@ async function diagnose(src) {
   } catch { /* ağ hatası */ }
   if (status === 404 && ext === 'webp') {
     return `Sunucu .webp dosyalarını sunmuyor (HTTP 404: ${src}). Visual Studio / IIS Express kullanıyorsanız ` +
-      'klasördeki web.config dosyası bunu çözer; projeyi bu klasörün kendisi kök olacak şekilde açın. ' +
-      'En kolay yol: baslat.bat ile açmak.';
+      'klasördeki web.config dosyası bunu çözer; projeyi bu klasörün kendisi kök olacak şekilde açın.';
   }
   if (status === 404) return `Dosya bulunamadı (HTTP 404): ${src}. Zip'in tamamen açıldığından ve sunucunun proje klasöründen başlatıldığından emin olun.`;
-  if (status >= 200 && status < 300) return `Görsel çözülemedi: ${src} (sunucu türü: "${type || 'yok'}"). Tarayıcınızı güncelleyin veya baslat.bat ile açın.`;
-  return `Görsel yüklenemedi: ${src}${status ? ` (HTTP ${status})` : ''}. Oyunu baslat.bat (Windows) veya baslat.sh ile açın.`;
+  if (status >= 200 && status < 300) return `Görsel çözülemedi: ${src} (sunucu türü: "${type || 'yok'}"). Tarayıcınızı güncelleyin.`;
+  return `Görsel yüklenemedi: ${src}${status ? ` (HTTP ${status})` : ''}. Sunucunun proje klasörünü kök olarak sunduğundan emin olun.`;
 }
