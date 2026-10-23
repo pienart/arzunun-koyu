@@ -5,15 +5,6 @@ export const HW = CONFIG.TILE_WIDTH / 2;
 export const HH = CONFIG.TILE_HEIGHT / 2;
 
 /**
- * Grid (i, j) → Dünya (x, y)   [karonun MERKEZİ]
- * İzometrik projeksiyon = grid'i 45° döndürüp dikeyde yarıya basmak:
- *   x = (i − j) · W/2      y = (i + j) · H/2
- */
-export function tileToWorld(i, j) {
-  return { x: (i - j) * HW, y: (i + j) * HH };
-}
-
-/**
  * Dünya → Grid (kesirli). Doğrusal dönüşümün tersi:
  *   x/HW = i − j,  y/HH = i + j   ⇒   i = (y/HH + x/HW)/2,   j = (y/HH − x/HW)/2
  */

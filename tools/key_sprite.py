@@ -1,6 +1,6 @@
 """
 Düz macenta (#FF00FF) zemin üzerinde üretilmiş tek bir bina görselini oyun sprite'ına çevirir
-ve assets/manifest.js'e ekler (taban ölçümü slice_sprites.py ile aynı yöntem).
+ve assets/manifest.js'e ekler (taban ölçümü: alt %30'luk kısımdaki opak sütunlar).
 
 Kullanım:  python tools/key_sprite.py <girdi.png> <anahtar> [en büyük boyut]   ör.  tools/raw/dock.png dock_0 640
 """

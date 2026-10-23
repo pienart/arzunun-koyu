@@ -69,7 +69,6 @@ export class GameMap {
   // ───────────── Sorgular ─────────────
   inBounds(i, j) { return i >= 0 && j >= 0 && i < this.width && j < this.height; }
   getTile(i, j) { return this.inBounds(i, j) ? this.terrain[j][i] : -1; }
-  getTileType(i, j) { return this.inBounds(i, j) ? TileRegistry.get(this.terrain[j][i]) : null; }
   getObjectAt(i, j) { return this.inBounds(i, j) ? this.occupancy[j][i] : null; }
 
   /** Yol bulmanın temel sorusu: bu karoya yürünebilir mi? */

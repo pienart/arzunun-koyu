@@ -173,8 +173,6 @@ export class World {
     return obj.isBuilding && !obj.blocks ? d === 0 : d <= 1;
   }
 
-  unitsOf(owner) { return this.units.filter((u) => u.owner === owner); }
-
   recountPopulation() {
     for (const p of Object.values(this.players)) {
       let pop = 0, cap = 0;

@@ -181,16 +181,6 @@ img { -webkit-user-drag: none; }
 }
 .endscreen button:hover { box-shadow: 0 0 12px rgba(255, 211, 107, 0.6); }
 
-/* Düşman dalga sayacı */
-.wave {
-  display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px 0 4px;
-  background: rgba(60, 10, 6, 0.55); border: 1px solid rgba(255, 110, 90, 0.5); border-radius: 4px;
-  font-weight: 700; font-size: 14px; color: #ffcfbf; text-shadow: 0 1px 2px #000;
-}
-.wave img { width: 28px; height: 28px; object-fit: contain; }
-.wave.soon { animation: pulse 0.9s infinite alternate; border-color: #ff6a50; }
-@keyframes pulse { from { box-shadow: 0 0 0 rgba(255, 80, 60, 0); } to { box-shadow: 0 0 12px rgba(255, 80, 60, 0.8); } }
-
 #dayBtn {
   display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 9px 0 7px; cursor: pointer; color: #ffd36b;
   background: rgba(0, 0, 0, 0.38); border: 1px solid var(--gold-dim); border-radius: 4px; font: 700 12px Georgia, serif;
@@ -209,21 +199,6 @@ img { -webkit-user-drag: none; }
   background: rgba(0, 0, 0, 0.38); border: 1px solid var(--gold-dim);
 }
 #helpBtn:hover, #helpBtn.on { border-color: #ffd36b; color: #ffe08a; }
-
-/* Ses butonları: atmosfer + olay sesleri */
-.sound { display: flex; gap: 4px; }
-.sndbtn {
-  display: flex; align-items: center; gap: 5px; height: 34px; padding: 0 9px 0 6px; cursor: pointer;
-  background: rgba(0, 0, 0, 0.38); border: 1px solid var(--gold-dim); border-radius: 4px; color: var(--ink);
-  font: 700 12px Georgia, serif;
-}
-.sndbtn:hover { border-color: #ffd36b; }
-.sndbtn .x { display: none; }
-.sndbtn.off { color: #8f7d66; }
-.sndbtn.off .wv { display: none; }
-.sndbtn.off .x { display: inline; }
-#ambBtn:not(.off) svg { color: #9fd36b; }
-@media (max-width: 1600px) { .sndbtn span { display: none; } }
 
 /* Alt panel gizleme sekmesi */
 #bottombar { transition: transform 0.25s ease; }
@@ -339,7 +314,6 @@ body.paused #pauseBadge { display: block; }
 body:not(.ingame) #topbar, body:not(.ingame) #bottombar, body:not(.ingame) #panelToggle,
 body:not(.ingame) #help, body:not(.ingame) #pending, body:not(.ingame) #fps, body:not(.ingame) #mapbox { display: none !important; }
 
-.wave b { white-space: nowrap; }
 /* Dar ekran: kaynak kutuları sayıyı kırpmasın (küçülmez), simgeler biraz küçülür, boşluk daralır */
 .res { flex-shrink: 0; }
 @media (max-width: 1100px) {

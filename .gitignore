@@ -6,3 +6,6 @@ __pycache__/
 .idea/
 Thumbs.db
 .DS_Store
+
+# Ham üretim kaynakları (Higgsfield indirmeleri): yalnızca yerelde, işlendikten sonra assets/ kullanılır
+tools/raw/

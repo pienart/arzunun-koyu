@@ -342,8 +342,6 @@ export class SpriteFactory {
     return this.sprites[['tree_oak', 'tree_pine', 'tree_autumn'][v]];
   }
 
-  villager(pose) { return this.sprites[`vil_${pose}`] ?? this.sprites.vil_idle; }
-
   /** Makro varyasyon: dokunun her 6 karoda bir tekrar ettiğini gizleyen büyük ölçekli, yumuşak ton farkları */
   _makeNoise() {
     const size = 256, c = makeCanvas(size, size), ctx = c.getContext('2d');

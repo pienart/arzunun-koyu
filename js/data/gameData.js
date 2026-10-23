@@ -419,10 +419,7 @@ export const MARKET = { sell: 70, buy: 130, lot: 100 };
  *  defenders : üssü koruyan başlangıç birlikleri          ageAt: düşmanın çağ atladığı zamanlar (sn)
  */
 export const ENEMY_AI = {
-  firstWave: 300,
-  interval: 150,
   defenders: { militia: 4, archer: 2 },
-  maxWave: 16,
   ageAt: [0, 480, 960],
   minDistance: 100,
 };

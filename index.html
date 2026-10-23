@@ -7,18 +7,18 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>Arzu'nun Köyü</title>
   <!-- build:begin (tools/stamp.py üretir, elle düzenlemeyin) -->
-  <link rel="stylesheet" href="css/style.css?v=96185f16ea" />
+  <link rel="stylesheet" href="css/style.css?v=085ab77327" />
   <script type="importmap">
   {
     "imports": {
-      "./assets/manifest.js": "./assets/manifest.js?v=0b16085d09",
+      "./assets/manifest.js": "./assets/manifest.js?v=817a41e94b",
       "./js/audio/AudioManager.js": "./js/audio/AudioManager.js?v=a20ea13270",
-      "./js/build.js": "./js/build.js?v=7aa57a78e8",
+      "./js/build.js": "./js/build.js?v=7befe3d6d9",
       "./js/config.js": "./js/config.js?v=3e9bb940e1",
       "./js/core/Game.js": "./js/core/Game.js?v=364b95d688",
       "./js/core/InputHandler.js": "./js/core/InputHandler.js?v=c64ba9e1bc",
       "./js/data/animData.js": "./js/data/animData.js?v=c00fc7d45b",
-      "./js/data/gameData.js": "./js/data/gameData.js?v=276bd37dbb",
+      "./js/data/gameData.js": "./js/data/gameData.js?v=1baf8ec635",
       "./js/entities/Animal.js": "./js/entities/Animal.js?v=876341f9b1",
       "./js/entities/Boat.js": "./js/entities/Boat.js?v=12b4f81e0f",
       "./js/entities/Building.js": "./js/entities/Building.js?v=cdf9779c48",
@@ -31,13 +31,13 @@
       "./js/render/Ambient.js": "./js/render/Ambient.js?v=9d4d732ec9",
       "./js/render/AssetLoader.js": "./js/render/AssetLoader.js?v=3ddda04556",
       "./js/render/Camera.js": "./js/render/Camera.js?v=3d3a1a8f5f",
-      "./js/render/Renderer.js": "./js/render/Renderer.js?v=4a09b6206f",
-      "./js/render/SpriteFactory.js": "./js/render/SpriteFactory.js?v=fecd85ed47",
+      "./js/render/Renderer.js": "./js/render/Renderer.js?v=11af099bab",
+      "./js/render/SpriteFactory.js": "./js/render/SpriteFactory.js?v=4d25451edd",
       "./js/render/WaterRenderer.js": "./js/render/WaterRenderer.js?v=4354797a05",
-      "./js/render/iso.js": "./js/render/iso.js?v=d450eab855",
+      "./js/render/iso.js": "./js/render/iso.js?v=bd2b743a8e",
       "./js/systems/Animals.js": "./js/systems/Animals.js?v=c1ccb2394b",
       "./js/systems/DayNight.js": "./js/systems/DayNight.js?v=c726e51af4",
-      "./js/systems/EnemyAI.js": "./js/systems/EnemyAI.js?v=ee555cffa4",
+      "./js/systems/EnemyAI.js": "./js/systems/EnemyAI.js?v=a36ccf8e9e",
       "./js/systems/Fog.js": "./js/systems/Fog.js?v=0e987fa363",
       "./js/systems/Pathfinder.js": "./js/systems/Pathfinder.js?v=2fa78882f5",
       "./js/systems/Player.js": "./js/systems/Player.js?v=e67dfb9f4e",
@@ -47,12 +47,12 @@
       "./js/systems/SpatialGrid.js": "./js/systems/SpatialGrid.js?v=e0aff388bc",
       "./js/systems/Weather.js": "./js/systems/Weather.js?v=bbb922e703",
       "./js/systems/Wild.js": "./js/systems/Wild.js?v=c2eb20db3c",
-      "./js/systems/World.js": "./js/systems/World.js?v=606f58d4df",
+      "./js/systems/World.js": "./js/systems/World.js?v=9b958b9939",
       "./js/ui/Menu.js": "./js/ui/Menu.js?v=854f5e84ac",
       "./js/ui/Minimap.js": "./js/ui/Minimap.js?v=4b72d131f7",
       "./js/ui/Panels.js": "./js/ui/Panels.js?v=f0ee47d5de",
-      "./js/ui/UIManager.js": "./js/ui/UIManager.js?v=3b74193f1a",
-      "./js/world/GameMap.js": "./js/world/GameMap.js?v=a6f4986c70",
+      "./js/ui/UIManager.js": "./js/ui/UIManager.js?v=68978edf87",
+      "./js/world/GameMap.js": "./js/world/GameMap.js?v=e4468688cf",
       "./js/world/Noise.js": "./js/world/Noise.js?v=8d5c455941",
       "./js/world/TileTypes.js": "./js/world/TileTypes.js?v=4af0f3c864"
     }
@@ -80,7 +80,6 @@
     <div class="res happy" id="res-happy"><img src="assets/icons/happy.webp" alt="" /><b>60</b><i class="hbar"><i></i></i></div>
     <div class="res" id="res-pop" title="Nüfus / Sınır"><img src="assets/icons/pop.webp" alt="" /><b>0/0</b></div>
     <div class="spacer"></div>
-    <div class="wave hidden" id="waveBox" title="Düşman saldırısına kalan süre"><img src="assets/icons/horn.webp" alt="" /><b>0:00</b></div>
     <button id="dayBtn" title="Gece/Gündüz (L)" aria-label="Gece ve gündüz modu">
       <svg class="sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <svg class="moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" fill="currentColor"/></svg>

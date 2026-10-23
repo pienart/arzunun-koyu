@@ -219,8 +219,6 @@ export class EnemyAI {
     return s ? { i: s.i, j: s.j } : null;
   }
 
-  get countdown() { return Math.max(0, this.waveTimer); }
-
   serialize() {
     return { waveTimer: this.waveTimer, wave: this.wave, dirBase: this.dirBase, enabled: this.enabled, econT: this.econT, trainT: this.trainT,
       tc: this.tc?.id, barracks: this.barracks?.id, range: this.range?.id };

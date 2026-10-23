@@ -236,7 +236,6 @@ export class Renderer {
     this._dirty = true;
   }
 
-  invalidate() { this._dirty = true; }
   toggleGrid() { this.showGrid = !this.showGrid; this._dirty = true; }
 
   /**

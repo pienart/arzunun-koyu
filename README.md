@@ -253,7 +253,7 @@ js/
 ├── audio/AudioManager.js   Web Audio: iki kanal (atmosfer / efekt), konumsal ses, ses enflasyonu koruması
 └── ui/                     UIManager (üst bar, alt panel, kısayollar), Menu (ana menü, duraklatma, ayarlar), Minimap
 assets/                     Sprite'lar (WebP), animasyon şeritleri (anims/), ikonlar, dokular, sesler (MP3), manifest.js
-tools/                      slice_sprites.py, process_audio.py, process_anim.py, key_sprite.py + ham varlıklar
+tools/                      key_sprite.py, process_anim.py, process_audio2.py, stamp.py, server.py (ham kaynaklar repoda tutulmaz)
 web.config
 ```
 
@@ -263,14 +263,16 @@ doygunluk ve parlaklık korunduğu için gölgelendirme ve doku detayı aynen ka
 ## Varlık hattı
 
 ```bash
-python tools/process_audio.py tools/raw/sounds assets/sounds   # ffmpeg + numpy: kırp, sönümle, seviyeyi eşitle → MP3
-python tools/slice_sprites.py                                  # pillow + numpy + scipy: sayfaları böl → WebP + manifest.js
 python tools/process_anim.py                                   # opencv + pillow: videolar → animasyon şeritleri (manifest "anims")
 python tools/key_sprite.py tools/raw/dock.png dock_0 640       # macenta zeminli görsel → sprite + manifest (en büyük boyut)
-python tools/process_audio2.py                                 # imageio-ffmpeg + numpy: ek sesler → seviye eşitleme, kesintisiz döngü
+python tools/process_audio2.py                                 # imageio-ffmpeg + numpy: yeni sesler → seviye eşitleme, kesintisiz döngü
 python tools/stamp.py                                          # modül/varlık adreslerine içerik sürümü (import map)
 python tools/server.py                                         # önbelleksiz, IPv4+IPv6 yerel sunucu
 ```
+
+**Ham kaynaklar:** Higgsfield'dan indirilen ham PNG/MP4/ses dosyaları `tools/raw/` altına konur, araçlarla işlenip
+`assets/`'e yazılır. Oyun yalnızca `assets/`'i kullanır; `tools/raw/` git'e eklenmez (`.gitignore`). Eski ham kaynaklar
+gerekirse git geçmişinden (`v1.6.1` etiketi) geri alınabilir.
 
 **Üretilen varlıklar (Higgsfield):** atlı, koçbaşı, tekne (5 yön), ahır, kuşatma atölyesi, çit, kapı, tavuk, kamp ateşi
 görselleri; atlının yürüyüş/saldırı/ölüm, köylü/milis/okçu ölüm ve üç yel değirmeni videoları; gece/gündüz ambiyansı,

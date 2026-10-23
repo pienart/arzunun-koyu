@@ -66,8 +66,6 @@ export class UIManager {
       ageName: $('#ageName'),
       ageProg: $('#ageProg'),
       ageBox: $('#ageBox'),
-      waveBox: $('#waveBox'),
-      waveText: $('#waveBox b'),
       menuBtn: $('#menuBtn'),
       fps: $('#fps'),
       idleBtn: $('#idleBtn'),
@@ -314,13 +312,6 @@ export class UIManager {
     this.el.ageBox.classList.toggle('researching', !!ageItem);
     this.el.ageProg.style.width = ageItem ? `${(1 - ageItem.remaining / ageItem.total) * 100}%` : '0%';
 
-    // Düşman dalga sayacı
-    const ai = w.enemyAI;
-    if (false) { // saldırılar rastgele: geri sayım gösterilmez (yalnızca saldırı başlayınca boru ve uyarı)
-      this.el.waveBox.classList.remove('hidden');
-      this.el.waveText.textContent = ai.wave === 0 ? `İlk saldırı ${fmtTime(ai.countdown)}` : `Dalga ${ai.wave + 1}: ${fmtTime(ai.countdown)}`;
-      this.el.waveBox.classList.toggle('soon', ai.countdown < 30);
-    } else this.el.waveBox.classList.add('hidden');
 
     const idle = this._idleN = w.units.filter((u) => u.owner === PLAYER && u.type === 'villager' && u.state === 'idle' && !u.garrisoned).length;
     this._sampleRates();

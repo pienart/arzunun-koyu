@@ -899,13 +899,6 @@ export const MANIFEST = {
       "anchorX": 0.4583,
       "baseW": 89.0
     },
-    "trade": {
-      "file": "assets/icons/trade.webp",
-      "w": 96,
-      "h": 92,
-      "anchorX": 0.4896,
-      "baseW": 95.0
-    },
     "wheelbarrow": {
       "file": "assets/icons/wheelbarrow.webp",
       "w": 96,
@@ -954,13 +947,6 @@ export const MANIFEST = {
       "h": 96,
       "anchorX": 0.5273,
       "baseW": 37.0
-    },
-    "torch": {
-      "file": "assets/icons/torch.webp",
-      "w": 40,
-      "h": 96,
-      "anchorX": 0.1875,
-      "baseW": 16.0
     },
     "it_shield": {
       "file": "assets/icons/it_shield.webp",
@@ -1031,20 +1017,6 @@ export const MANIFEST = {
       "h": 95,
       "anchorX": 0.5,
       "baseW": 96.0
-    },
-    "wine": {
-      "file": "assets/icons/wine.webp",
-      "w": 63,
-      "h": 96,
-      "anchorX": 0.5,
-      "baseW": 63.0
-    },
-    "boulder": {
-      "file": "assets/icons/boulder.webp",
-      "w": 95,
-      "h": 96,
-      "anchorX": 0.5,
-      "baseW": 95.0
     }
   },
   "textures": {
