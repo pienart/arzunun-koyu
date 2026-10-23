@@ -430,9 +430,10 @@ export const DIFFICULTY = {
   // firstWave: ilk saldırının en erken zamanı (sn; asla 20 dakikadan önce değil) — üstüne 0–5 dk rastgele eklenir.
   // interval : dalgalar arası ORTALAMA süre; her seferinde %60–%150 arası rastgele (saldırı zamanı tahmin edilemez).
   // enemyGather: düşman köylülerinin toplama çarpanı (normalde sizden %5 hızlı)
-  easy:   { name: 'Kolay', firstWave: 1500, interval: 300, waveMul: 0.65, enemyGather: 0.75, enemyVillagers: 4 },
-  normal: { name: 'Normal', firstWave: 1200, interval: 240, waveMul: 1, enemyGather: 1.05, enemyVillagers: 6 },
-  hard:   { name: 'Zor', firstWave: 1200, interval: 180, waveMul: 1.4, enemyGather: 1.4, enemyVillagers: 9 },
+  // enemyStart: düşmanın başlangıç hazinesi (her kaynaktan)
+  easy:   { name: 'Kolay', firstWave: 1500, interval: 300, waveMul: 0.65, enemyGather: 0.75, enemyVillagers: 4, enemyStart: 1500 },
+  normal: { name: 'Normal', firstWave: 1200, interval: 240, waveMul: 1, enemyGather: 1.05, enemyVillagers: 6, enemyStart: 3500 },
+  hard:   { name: 'Zor', firstWave: 1200, interval: 180, waveMul: 1.4, enemyGather: 1.4, enemyVillagers: 9, enemyStart: 5000 },
 };
 
 /**

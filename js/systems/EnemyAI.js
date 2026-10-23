@@ -10,8 +10,11 @@ import { TileId } from '../world/TileTypes.js';
  *  - EKONOMİ: köylüleri üssün çevresinde odun/yiyecek/altın/taş toplar, düşman zamanla yeni köylü yetiştirir.
  *    Biriken kaynakla her dalgaya ek asker satın alınır → düşman köylülerine baskın yapmak dalgaları küçültür.
  *  - Zorluk (World.diff): ilk saldırı zamanı, dalga aralığı, dalga büyüklüğü, köylü sayısı ve toplama hızı.
+ *  - GELİŞİM (oyun başından itibaren): köylüleriyle sürekli bina kurar (ev, kışla, okçuluk alanı, ahır, kule, hastane,
+ *    kuşatma atölyesi, kamplar), üretim binalarında sürekli asker yetiştirir (kalıcı ordu) ve bu ordu dalgalara katılır.
+ *    Hedef: oyuncuyla dengeli bir savaş — düşman asla geride kalmaz.
  */
-const GATHER_ORDER = ['tree', 'berry', 'tree', 'gold', 'tree', 'stone', 'berry', 'gold'];
+const GATHER_ORDER = ['farm', 'tree', 'berry', 'farm', 'gold', 'tree', 'farm', 'stone', 'berry', 'gold'];
 export class EnemyAI {
   constructor(world) {
     this.world = world;
@@ -24,6 +27,8 @@ export class EnemyAI {
     this._gatherIdx = 0;
     this.enabled = false;
     this.tc = null;
+    this.buildT = 4;          // sonraki inşaat kararı
+    this.armyT = 6;           // sonraki asker üretim kararı
   }
 
   setup() {
@@ -49,8 +54,9 @@ export class EnemyAI {
       const post = w.map.isWalkable(pi, pj) ? { i: pi, j: pj } : w.map.findWalkableNear(pi, pj, 4);
       if (u && post) u.guardAt(w, post.i, post.j);
     });
-    // Düşman hazinesi küçük başlar (oyuncunun 5 kat başlangıcı ona uygulanmaz); gerisini köylüleri toplar
-    this.player.resources = { food: 200, wood: 200, gold: 100, stone: 100, hide: 0 };
+    // Düşman hazinesi: zorluğa göre (Normal 3500) — hemen bina kurup asker üretmeye başlar
+    const st = w.diff.enemyStart ?? 3000;
+    this.player.resources = { food: st, wood: st, gold: st * 0.8, stone: st * 0.6, hide: 0 };
     // Ekonomi: başlangıç köylüleri
     for (let k = 0; k < w.diff.enemyVillagers; k++) this._spawnWorker();
   }
@@ -81,12 +87,136 @@ export class EnemyAI {
     this.econT = 3;
     const vs = this.villagers;
     for (const u of vs) if (u.state === 'idle') this._giveJob(u);
+    // Takas: yiyecek azaldıysa biriken odun/taşı yiyeceğe çevir (pazar oranı ~%70)
+    const r = this.player.resources;
+    if (r.food < 400) for (const k of ['wood', 'stone']) if (r[k] > 1200) { r[k] -= 300; r.food += 210; }
     // Köylü üret: hedef sayı çağla artar
-    const want = this.world.diff.enemyVillagers + 2 * this.player.age;
-    if (this.trainT <= 0 && vs.length < Math.min(16, want) && this.player.spend(UNITS.villager.cost)) {
-      this.trainT = 28;
+    const want = this.world.diff.enemyVillagers + 6 + 4 * this.player.age;
+    if (this.trainT <= 0 && vs.length < Math.min(26, want) && this.player.spend(UNITS.villager.cost)) {
+      this.trainT = 16;
       this._spawnWorker();
     }
+  }
+
+  // ───────────── Gelişim: inşaat ve kalıcı ordu ─────────────
+  _count(type, completeOnly = false) {
+    return this.world.buildings.filter((b) => b.owner === ENEMY && b.type === type && (!completeOnly || b.complete)).length;
+  }
+
+  /** Bu çağda istenen bina sayıları (sırası öncelik sırasıdır) */
+  _plan() {
+    const a = this.player.age, p = this.player;
+    const houseNeed = p.popCap < 200 && p.popCap - p.population < 8 ? this._count('house') + 1 : 0;
+    return [
+      ['house', houseNeed],
+      ['barracks', 1 + Math.min(3, a + (this._rich() ? 1 : 0))],
+      ['lumberCamp', 1], ['mill', 1], ['miningCamp', 1],
+      ['farm', 4 + a * 3],
+      ['archeryRange', 1 + (a >= 2 ? 1 : 0)],
+      ['stable', a >= 1 ? 1 + (a >= 3 ? 1 : 0) : 0],
+      ['watchTower', a >= 1 ? 2 + a * 2 : 0],
+      ['hospital', a >= 1 ? 1 : 0],
+      ['siegeWorkshop', a >= 2 ? 1 : 0],
+      ['house', p.popCap < 200 ? Math.min(30, 8 + a * 6) : 0],
+    ];
+  }
+
+  /** Sıradaki eksik binayı Kasaba Merkezi çevresine temel olarak kur ve 2 köylüyü inşaata gönder (aynı anda en fazla 3 inşaat) */
+  _build(dt) {
+    this.buildT -= dt;
+    if (this.buildT > 0) return;
+    this.buildT = 6;
+    const w = this.world;
+    const sites = w.buildings.filter((b) => b.owner === ENEMY && !b.complete);
+    for (const s of sites) if (!w.units.some((u) => u.task?.target === s)) this._sendBuilders(s, 2);
+    if (sites.length >= 3) return;
+    for (const [type, want] of this._plan()) {
+      if (this._count(type) >= want) continue;
+      if (w.checkBuildable(type, ENEMY)) continue; // çağ / ön koşul / kaynak yok → sıradakine bak
+      const spot = this._findSite(type);
+      if (!spot) continue;
+      this.player.spend(w.costOf(type, ENEMY));
+      const b = w.addBuilding(type, spot.i, spot.j, ENEMY, false);
+      this._sendBuilders(b, type === 'house' ? 1 : 2);
+      return;
+    }
+  }
+
+  _findSite(type) {
+    const w = this.world, tc = this.tc, size = BUILDINGS[type].size;
+    const dir = this._dirToPlayer();
+    for (let r = 5; r < 20; r++) {
+      for (let k = 0; k < 20; k++) {
+        const a = (k / 20) * Math.PI * 2 + r * 1.3;
+        let oi = Math.round(tc.centerI + Math.cos(a) * r - size / 2), oj = Math.round(tc.centerJ + Math.sin(a) * r - size / 2);
+        if (type === 'watchTower') { // kuleler oyuncuya bakan tarafa
+          oi = Math.round(tc.centerI + dir.i * (6 + r * 0.6) + Math.cos(a) * 4); oj = Math.round(tc.centerJ + dir.j * (6 + r * 0.6) + Math.sin(a) * 4);
+        }
+        if (!w.map.canPlace(oi - 1, oj - 1, size + 2)) continue;
+        return { i: oi, j: oj };
+      }
+    }
+    return null;
+  }
+
+  _sendBuilders(b, n) {
+    const vs = this.villagers.filter((u) => u.state !== 'build')
+      .sort((a, c) => Math.hypot(a.x - b.centerI, a.y - b.centerJ) - Math.hypot(c.x - b.centerI, c.y - b.centerJ));
+    this.world.commandBuild(vs.slice(0, n), b);
+  }
+
+  /** Kalıcı ordu: üretim binalarında sürekli asker; hedef boyut çağla ve dalga sayısıyla büyür */
+  _army(dt) {
+    this.armyT -= dt;
+    if (this.armyT > 0) return;
+    this.armyT = 5;
+    const w = this.world, a = this.player.age;
+    // Hedef ordu: çağ, dalga ve zamanla büyür; hazine doluysa daha da büyük (kaynak biriktirmez)
+    const minutes = w.time / 60;
+    const target = Math.min(110, 14 + 14 * a + 4 * this.wave + Math.floor(minutes) + (this._rich() ? 15 : 0));
+    const have = w.units.filter((u) => u.owner === ENEMY && u.isMilitary && !u.def.monster).length;
+    let queued = 0;
+    for (const b of w.buildings) if (b.owner === ENEMY) queued += b.queue.filter((q) => q.kind === 'unit' && q.id !== 'villager').length;
+    if (have + queued >= target) return;
+    const muster = this._muster();
+    const pick = { barracks: ['militia'], archeryRange: ['archer'], stable: ['cavalry'], siegeWorkshop: a >= 2 ? ['ram', 'catapult'] : ['ram'] };
+    for (const b of w.buildings) {
+      if (b.owner !== ENEMY || !b.complete || !pick[b.type] || b.queue.length >= 2) continue;
+      const types = pick[b.type];
+      const type = types[(this._rot = (this._rot ?? 0) + 1) % types.length];
+      if (type === 'ram' && this._siegeCount() >= 2 + a) continue;
+      if (w.checkQueue(b, 'unit', type)) continue;
+      w.enqueue(b, 'unit', type);
+      b.rally = muster;
+    }
+  }
+
+  /** Hazine dolu mu? (her kaynak 1500 üzeri) → daha fazla bina ve asker */
+  _rich() { const r = this.player.resources; return r.food > 1500 && r.wood > 1500 && r.gold > 1200; }
+
+  /**
+   * Askeri gelişim (oyuncunun araştırmalarına karşılık): 2 dakikada bir, kaynak varsa ordusunu güçlendirir
+   * (+1 saldırı, +1 zırh, +8 can; okçuya +0,5 menzil). Böylece düşman yalnızca sayıca değil nitelikçe de gelişir.
+   */
+  _research(dt) {
+    this.resT = (this.resT ?? 90) - dt;
+    if (this.resT > 0) return;
+    this.resT = 120;
+    const p = this.player;
+    if (!p.spend({ food: 300, gold: 200 })) return;
+    for (const t of ['militia', 'archer', 'cavalry']) { p.addBonus(t, 'attack', 1); p.addBonus(t, 'melee', 1); p.addBonus(t, 'pierce', 1); p.addBonus(t, 'hp', 8); }
+    p.addBonus('archer', 'range', 0.5);
+    p.addBonus('tower', 'attack', 1);
+    this.researched = (this.researched ?? 0) + 1;
+  }
+
+  _siegeCount() { return this.world.units.filter((u) => u.owner === ENEMY && (u.def.siege || u.type === 'catapult')).length; }
+
+  /** Toplanma noktası: Kasaba Merkezi'nin oyuncuya bakan önü */
+  _muster() {
+    const d = this._dirToPlayer(), tc = this.tc;
+    const s = this.world.map.findWalkableNear(Math.round(tc.centerI + d.i * 9), Math.round(tc.centerJ + d.j * 9), 6);
+    return s ? { i: s.i, j: s.j } : null;
   }
 
   get countdown() { return Math.max(0, this.waveTimer); }
@@ -118,6 +248,9 @@ export class EnemyAI {
       w.notify(`Düşman yeni bir çağa geçti: ${this.player.ageDef.name}.`, 'info');
     }
     this._economy(dt);
+    this._build(dt);
+    this._army(dt);
+    this._research(dt);
     this.waveTimer -= dt;
     if (this.waveTimer <= 0) {
       this.waveTimer = w.diff.interval * (0.6 + Math.random() * 0.9);
@@ -169,9 +302,13 @@ export class EnemyAI {
       u.attackMoveTo(w, st.i, st.j, true);
       sent++;
     }
+    // Kalıcı ordudan da birlikler katılır (nöbetçiler hariç): her dalgada daha fazlası
+    const reserve = w.units.filter((u) => u.owner === ENEMY && u.isMilitary && !u.def.monster && !u.post && (u.state === 'idle' || u.state === 'move'));
+    const join = reserve.slice(0, Math.min(reserve.length, 3 + n * 3));
+    for (const u of join) { u.nextGoal = { i: ti, j: tj }; u.attackMoveTo(w, st.i, st.j, true); sent++; }
     this.lastWave = { n, sent, at: w.time };
     const parts = [`${militia} milis`, archers && `${archers} okçu`, cavalry && `${cavalry} atlı`, rams && `${rams} koçbaşı`, catapults && `${catapults} mancınık`].filter(Boolean).join(', ');
-    w.notify(`Düşman saldırısı! Dalga ${n} (${sent} asker: ${parts}) — güç +%${Math.round((power - 1) * 100)}${bought ? ` · ${bought} tanesi düşman hazinesinden` : ''}`, 'warn');
+    w.notify(`Düşman saldırısı! Dalga ${n} (${sent} asker: ${parts}${join.length ? `, +${join.length} kalıcı ordudan` : ''}) — güç +%${Math.round((power - 1) * 100)}${bought ? ` · ${bought} tanesi düşman hazinesinden` : ''}`, 'warn');
     w.sound('horn');
   }
 

@@ -66,11 +66,20 @@ bağlantı başına ~2 sn gecikme olmaz (130 görsel 10+ sn yerine ~1 sn'de yük
   (bina seçili → Taşı; bedel maliyetin %30'u).
 - **Gizemli Geçit:** Haritanın uç bölgelerinde, kütüklerle örtülü iki toprak tümsek. Birinin üstüne giren birim diğerinden
   çıkar; geçitler her dakika yer değiştirir.
-- **Düşman:** Sizden ~%5 hızlı gelişir (çağ atladığınızda o da atlar); ilk 20 dakikadan sonra saldırılar rastgele aralıklarla
+- **Düşman:** Oyun başından itibaren aktif gelişir: köylüleriyle sürekli ev, kışla, okçuluk alanı, ahır, kule, hastane,
+  çiftlik ve kuşatma atölyesi kurar; üretim binalarında sürekli asker yetiştirir (kalıcı ordu), 2 dakikada bir ordusunu
+  güçlendirir ve fazla kaynağını takas eder. Sizden ~%5 hızlı gelişir (çağ atladığınızda o da atlar).
   gelir ve her dalga sertleşir: 1. dalga küçük bir akın, sonra her seferinde daha kalabalık; 3. dalgadan koçbaşı, 4.'den atlı,
   6.'dan mancınık eklenir ve askerler her dalgada %6 daha güçlüdür (saldırı ve can). Her dalga köye farklı bir yönden gelir.
 - **Oyun sonu:** Zafer veya yenilgide tüm kayıtlar silinir; menüde "Devam Et" çıkmaz, oyun sıfırdan başlar.
 - **Çağ atlama süresi:** Feodal 90 sn, Kale 140 sn, İmparatorluk 200 sn.
+- **Mobil (telefon/tablet):** Dokun = seç, uzun bas = komut (topla/inşa et/saldır/yürü), tek parmak = kaydır,
+  iki parmak = kıstır-büyüt. Sol alttaki düğmeler: **Kutu** (sürükleyerek birlik seç), **Komut** (dokunuş = komut),
+  **İptal**. Dar ekranda üst bar kaydırılabilir, alt panel küçülür, mini harita sağ üstte, inşaat listesi onun altında.
+- **Başlangıç çiti:** Köy, başlangıç kaynaklarını da içine alan ahşap bir çitle çevrili başlar; düşman yönünde bir kapı
+  vardır. İstediğiniz zaman genişletebilir ya da yıkabilirsiniz (çit çağ atladıkça taş/kale suruna dönüşür).
+- **Ev kapasitesi çağla artar:** Kasaba Merkezi her çağ atladığında evlerin kapasitesi %25 artar (5 → 6 → 8 → 9).
+- **Zoom sınırı:** En uzak zoom tüm haritanın ekrana sığdığı ölçektir; haritanın dışına uzaklaşılmaz.
 - **Çağ şartları:** Kaynak yetmez. Feodal için 3 asker + 2 ev, kereste kampı, değirmen ve kışla; Kale için 8 asker +
   5 ev, Bilim Merkezi, Okçuluk Alanı, Pazar, Gözetleme Kulesi ve Hayvan Çiftliği; İmparatorluk için 15 asker + 8 ev,
   Ahır, Kuşatma Atölyesi, Üniversite ve Simya Atölyesi gerekir. Kasaba Merkezi seçilince açılan panelde liste ✓/✗ ile

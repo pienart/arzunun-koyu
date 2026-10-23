@@ -6,6 +6,13 @@ import { CONFIG } from '../config.js';
  *   Sağ tık            → komut (onRightClick)
  *   Orta sürükle / Space + sol sürükle → kamerayı kaydır (atalet ile)
  *   Tekerlek           → imlece doğru zoom          WASD / Oklar → kaydır
+ *
+ * DOKUNMATİK (telefon/tablet):
+ *   Dokun              → seç (çift dokunuş: ekrandaki aynı türdekiler)
+ *   Uzun bas (0,45 sn) → komut (sağ tık gibi: topla, inşa et, saldır, yürü)
+ *   Tek parmak sürükle → haritayı kaydır (kutu modu açıksa / çit çizerken: seçim kutusu / hat)
+ *   İki parmak         → kıstır-büyüt zoom + kaydır
+ *   touchCommand açıksa dokunuş doğrudan komut olur (alt köşedeki "Komut" düğmesi).
  */
 export class InputHandler {
   constructor(canvas, camera) {
@@ -21,6 +28,11 @@ export class InputHandler {
     this.onRightClick = null;    // (sx, sy, e)
     this.onBoxSelect = null;     // (box, e)
     this.onKeyPress = null;      // (code, e)
+    this.touches = new Map();    // dokunmatik: pointerId → { x, y }
+    this.pinch = null;
+    this.touchBox = false;       // dokunmatik: tek parmak sürükleme kaydırma yerine seçim kutusu/hat çizsin
+    this.touchCommand = false;   // dokunmatik: dokunuş = komut
+    this.onTouchDetected = null;
     this._bind();
   }
 
@@ -44,7 +56,91 @@ export class InputHandler {
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
 
+  // ───────────── Dokunmatik ─────────────
+  _touchDown(e) {
+    e.preventDefault();
+    if (!this.isTouch) { this.isTouch = true; this.onTouchDetected?.(); }
+    const p = this._local(e);
+    this.touches.set(e.pointerId, p);
+    try { this.canvas.setPointerCapture(e.pointerId); } catch { /* yok say */ }
+    if (this.touches.size === 2) {
+      // İkinci parmak: tek parmak hareketini iptal et, kıstırmaya geç
+      clearTimeout(this._longT);
+      if (this.drag?.mode === 'pan') this.camera.endDrag();
+      this.drag = null; this.box = null;
+      const [a, b] = [...this.touches.values()];
+      this.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      return;
+    }
+    if (this.touches.size > 2) return;
+    this.mouse.x = p.x; this.mouse.y = p.y; this.mouse.inside = true;
+    const mode = this.touchBox ? 'box' : 'pan';
+    this.drag = { id: e.pointerId, mode, touch: true, sx: p.x, sy: p.y, lx: p.x, ly: p.y, lt: e.timeStamp, vx: 0, vy: 0, moved: false, long: false };
+    if (mode === 'pan') this.camera.beginDrag();
+    // Uzun bas → komut
+    clearTimeout(this._longT);
+    this._longT = setTimeout(() => {
+      const d = this.drag;
+      if (!d || d.moved || d.id !== e.pointerId) return;
+      d.long = true;
+      navigator.vibrate?.(25);
+      this.onRightClick?.(d.sx, d.sy, e);
+    }, 450);
+  }
+
+  _touchMove(e) {
+    if (!this.touches.has(e.pointerId)) return;
+    const p = this._local(e);
+    this.touches.set(e.pointerId, p);
+    if (this.pinch && this.touches.size >= 2) {
+      const [a, b] = [...this.touches.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      this.camera.panBy(mx - this.pinch.mx, my - this.pinch.my);
+      if (this.pinch.d > 10) this.camera.zoomInstant(mx, my, d / this.pinch.d);
+      this.pinch = { d, mx, my };
+      return;
+    }
+    this.mouse.x = p.x; this.mouse.y = p.y;
+    const d = this.drag;
+    if (!d || d.id !== e.pointerId) return;
+    if (!d.moved && Math.hypot(p.x - d.sx, p.y - d.sy) > CONFIG.DRAG_THRESHOLD * 2) { d.moved = true; clearTimeout(this._longT); }
+    if (!d.moved || d.long) return;
+    if (d.mode === 'pan') {
+      const dx = p.x - d.lx, dy = p.y - d.ly, dt = Math.max(1, e.timeStamp - d.lt) / 1000;
+      this.camera.panBy(dx, dy);
+      d.vx += (dx / dt - d.vx) * 0.3; d.vy += (dy / dt - d.vy) * 0.3;
+      d.lx = p.x; d.ly = p.y; d.lt = e.timeStamp;
+    } else this.box = { x0: d.sx, y0: d.sy, x1: p.x, y1: p.y };
+  }
+
+  _touchUp(e, cancelled) {
+    if (!this.touches.has(e.pointerId)) return;
+    this.touches.delete(e.pointerId);
+    try { this.canvas.releasePointerCapture(e.pointerId); } catch { /* yok say */ }
+    if (this.pinch) { if (this.touches.size < 2) this.pinch = null; return; }
+    clearTimeout(this._longT);
+    const d = this.drag;
+    if (!d || d.id !== e.pointerId) return;
+    const p = this._local(e);
+    if (!cancelled && !d.long) {
+      if (d.mode === 'pan' && d.moved) { if (e.timeStamp - d.lt < 80) this.camera.fling(d.vx, d.vy); }
+      else if (d.mode === 'box' && d.moved && this.box) this.onBoxSelect?.(this.box, e);
+      else if (!d.moved) {
+        if (this.touchCommand) this.onRightClick?.(p.x, p.y, e);
+        else {
+          const lc = this._lastClick;
+          const dbl = e.timeStamp - lc.t < 350 && Math.hypot(p.x - lc.x, p.y - lc.y) < 24;
+          this._lastClick = { t: dbl ? 0 : e.timeStamp, x: p.x, y: p.y };
+          if (dbl) this.onDoubleClick?.(p.x, p.y, e); else this.onLeftClick?.(p.x, p.y, e);
+        }
+      }
+    }
+    if (d.mode === 'pan') this.camera.endDrag();
+    this.drag = null; this.box = null;
+  }
+
   _onDown(e) {
+    if (e.pointerType === 'touch') { this._touchDown(e); return; }
     const p = this._local(e);
     if (e.button === 2) {           // sağ tık: anında komut (AoE gibi basışta tepki)
       e.preventDefault();
@@ -63,6 +159,7 @@ export class InputHandler {
   }
 
   _onMove(e) {
+    if (e.pointerType === 'touch') { this._touchMove(e); return; }
     const p = this._local(e);
     this.mouse.x = p.x;
     this.mouse.y = p.y;
@@ -83,6 +180,7 @@ export class InputHandler {
   }
 
   _onUp(e, cancelled) {
+    if (e.pointerType === 'touch') { this._touchUp(e, cancelled); return; }
     const d = this.drag;
     if (!d || e.pointerId !== d.id) return;
     const p = this._local(e);

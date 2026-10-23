@@ -96,6 +96,11 @@ export class UIManager {
     this._refs = {};
     this.el.idleBtn.addEventListener('click', () => { game.click(); game.selectNextIdle(); });
     // Köylü butonunun altındaki ikonlar: yazı yok, açıklama fare üzerine gelince ipucunda
+    // Köylü menüsü açıkken inşaat listesi geri çekilir (ikisi aynı köşede üst üste binmesin)
+    const iw = $('#idleWrap');
+    iw.addEventListener('mouseenter', () => document.body.classList.add('idlemenu'));
+    iw.addEventListener('mouseleave', () => document.body.classList.remove('idlemenu'));
+    iw.addEventListener('focusout', () => document.body.classList.remove('idlemenu'));
     const vsel = $('#idleMenu');
     vsel.addEventListener('click', (e) => {
       const k = e.target.closest('button[data-vsel]')?.dataset.vsel;
@@ -482,7 +487,7 @@ export class UIManager {
       } else if (a.def.dropsite) l1 = `Kabul eder: ${a.def.dropsite.map((x) => ICON(x)).join(' ')}${a.level > 1 ? ` · bırakılan +%${Math.round((g.world.levelMul(a) - 1) * 100)}` : ''}`;
       else if (a.def.light) l1 = 'Geceleri köylüler ateşi yakar; çevresi daha aydınlık olur.';
       else if (a.def.tiers) l1 = `<span class="st">${ICON('shield')}${a.armor.melee}/${a.armor.pierce}</span> Çağ atladıkça kalınlaşır ve güçlenir`;
-      else if (a.def.popProvided) l1 = `${ICON('pop')} Nüfus +${a.def.popProvided}`;
+      else if (a.def.popProvided) l1 = `${ICON('pop')} Nüfus +${g.world.popOf(a)} (çağla artar)`;
       const q = a.owner === PLAYER ? a.queue[0] : null;
       if (q) {
         const name = q.kind === 'unit' ? UNITS[q.id].name : q.kind === 'age' ? g.world.player.nextAge?.name ?? '' : q.kind === 'level' ? `Seviye ${q.id}` : TECHS[q.id].name;

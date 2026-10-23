@@ -434,3 +434,64 @@ body:not(.ingame) #xpanel, body:not(.ingame) #items { display: none !important; 
 #pendingList li .call img { width: 100%; height: 100%; object-fit: contain; }
 #pendingList li .call:hover { border-color: #ffd36b; background: rgba(255, 211, 107, 0.15); }
 .endscreen .sub { opacity: 0.75; font-size: 13px; }
+
+/* ───────── Köylü menüsü ↔ inşaat listesi: aynı anda ikisi görünmez ───────── */
+#pending { transition: opacity 0.15s, transform 0.15s; }
+body.idlemenu #pending { opacity: 0; transform: translateX(30px); pointer-events: none; }
+#idleMenu { z-index: 9; }
+
+/* ───────── Dokunmatik araç çubuğu ───────── */
+#touchbar { display: none; }
+body.touch #touchbar {
+  display: flex; flex-direction: column; gap: 6px; position: fixed; left: 8px; bottom: 140px; z-index: 7;
+}
+body.touch.panel-collapsed #touchbar { bottom: 12px; }
+#touchbar button {
+  width: 52px; height: 52px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, var(--wood-hi), var(--wood-lo)); border: 2px solid #8a6a32; color: var(--ink); font: 700 18px Georgia, serif;
+}
+#touchbar button span { font-size: 10px; font-weight: 400; }
+#touchbar button.on { border-color: #ffd36b; box-shadow: 0 0 10px rgba(255, 211, 107, 0.7); color: #ffe08a; }
+body:not(.ingame) #touchbar { display: none !important; }
+
+/* ───────── Mobil / dar ekran düzeni ───────── */
+html, body { touch-action: none; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+#commands, #xpanel, #pendingList, #help, #menu { touch-action: pan-y; }
+@media (max-width: 900px), (pointer: coarse) and (max-height: 600px) {
+  #topbar { height: 40px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; gap: 4px; padding: 0 4px; }
+  #topbar::-webkit-scrollbar { display: none; }
+  .res { height: 28px; font-size: 12px; padding: 0 5px 0 2px; }
+  .res img { width: 18px; height: 18px; }
+  .res.happy { min-width: 70px; }
+  .age { min-width: 0; padding: 0 6px; height: 30px; }
+  .age span { font-size: 12px; }
+  .age img { width: 22px; height: 22px; }
+  #dayBtn span, #helpBtn { display: none; }
+  #idleBtn { height: 30px; }
+  #idleBtn img { height: 24px; }
+  .spacer { min-width: 4px; }
+
+  #bottombar { right: 0; height: 128px; grid-template-columns: minmax(150px, 34%) 1fr; gap: 5px; padding: 5px; }
+  #panelToggle { right: 8px; bottom: 128px; }
+  body.panel-collapsed #panelToggle { bottom: 0; }
+  #selinfo { gap: 6px; padding: 5px; }
+  .portrait { width: 64px; height: 80px; }
+  #selinfo .title { font-size: 13px; }
+  #selinfo .line { font-size: 11px; }
+  #commands { grid-template-columns: repeat(auto-fill, 50px); grid-auto-rows: 50px; gap: 4px; padding: 5px; }
+  .cmd .lbl { font-size: 9px; }
+  .cmd .hk { display: none; }
+
+  /* Mini harita sağ üstte küçük; inşaat listesi onun altında */
+  #mapbox { top: 44px; bottom: auto; right: 6px; width: 150px; height: 84px; padding: 3px; }
+  #mapToggle { top: auto; bottom: -18px; border-radius: 0 0 6px 6px; border-top: none; border-bottom: 2px solid #8a6a32; }
+  #pending { top: 134px; right: 6px; width: 180px; max-height: calc(100vh - 300px); }
+  body.panel-collapsed #pending { max-height: calc(100vh - 160px); }
+  #xpanel { left: 4px; right: 4px; max-width: none; bottom: 134px; max-height: calc(100vh - 190px); }
+  #items { top: 46px; left: 4px; }
+  #items .it { width: 36px; height: 36px; }
+  #help { display: none; }
+  #toasts { top: 46px; }
+  .toast { font-size: 12px; }
+}
+body.touch #help { display: none !important; }

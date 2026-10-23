@@ -76,6 +76,20 @@ export class Camera {
     this.fly = { fx: cx, fy: cy, tx: wx, ty: wy, fz: this.zoom, tz: zoom, t: 0, duration };
   }
 
+  /**
+   * En uzak zoom: haritanın tamamının ekrana sığdığı ölçek (bundan uzağa gidilmez; harita dışı boşluk görünmez).
+   * Ekran haritadan büyükse yine de CONFIG.ZOOM_MIN'den uzaklaşılmaz.
+   */
+  get minZoom() { return Math.min(CONFIG.ZOOM_MIN, this.fitZoom(1)); }
+
+  /** Kıstırma (dokunmatik): imleç/parmak ortası sabit kalarak anında ölçekle */
+  zoomInstant(sx, sy, factor) {
+    this.intro = null; this.fly = null;
+    const z = clamp(this.zoom * factor, this.minZoom, CONFIG.ZOOM_MAX);
+    this.targetZoom = z;
+    this._zoomAround(z, sx, sy);
+  }
+
   /** Tüm haritanın ekrana sığdığı zoom */
   fitZoom(margin = 0.94) {
     const b = this.bounds;
@@ -91,8 +105,7 @@ export class Camera {
   // ───────────── ZOOM ─────────────
   zoomAt(sx, sy, factor) {
     if (this.intro || this.fly) { this.targetZoom = this.zoom; this.intro = null; this.fly = null; }
-    // Tüm harita görünümünden (E) tekerlekle yaklaşırken alt sınır yavaşça normale döner
-    this.targetZoom = clamp(this.targetZoom * factor, Math.min(CONFIG.ZOOM_MIN, this.zoom * 0.9), CONFIG.ZOOM_MAX);
+    this.targetZoom = clamp(this.targetZoom * factor, this.minZoom, CONFIG.ZOOM_MAX);
     this._anchor.x = sx;
     this._anchor.y = sy;
   }

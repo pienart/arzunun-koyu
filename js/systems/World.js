@@ -88,6 +88,8 @@ export class World {
     this.wild.setup();
     this.portals.setup();
     this.animals.setup();
+    // Varsayılan savunma: köyü çevreleyen ahşap çit ve düşmana bakan tarafta bir kapı (sonradan genişletilebilir)
+    this._buildStartWalls();
     this.recountPopulation();
   }
 
@@ -180,7 +182,7 @@ export class World {
         if (b.owner !== p.id) continue;
         pop += b.garrison.length;
         if (b.queue[0]?.kind === 'unit' && b.queue[0].started) pop++;
-        if (b.complete) cap += b.def.popProvided ?? 0;
+        if (b.complete) cap += this.popOf(b);
       }
       p.population = pop;
       p.popCap = Math.min(START.popMax, cap);
@@ -705,6 +707,50 @@ export class World {
     this.players[b.owner].refund(half);
     this.notify(`${b.name} inşaatı yıkıldı: ${formatCost(half) || 'kaynak'} geri alındı.`, 'info');
     this.sound('collapse', b.centerI, b.centerJ, 0.5);
+  }
+
+  /**
+   * Nüfus katkısı: Kasaba Merkezi her geliştiğinde (çağ atladıkça) ev ve diğer konut binalarının kapasitesi %25 artar
+   * (Ev: 5 → 6 → 8 → 9).
+   */
+  popOf(b) {
+    const base = b.def.popProvided ?? 0;
+    return base ? Math.round(base * (1 + 0.25 * this.players[b.owner].age)) : 0;
+  }
+
+  /**
+   * Başlangıç çiti: Kasaba Merkezi'nin çevresinde (başlangıç kaynaklarını da içine alan) kare bir halka. Ağaç/çalı
+   * halkadan temizlenir; su, maden ve taş ocağı karoları atlanır (doğal engel). Düşman üssüne bakan kenarın ortasına
+   * bir kapı konur. Düşman üssü ve mağara bu çitten ÖNCE yerleşir (onların erişilebilirlik araması çite takılmasın).
+   */
+  _buildStartWalls() {
+    const tc = this.townCenter, map = this.map;
+    if (!tc) return;
+    const ci = Math.round(tc.centerI), cj = Math.round(tc.centerJ), R = 19;
+    const ring = [];
+    for (let k = -R; k <= R; k++) ring.push([ci + k, cj - R], [ci + R, cj + k], [ci - k, cj + R], [ci - R, cj - k]);
+    // Kapı: düşman yönündeki kenarın ortası
+    const e = this.enemyAI.tc;
+    const ang = e ? Math.atan2(e.centerJ - cj, e.centerI - ci) : 0;
+    const gi = Math.abs(Math.cos(ang)) >= Math.abs(Math.sin(ang)) ? ci + Math.sign(Math.cos(ang)) * R : ci;
+    const gj = Math.abs(Math.cos(ang)) >= Math.abs(Math.sin(ang)) ? cj : cj + Math.sign(Math.sin(ang)) * R;
+    const seen = new Set();
+    let gate = null;
+    for (const [i, j] of ring) {
+      const key = j * map.width + i;
+      if (seen.has(key) || !map.inBounds(i, j)) continue;
+      seen.add(key);
+      const o = map.occupancy[j][i];
+      if (o && !o.isBuilding && (o.kind === 'tree' || o.kind === 'berry' || o.kind === 'stump')) map.removeObject(o);
+      if (this.checkPlacement('wall', i, j)) continue; // su, maden, bina → atla
+      const isGate = !gate && Math.abs(i - gi) + Math.abs(j - gj) <= 1;
+      const b = this.addBuilding(isGate ? 'gate' : 'wall', i, j, PLAYER, true);
+      if (isGate) gate = b;
+    }
+    if (!gate) { // kapı yeri suya denk geldiyse çitin herhangi bir parçasını kapıya çevir
+      const w0 = this.buildings.find((b) => b.owner === PLAYER && b.type === 'wall');
+      if (w0) { this.removeBuilding(w0); this.addBuilding('gate', w0.originI, w0.originJ, PLAYER, true); }
+    }
   }
 
   // ───────────── Ekonomi: gıda tüketimi, şarap, huzur, hastane, çeşme ─────────────
@@ -1236,6 +1282,8 @@ export class World {
       p.advanceAge();
       // Surlar ve kapılar yeni çağın taşına/kalesine dönüşür (daha kalın, daha sağlam)
       for (const o of this.buildings) if (o.owner === b.owner && o.def.tiers) this.applyTier(o, p.tier);
+      this.recountPopulation(); // evlerin kapasitesi çağla artar
+      if (b.owner === PLAYER) this.notify(`Kasaba Merkezi gelişti: her ev artık ${Math.round(5 * (1 + 0.25 * p.age))} kişi barındırıyor.`, 'good');
       this.map.version++; // tüm binaların görünümü yeni çağa geçer
       if (b.owner === PLAYER) { this.notify(`Yeni çağ: ${p.ageDef.name}!`, 'age'); this.sound('fanfare'); }
     }

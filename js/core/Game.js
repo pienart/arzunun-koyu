@@ -38,6 +38,7 @@ export class Game {
     this.sprites = new SpriteFactory(assets, MANIFEST);
     this.renderer = new Renderer(this.canvas, this.world, this.camera, this.sprites);
     this.input = new InputHandler(this.canvas, this.camera);
+    this._setupTouch();
     this.audio = new AudioManager(MANIFEST.sounds, this.camera);
     this.audio.init();
     // Tarayıcılar sesi ancak bir kullanıcı etkileşiminden sonra başlatmaya izin verir
@@ -84,6 +85,32 @@ export class Game {
     this.ui.update();
     this.ui.toast(save ? 'Kayıtlı oyun yüklendi.' : 'Köylülerinizi seçip sağ tıkla kaynaklara gönderin!', 'info');
     this._loop = this._loop.bind(this);
+  }
+
+  /**
+   * Dokunmatik cihaz: ilk dokunuşta (veya kaba işaretçili cihazda açılışta) mobil düzen + dokunmatik araç çubuğu.
+   *  Kutu  : tek parmak sürükleme seçim kutusu çizer (kapalıyken haritayı kaydırır)
+   *  Komut : dokunuş komut olur (uzun basmaya gerek kalmaz)
+   *  İptal : yerleştirmeyi iptal et / seçimi kaldır
+   */
+  _setupTouch() {
+    const bar = document.getElementById('touchbar');
+    const on = () => {
+      if (document.body.classList.contains('touch')) return;
+      document.body.classList.add('touch');
+      this.ui?.toggleHelp(false);
+    };
+    this.input.onTouchDetected = on;
+    if (window.matchMedia?.('(pointer: coarse)').matches) on();
+    this._touchBoxUser = false;
+    bar?.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-t]');
+      if (!b) return;
+      this.click();
+      if (b.dataset.t === 'box') { this._touchBoxUser = !this._touchBoxUser; b.classList.toggle('on', this._touchBoxUser); }
+      else if (b.dataset.t === 'cmd') { this.input.touchCommand = !this.input.touchCommand; b.classList.toggle('on', this.input.touchCommand); }
+      else if (b.dataset.t === 'cancel') { if (this.placement) this.placement = null; else { this.select([]); this.ui.closePanel(); } }
+    });
   }
 
   _worldBounds() {
@@ -407,6 +434,8 @@ export class Game {
 
   _updatePlacement() {
     const p = this.placement;
+    // Dokunmatik: çit/patika çizerken tek parmak sürükleme hattı çizer
+    this.input.touchBox = this._touchBoxUser || !!(p && BUILDINGS[p.type]?.line);
     if (!p) return;
     const def = BUILDINGS[p.type];
     const m = this.input.mouse;
@@ -491,7 +520,7 @@ export class Game {
       }
       case 'KeyE': { // tüm harita (en dıştan)
         const b = this.camera.bounds;
-        this.camera.flyTo((b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2, this.camera.fitZoom(), 1.3);
+        this.camera.flyTo((b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2, this.camera.minZoom, 1.3);
         break;
       }
       case 'KeyG': this.renderer.toggleGrid(); break;
