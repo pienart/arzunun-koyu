@@ -388,24 +388,24 @@ export const MANIFEST = {
     },
     "ram_e": {
       "file": "assets/sprites/ram_e.webp",
-      "w": 260,
-      "h": 243,
-      "anchorX": 0.4942,
-      "baseW": 242.0
+      "w": 245,
+      "h": 260,
+      "anchorX": 0.5,
+      "baseW": 244.0
     },
     "ram_s": {
       "file": "assets/sprites/ram_s.webp",
-      "w": 173,
+      "w": 161,
       "h": 260,
-      "anchorX": 0.4971,
-      "baseW": 173.0
+      "anchorX": 0.587,
+      "baseW": 132.0
     },
     "ram_n": {
       "file": "assets/sprites/ram_n.webp",
-      "w": 168,
+      "w": 139,
       "h": 260,
-      "anchorX": 0.497,
-      "baseW": 168.0
+      "anchorX": 0.4964,
+      "baseW": 139.0
     },
     "ram_se": {
       "file": "assets/sprites/ram_se.webp",
@@ -417,23 +417,23 @@ export const MANIFEST = {
     "boat_e": {
       "file": "assets/sprites/boat_e.webp",
       "w": 260,
-      "h": 215,
-      "anchorX": 0.5077,
-      "baseW": 239.0
+      "h": 259,
+      "anchorX": 0.5788,
+      "baseW": 206.0
     },
     "boat_s": {
       "file": "assets/sprites/boat_s.webp",
-      "w": 136,
+      "w": 113,
       "h": 260,
-      "anchorX": 0.5,
-      "baseW": 107.0
+      "anchorX": 0.5619,
+      "baseW": 98.0
     },
     "boat_n": {
       "file": "assets/sprites/boat_n.webp",
-      "w": 116,
+      "w": 95,
       "h": 260,
-      "anchorX": 0.4957,
-      "baseW": 110.0
+      "anchorX": 0.5053,
+      "baseW": 93.0
     },
     "boat_se": {
       "file": "assets/sprites/boat_se.webp",
@@ -465,10 +465,10 @@ export const MANIFEST = {
     },
     "gate_0": {
       "file": "assets/sprites/gate_0.webp",
-      "w": 170,
-      "h": 220,
-      "anchorX": 0.4971,
-      "baseW": 170.0
+      "w": 220,
+      "h": 179,
+      "anchorX": 0.3295,
+      "baseW": 146.0
     },
     "chicken": {
       "file": "assets/sprites/chicken.webp",
@@ -507,17 +507,17 @@ export const MANIFEST = {
     },
     "gate_1": {
       "file": "assets/sprites/gate_1.webp",
-      "w": 209,
-      "h": 220,
-      "anchorX": 0.4976,
-      "baseW": 207.0
+      "w": 220,
+      "h": 188,
+      "anchorX": 0.2932,
+      "baseW": 130.0
     },
     "gate_2": {
       "file": "assets/sprites/gate_2.webp",
-      "w": 234,
-      "h": 300,
-      "anchorX": 0.4979,
-      "baseW": 234.0
+      "w": 220,
+      "h": 212,
+      "anchorX": 0.3932,
+      "baseW": 174.0
     },
     "animalFarm_0": {
       "file": "assets/sprites/animalFarm_0.webp",
@@ -571,9 +571,9 @@ export const MANIFEST = {
     "cart_e": {
       "file": "assets/sprites/cart_e.webp",
       "w": 300,
-      "h": 161,
-      "anchorX": 0.4617,
-      "baseW": 266.0
+      "h": 217,
+      "anchorX": 0.5567,
+      "baseW": 201.0
     },
     "cherryTree_0": {
       "file": "assets/sprites/cherryTree_0.webp",
@@ -612,10 +612,10 @@ export const MANIFEST = {
     },
     "cart_s": {
       "file": "assets/sprites/cart_s.webp",
-      "w": 164,
+      "w": 117,
       "h": 300,
-      "anchorX": 0.4939,
-      "baseW": 61.0
+      "anchorX": 0.5085,
+      "baseW": 56.0
     },
     "cart_ne": {
       "file": "assets/sprites/cart_ne.webp",
@@ -626,10 +626,10 @@ export const MANIFEST = {
     },
     "cart_n": {
       "file": "assets/sprites/cart_n.webp",
-      "w": 179,
+      "w": 130,
       "h": 300,
-      "anchorX": 0.4972,
-      "baseW": 179.0
+      "anchorX": 0.4962,
+      "baseW": 130.0
     },
     "tavern_0": {
       "file": "assets/sprites/tavern_0.webp",
@@ -696,10 +696,10 @@ export const MANIFEST = {
     },
     "statue_0": {
       "file": "assets/sprites/statue_0.webp",
-      "w": 132,
+      "w": 138,
       "h": 300,
-      "anchorX": 0.4962,
-      "baseW": 132.0
+      "anchorX": 0.4964,
+      "baseW": 138.0
     },
     "lampPost_0": {
       "file": "assets/sprites/lampPost_0.webp",
@@ -711,9 +711,9 @@ export const MANIFEST = {
     "bench_0": {
       "file": "assets/sprites/bench_0.webp",
       "w": 240,
-      "h": 202,
-      "anchorX": 0.4208,
-      "baseW": 187.0
+      "h": 220,
+      "anchorX": 0.4167,
+      "baseW": 189.0
     },
     "hedge_0": {
       "file": "assets/sprites/hedge_0.webp",
@@ -739,16 +739,16 @@ export const MANIFEST = {
     "catapult_e": {
       "file": "assets/sprites/catapult_e.webp",
       "w": 300,
-      "h": 259,
-      "anchorX": 0.515,
-      "baseW": 290.0
+      "h": 251,
+      "anchorX": 0.4983,
+      "baseW": 294.0
     },
     "warWagon_e": {
       "file": "assets/sprites/warWagon_e.webp",
       "w": 340,
-      "h": 239,
-      "anchorX": 0.6397,
-      "baseW": 236.0
+      "h": 294,
+      "anchorX": 0.5971,
+      "baseW": 233.0
     },
     "gazelle_idle": {
       "file": "assets/sprites/gazelle_idle.webp",
@@ -787,10 +787,10 @@ export const MANIFEST = {
     },
     "catapult_s": {
       "file": "assets/sprites/catapult_s.webp",
-      "w": 207,
+      "w": 215,
       "h": 300,
-      "anchorX": 0.4662,
-      "baseW": 194.0
+      "anchorX": 0.4977,
+      "baseW": 215.0
     },
     "catapult_ne": {
       "file": "assets/sprites/catapult_ne.webp",
@@ -801,10 +801,10 @@ export const MANIFEST = {
     },
     "catapult_n": {
       "file": "assets/sprites/catapult_n.webp",
-      "w": 223,
+      "w": 210,
       "h": 300,
-      "anchorX": 0.4552,
-      "baseW": 204.0
+      "anchorX": 0.6095,
+      "baseW": 163.0
     },
     "warWagon_se": {
       "file": "assets/sprites/warWagon_se.webp",
@@ -815,10 +815,10 @@ export const MANIFEST = {
     },
     "warWagon_s": {
       "file": "assets/sprites/warWagon_s.webp",
-      "w": 172,
+      "w": 165,
       "h": 340,
-      "anchorX": 0.5,
-      "baseW": 155.0
+      "anchorX": 0.6576,
+      "baseW": 112.0
     },
     "warWagon_ne": {
       "file": "assets/sprites/warWagon_ne.webp",
@@ -829,10 +829,10 @@ export const MANIFEST = {
     },
     "warWagon_n": {
       "file": "assets/sprites/warWagon_n.webp",
-      "w": 156,
+      "w": 146,
       "h": 340,
-      "anchorX": 0.4968,
-      "baseW": 148.0
+      "anchorX": 0.4966,
+      "baseW": 146.0
     },
     "gazelle_se": {
       "file": "assets/sprites/gazelle_se.webp",
@@ -1102,24 +1102,24 @@ export const MANIFEST = {
     },
     "tr_gate_0": {
       "file": "assets/sprites/tr_gate_0.webp",
-      "w": 175,
-      "h": 220,
-      "anchorX": 0.4971,
-      "baseW": 175.0
-    },
-    "tr_gate_1": {
-      "file": "assets/sprites/tr_gate_1.webp",
       "w": 180,
       "h": 220,
       "anchorX": 0.4972,
       "baseW": 180.0
     },
+    "tr_gate_1": {
+      "file": "assets/sprites/tr_gate_1.webp",
+      "w": 220,
+      "h": 183,
+      "anchorX": 0.4977,
+      "baseW": 220.0
+    },
     "tr_gate_2": {
       "file": "assets/sprites/tr_gate_2.webp",
-      "w": 158,
+      "w": 220,
       "h": 220,
-      "anchorX": 0.4968,
-      "baseW": 158.0
+      "anchorX": 0.525,
+      "baseW": 208.0
     },
     "tr_goldPanning_1": {
       "file": "assets/sprites/tr_goldPanning_1.webp",

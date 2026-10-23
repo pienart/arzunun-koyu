@@ -60,6 +60,8 @@ oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penc
   yayalardan hızlı; askerleri seçip arabaya sağ tıklayın, "İndir" ile indirin.
 - **Yabani hayvanlar:** Ceylan, geyik, tavşan, yaban atı sürüleri; ara sıra köyün yakınına gelirler. Köylülerle sağ tıklayıp
   avlayın: et (yerde kalır, toplanır) ve **deri**. Deri: Kürk Giysiler, Deri Zırh; Avcılık araştırması +%50 et/deri.
+  Avlamak kolaydır (az canlıdırlar, kaçarken köylü yetişir). Haritadaki hayvan sayısı sabit kalır: avlanan her hayvanın
+  yerine ~30 sn içinde haritanın rastgele bir yerinde (çitin dışında) yenisi doğar.
 - **Mimar:** Patika, çit bitkisi (sürükle), çiçek tarhı, süs ağacı, bank, sokak feneri (geceleri yanar), kuyu (8 karo içinde
   +%10 toplama), heykel, çeşme (çevresini iyileştirir). Süsler güzellik → huzur verir. Mimar varsa binalar **taşınabilir**
   (bina seçili → Taşı; bedel maliyetin %30'u).
@@ -75,8 +77,10 @@ oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penc
 - **Mobil (telefon/tablet):** Dokun = seç, uzun bas = komut (topla/inşa et/saldır/yürü), tek parmak = kaydır,
   iki parmak = kıstır-büyüt. Sol alttaki düğmeler: **Kutu** (sürükleyerek birlik seç), **Komut** (dokunuş = komut),
   **İptal**. Dar ekranda üst bar kaydırılabilir, alt panel küçülür, mini harita sağ üstte, inşaat listesi onun altında.
-- **Başlangıç çiti:** Köy, başlangıç kaynaklarını da içine alan ahşap bir çitle çevrili başlar; düşman yönünde bir kapı
-  vardır. İstediğiniz zaman genişletebilir ya da yıkabilirsiniz (çit çağ atladıkça taş/kale suruna dönüşür).
+- **Başlangıç çiti:** Köy ahşap bir çitle çevrili başlar. **Çitin içinde kaynak yoktur** (yalnızca birkaç küçük ağaç);
+  başlangıç kaynakları (meyve, orman, altın, taş) çitin hemen dışında farklı yönlerdedir ve her birine bakan kenarda,
+  ayrıca düşman yönünde bir kapı vardır. İstediğiniz zaman genişletebilir ya da yıkabilirsiniz (çit çağ atladıkça taş/kale suruna dönüşür).
+- **Kapı yönü:** Çit ve kapı görselleri çitin uzandığı yöne göre çevrilir; kapı her zaman çit hattına oturur.
 - **Çit seçenekleri:** Bir çit parçasını seçince **Kapı Aç** (kapı bedeliyle anında kapıya çevrilir) ve **Yık** (geri ödemesiz)
   çıkar; kapılarda da **Yık** var. Birimler kapıların yerini bilir: hedef çitin öbür tarafındaysa önce en uygun kapıya, oradan
   hedefe gider (çitin önünde takılıp kalmaz).
@@ -194,6 +198,10 @@ oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penc
   dağılan kümeler alanla orantılıdır ve birbirinden uzaktır (aynı tür en az 22, farklı tür en az 8 karo).
 - **Görünüm:** Binalar, ağaçlar ve dağlar arkalarındaki birimlerin ve tavukların ÖNÜNDE çizilir (ayak izine göre derinlik).
   Örtülen kendi birimleriniz soluk siluetle görünür, düşman tamamen gizlenir.
+- **Su ve balık:** Haritada geniş göller ve deniz vardır; sularda çok sayıda balık sürüsü bulunur (köy çitinin içindeki
+  gölde balık olmaz).
+- **İzometrik görünüm:** Tüm araçlar (tekne, araba, mancınık, koçbaşı, savaş arabası) her yönde aynı yüksek izometrik
+  kameradan çizilir; heykel, bank ve kapılar da izometrik. Çiftçiler tarlada sabit durup aynı yöne bakarak hasat eder.
 - **Mevsimler ve hava:** İlkbahar → Yaz → Sonbahar → Kış (her biri 7,5 dakika; oyun yazla başlar). Kış gelince arayüz değişmez. Sonbaharda meşeler
   kızıla döner. **Kışın her yer beyaza bürünür:** zemin ~40 sn içinde karla kaplanır (göller açık kalır, kıyılar buzlu
   görünür), ağaçlar, çalılar, dağlar, madenler ve bina çatıları karlı görünüme geçer, mini harita da beyazlar;

@@ -297,10 +297,10 @@ export const UNITS = {
     attack: 0, armor: { melee: 4, pierce: 12 }, range: 0, reload: 2, los: 7, bldgMul: 0, vehicle: true, transport: 50, noAttack: true,
   },
   // Yabani hayvanlar (avlanır: et + deri)
-  gazelle: { name: 'Ceylan', cost: {}, trainTime: 0, pop: 0, hp: 18, speed: 2.4, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 6, bldgMul: 0, animal: true, civil: true, meat: 120, hide: 6, height: 26 },
-  deer:    { name: 'Geyik', cost: {}, trainTime: 0, pop: 0, hp: 30, speed: 2.2, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 6, bldgMul: 0, animal: true, civil: true, meat: 160, hide: 10, height: 33 },
-  rabbit:  { name: 'Tavşan', cost: {}, trainTime: 0, pop: 0, hp: 6, speed: 2.0, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 5, bldgMul: 0, animal: true, civil: true, meat: 40, hide: 2, height: 11 },
-  horse:   { name: 'Yaban Atı', cost: {}, trainTime: 0, pop: 0, hp: 45, speed: 2.7, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 7, bldgMul: 0, animal: true, civil: true, meat: 200, hide: 14, height: 36 },
+  gazelle: { name: 'Ceylan', cost: {}, trainTime: 0, pop: 0, hp: 6, speed: 2.4, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 6, bldgMul: 0, animal: true, civil: true, meat: 120, hide: 6, height: 26 },
+  deer:    { name: 'Geyik', cost: {}, trainTime: 0, pop: 0, hp: 8, speed: 2.2, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 6, bldgMul: 0, animal: true, civil: true, meat: 160, hide: 10, height: 33 },
+  rabbit:  { name: 'Tavşan', cost: {}, trainTime: 0, pop: 0, hp: 3, speed: 2.0, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 5, bldgMul: 0, animal: true, civil: true, meat: 40, hide: 2, height: 11 },
+  horse:   { name: 'Yaban Atı', cost: {}, trainTime: 0, pop: 0, hp: 10, speed: 2.7, attack: 0, armor: { melee: 0, pierce: 0 }, range: 0, reload: 2, los: 7, bldgMul: 0, animal: true, civil: true, meat: 200, hide: 14, height: 36 },
   fishingBoat: {
     name: 'Balıkçı Teknesi', cost: { wood: 75 }, trainTime: 15, pop: 1, hp: 60, speed: 2.0, carry: 15,
     attack: 0, armor: { melee: 0, pierce: 4 }, range: 0, reload: 2, los: 6, bldgMul: 0, naval: true,

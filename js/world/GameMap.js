@@ -1,6 +1,7 @@
 import { TileId, TileRegistry } from './TileTypes.js';
 import { ValueNoise2D, mulberry32 } from './Noise.js';
 import { RESOURCE_NODES } from '../data/gameData.js';
+import { CONFIG } from '../config.js';
 
 /**
  * Haritaya yerleşen hareketsiz nesnelerin ortak tabanı.
@@ -164,8 +165,8 @@ export class GameMap {
         const e = (elev[j][i] - min) / (max - min) - smoothstep(0.75, 1.0, edge) * 0.8;
         elev[j][i] = e;
         let t;
-        if (e < 0.305) t = TileId.WATER;   // biraz daha geniş göller ve deniz
-        else if (e < 0.33) t = TileId.SAND;
+        if (e < 0.345) t = TileId.WATER;   // geniş göller ve deniz (bol balık)
+        else if (e < 0.37) t = TileId.SAND;
         else if (e < 0.75) t = dirtNoise.fbm(i * 0.09, j * 0.09, 3) > 0.64 ? TileId.DIRT : TileId.GRASS;
         else t = TileId.GRASS;             // kayalık (dağ) yok: yüksek yerler de çayır
         this.terrain[j][i] = t;
@@ -214,13 +215,17 @@ export class GameMap {
       }
     }
 
-    // 6) Başlangıç kaynakları (AoE'deki gibi garanti): üsse yakın ama FARKLI YÖNLERDE (hepsi aynı yere yığılmasın)
+    // 6) Başlangıç kaynakları (AoE'deki gibi garanti): ÇİTİN HEMEN DIŞINDA, FARKLI YÖNLERDE. Çitin içi köy alanıdır:
+    //    orada kaynak olmaz (yalnızca birkaç küçük süs ağacı). World her kümeye bakan kenara bir kapı açar.
     this._clusters = [];
+    this.startCenter = sc;
+    const R = CONFIG.START_WALL_R;
     const a0 = rand() * Math.PI * 2;
-    this._placeCluster('berry', sc, 7, 10, 6, a0);
-    this._placeCluster('tree', sc, 9, 12, 9, a0 + 1.6);
-    this._placeCluster('gold', sc, 11, 16, 7, a0 + 3.1);
-    this._placeCluster('stone', sc, 12, 17, 5, a0 + 4.6);
+    this._placeCluster('berry', sc, R + 3, R + 5, 6, a0);
+    this._placeCluster('tree', sc, R + 4, R + 7, 12, a0 + 1.6);
+    this._placeCluster('gold', sc, R + 4, R + 7, 7, a0 + 3.1);
+    this._placeCluster('stone', sc, R + 4, R + 7, 5, a0 + 4.6);
+    this.startClusters = this._clusters.map((c) => ({ ...c }));
     // Haritaya dağınık ek kaynaklar: SEYREK — küçük kümeler, aralarında boşluk, kümeler birbirinden çok uzak
     const area = (W * H) / (128 * 128);
     for (let k = 0; k < Math.round(4 * area); k++) this._placeCluster('gold', null, 0, 0, 2 + ((rand() * 2) | 0));
@@ -230,8 +235,34 @@ export class GameMap {
     for (let k = 0; k < Math.max(2, Math.round(1.2 * area)); k++) this._placeSite('quarry');
     for (let k = 0; k < Math.max(2, Math.round(1.2 * area)); k++) this._placeSite('goldReserve');
 
+    this._clearVillage(sc, rand);
     this._analyzeWater();
     this._placeFish();
+  }
+
+  /** Çitin içindeki (Kasaba Merkezi'ne Chebyshev uzaklığı ≤ R+1) kaynakları kaldırır; birkaç küçük ağaç kalır */
+  _clearVillage(sc, rand) {
+    const R = CONFIG.START_WALL_R + 1, keep = 5;
+    const trees = [];
+    for (let j = sc.j - R; j <= sc.j + R; j++) {
+      for (let i = sc.i - R; i <= sc.i + R; i++) {
+        const o = this.objects[j]?.[i];
+        if (!o || o.isBuilding || !o.kind) continue;
+        if (o.kind === 'tree' && Math.max(Math.abs(i - sc.i), Math.abs(j - sc.j)) < R - 2 && Math.hypot(i - sc.i, j - sc.j) > 7) trees.push(o);
+        else this.removeObject(o);
+      }
+    }
+    trees.sort(() => rand() - 0.5);
+    for (const [k, t] of trees.entries()) {
+      if (k < keep) { t.scale = 0.55 + rand() * 0.15; t.amount = t.maxAmount = Math.round((t.maxAmount ?? t.amount) * 0.4); }
+      else this.removeObject(t);
+    }
+  }
+
+  /** Karo, başlangıç çitinin içinde (ya da üstünde) mi? */
+  _inVillage(i, j) {
+    const c = this.startCenter;
+    return !!c && Math.max(Math.abs(i - c.i), Math.abs(j - c.j)) <= CONFIG.START_WALL_R + 1;
   }
 
   /**
@@ -243,23 +274,23 @@ export class GameMap {
     for (let j = 4; j < H - 4; j++) {
       for (let i = 4; i < W - 4; i++) {
         const d = this.waterDepth[j][i];
-        if (this.terrain[j][i] === TileId.WATER && d >= 1) cand.push([i, j]);
+        if (this.terrain[j][i] === TileId.WATER && d >= 1 && !this._inVillage(i, j)) cand.push([i, j]); // çitin içi kaynaksız
       }
     }
     if (!cand.length) return;
     // Denizin her yerinde (kıyıda ve açıkta) birbirinden ~6 karo aralıklı balık sürüleri
-    const target = Math.max(16, Math.min(900, Math.round(cand.length / 18))); // bol balık: 10 tekne rahatça avlanır
+    const target = Math.max(24, Math.min(1600, Math.round(cand.length / 9))); // çok bol balık
     const placed = [];
     const cell = new Map(), key = (i, j) => `${(i / 6) | 0},${(j / 6) | 0}`;
     const ok = (i, j) => {
       const ci = (i / 6) | 0, cj = (j / 6) | 0;
-      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) for (const [a, b] of cell.get(`${ci + di},${cj + dj}`) ?? []) if (Math.hypot(a - i, b - j) < 5) return false;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) for (const [a, b] of cell.get(`${ci + di},${cj + dj}`) ?? []) if (Math.hypot(a - i, b - j) < 3.5) return false;
       return true;
     };
     const add = (i, j) => { placed.push([i, j]); const k = key(i, j); if (!cell.has(k)) cell.set(k, []); cell.get(k).push([i, j]); };
     const s = this.spawn;
     const near = cand.filter(([i, j]) => Math.hypot(i - s.i, j - s.j) < 20).sort(() => rand() - 0.5);
-    for (const [i, j] of near) { if (placed.length >= 2) break; if (ok(i, j)) add(i, j); }
+    for (const [i, j] of near) { if (placed.length >= 4) break; if (ok(i, j)) add(i, j); }
     for (let k = 0; k < target * 8 && placed.length < target; k++) {
       const [i, j] = cand[(rand() * cand.length) | 0];
       if (ok(i, j)) add(i, j);
@@ -272,7 +303,7 @@ export class GameMap {
     const rand = this.rand, W = this.width, H = this.height;
     for (let attempt = 0; attempt < 300; attempt++) {
       const oi = 8 + ((rand() * (W - 18)) | 0), oj = 8 + ((rand() * (H - 18)) | 0);
-      if (Math.hypot(oi + 1 - this.spawn.i, oj + 1 - this.spawn.j) < 26) continue;
+      if (Math.hypot(oi + 1 - this.spawn.i, oj + 1 - this.spawn.j) < 32) continue;
       if ((this._sites ?? []).some((s) => Math.hypot(s.i - oi, s.j - oj) < 34)) continue;
       let ok = true;
       for (let j = oj - 1; ok && j < oj + 4; j++) for (let i = oi - 1; ok && i < oi + 4; i++) ok = this._freeLand(i, j) && this.terrain[j][i] !== TileId.SAND;
@@ -322,12 +353,13 @@ export class GameMap {
       if (center) {
         const spread = attempt < 40 ? 0.45 : Math.PI; // önce tercih edilen yön, olmazsa her yön
         const a = angle !== null ? angle + (rand() - 0.5) * 2 * spread : rand() * Math.PI * 2, r = rMin + rand() * (rMax - rMin);
-        ci = Math.round(center.i + Math.cos(a) * r);
-        cj = Math.round(center.j + Math.sin(a) * r);
+        const m = Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a))); // kare halka: r Chebyshev uzaklığı
+        ci = Math.round(center.i + (Math.cos(a) * r) / m);
+        cj = Math.round(center.j + (Math.sin(a) * r) / m);
       } else {
         ci = 10 + ((rand() * (this.width - 20)) | 0);
         cj = 10 + ((rand() * (this.height - 20)) | 0);
-        if (Math.hypot(ci - this.spawn.i, cj - this.spawn.j) < 22) continue;
+        if (Math.hypot(ci - this.spawn.i, cj - this.spawn.j) < 30) continue;
       }
       if (!this._freeLand(ci, cj)) continue;
       const tooClose = (this._clusters ?? []).some((c) => {
@@ -366,10 +398,8 @@ export class GameMap {
     if (!this.inBounds(i, j) || this.occupancy[j][i]) return false;
     const t = this.terrain[j][i];
     if (t !== TileId.GRASS && t !== TileId.DIRT && t !== TileId.SAND) return false;
-    // Kasaba merkezinin ayak izine ve hemen çevresine kaynak koyma
-    const s = this.spawn;
-    if (i >= s.i - 2 && i <= s.i + 5 && j >= s.j - 2 && j <= s.j + 5) return false;
-    return true;
+    // Çitin içine (köy alanı) kaynak koyma
+    return !this._inVillage(i, j);
   }
 
   /** (ci, cj) etrafında size×size + margin boş arazi arar (halka araması). */

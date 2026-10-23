@@ -751,7 +751,7 @@ export class World {
   _buildStartWalls() {
     const tc = this.townCenter, map = this.map;
     if (!tc) return;
-    const ci = Math.round(tc.centerI), cj = Math.round(tc.centerJ), R = 19;
+    const ci = Math.round(tc.centerI), cj = Math.round(tc.centerJ), R = CONFIG.START_WALL_R;
     this.enclosure = { ci, cj, R, tiles: [] }; // devriye alanı ve çitin olması gereken karoları (gedik denetimi)
     const ring = [];
     for (let k = -R; k <= R; k++) ring.push([ci + k, cj - R], [ci + R, cj + k], [ci - k, cj + R], [ci - R, cj - k]);
@@ -776,7 +776,21 @@ export class World {
     }
     if (!gate) { // kapı yeri suya denk geldiyse çitin herhangi bir parçasını kapıya çevir
       const w0 = this.buildings.find((b) => b.owner === PLAYER && b.type === 'wall');
-      if (w0) { this.removeBuilding(w0); this.addBuilding('gate', w0.originI, w0.originJ, PLAYER, true); }
+      if (w0) { this.removeBuilding(w0); gate = this.addBuilding('gate', w0.originI, w0.originJ, PLAYER, true); }
+    }
+    // Kaynaklar çitin dışındadır: her başlangıç kaynağı kümesine bakan kenarda (yakında kapı yoksa) bir kapı açılır
+    const gates = gate ? [gate] : [];
+    for (const c of map.startClusters ?? []) {
+      let best = null, bd = Infinity;
+      for (const b of this.buildings) {
+        if (b.owner !== PLAYER || b.type !== 'wall') continue;
+        const d = Math.hypot(b.i - c.i, b.j - c.j);
+        if (d < bd) { bd = d; best = b; }
+      }
+      if (!best || gates.some((g) => Math.hypot(g.i - best.i, g.j - best.j) < 8)) continue;
+      const oi = best.originI, oj = best.originJ;
+      this.removeBuilding(best);
+      gates.push(this.addBuilding('gate', oi, oj, PLAYER, true));
     }
   }
 

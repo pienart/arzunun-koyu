@@ -760,6 +760,13 @@ export class Renderer {
     return list.length;
   }
 
+  /** Çit/kapı parçasının uzandığı eksen: komşu çit/kapıların çoğu i ekseni (i±1) mi, j ekseni (j±1) mi */
+  _wallAxis(b) {
+    const m = this.map, linked = (i, j) => { const o = m.getObjectAt(i, j); return !!(o?.isBuilding && (o.def.wall || o.def.gate)); };
+    const ni = linked(b.i - 1, b.j) + linked(b.i + 1, b.j), nj = linked(b.i, b.j - 1) + linked(b.i, b.j + 1);
+    return ni > nj ? 'i' : 'j';
+  }
+
   /** Bir nesnenin ekrandaki sprite dikdörtgeni (dünya birimi) ve gölgesi; kışın karlı görsel */
   layout(obj) {
     const L = this._layout(obj);
@@ -778,15 +785,23 @@ export class Renderer {
       const nightKey = obj.def?.dayNight && this._night && obj.progress >= 1 ? sp.buildingNight(obj.type, owner) : null;
       const s = obj.progress !== undefined && obj.progress < 1 ? sp.get('foundation') : nightKey ?? sp.building(obj.type, tier, owner);
       const baseW = obj.size * TW * CONFIG.BUILDING_FIT * (obj.def?.fit ?? 1); // ince tabanlı süsler (fener, heykel) küçültülür
-      const w = baseW / s.baseRatio, h = w * s.aspect;
+      let w = baseW / s.baseRatio, h = w * s.aspect;
+      // Kapı, aynı kademedeki çit parçasıyla aynı piksel ölçeğinde çizilir (taban ölçümüne göre küçük kalmasın)
+      if (obj.def?.gate && obj.progress >= 1) {
+        const ws = sp.building('wall', tier, owner);
+        if (ws && ws !== s) { w = s.levels[0].width * (baseW / ws.baseRatio) / ws.levels[0].width; h = w * s.aspect; }
+      }
+      // Çit ve kapı görselleri j ekseni boyunca (ekranda sağa yükselen) çizilmiştir; çit i ekseni boyunca uzanıyorsa aynala
+      const flip = !!(obj.def?.wall || obj.def?.gate) && obj.progress >= 1 && this._wallAxis(obj) === 'i';
+      const ax = flip ? 1 - s.anchorX : s.anchorX;
       // Taban merkezi = ayak izi merkezi (x), görselin alt kenarı = ayak izinin ön köşesi (y)
-      const x = cx - s.anchorX * w, y = cy + HH - h + 2;
+      const x = cx - ax * w, y = cy + HH - h + 2;
       const fcY = cy + HH - obj.size * HH; // ayak izi merkezinin y'si
       // Animasyonlu bina (yel değirmeni): sprite anahtarına ait kare dizisi varsa
       const bkey = obj.progress !== undefined && obj.progress >= 1 && !nightKey ? sp.buildingKey(obj.type, tier, owner) : null;
       const anim = bkey && sp.anims[bkey] ? bkey : null;
       // İki katmanlı gölge: temas gölgesi (ambient occlusion) + güneşin sol-üstten düşürdüğü sağa uzanan gölge
-      return { obj, s, x, y, w, h, cx, cy, baseW, flip: false, anim, shadows: [
+      return { obj, s, x, y, w, h, cx, cy, baseW, flip, anim, shadows: [
         { x: cx, y: fcY + obj.size * HH * 0.1, rx: baseW * 0.58, ry: obj.size * HH * 1.1, a: 0.85 },
         { x: cx + baseW * 0.34, y: fcY - obj.size * HH * 0.05, rx: baseW * 0.52, ry: obj.size * HH * 0.85, a: 0.85 },
       ] };
@@ -887,11 +902,10 @@ export class Renderer {
     let gy = u.prevY + (u.y - u.prevY) * alpha;
     let facing = u.facing;
     if (u.state === 'gather' && u.phase === 'work' && u.task?.target?.isBuilding) {
-      // Çiftçi tarlanın içinde ileri geri dolaşır
-      const a = time * 0.45 + u.id;
-      gx += Math.sin(a) * 0.8;
-      gy += Math.cos(time * 0.37 + u.id * 1.7) * 0.8;
-      facing = Math.cos(a) >= 0 ? 1 : -1;
+      // Çiftçi tarlada sabit bir yerde durur ve hep aynı yöne bakar (hasat animasyonu kendi içinde hareketli)
+      gx += ((u.id * 0.37) % 1 - 0.5) * 0.9;
+      gy += ((u.id * 0.61) % 1 - 0.5) * 0.9;
+      facing = u.id % 2 ? 1 : -1;
     }
     // Aynı karodaki birimler üst üste binmesin: kimliğe bağlı sabit küçük ofset (yalnızca görsel)
     gx += (((u.id * 73) % 11) / 10 - 0.5) * 0.12;

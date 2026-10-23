@@ -19,15 +19,15 @@ export class Animal extends Unit {
   get pose() { return 'idle'; }
 
   /** Kaçarken hızlı, otlarken ağır */
-  speed(world) { return this.def.speed * (this.fleeT > 0 ? 1.3 : 0.45); }
+  speed(world) { return this.def.speed * (this.fleeT > 0 ? 0.6 : 0.45); } // kaçarken bile köylü (1,8) yetişir
 
   attack() { /* hayvan saldırmaz */ }
 
   flee(world, from) {
     if (this.fleeT > 0 && this.path.length) return;
-    this.fleeT = 6;
+    this.fleeT = 3;
     const dx = this.x - (from?.x ?? this.x - 1), dy = this.y - (from?.y ?? this.y), d = Math.hypot(dx, dy) || 1;
-    const ti = Math.round(this.x + (dx / d) * 9), tj = Math.round(this.y + (dy / d) * 9);
+    const ti = Math.round(this.x + (dx / d) * 4), tj = Math.round(this.y + (dy / d) * 4);
     const spot = world.map.findWalkableNear(ti, tj, 4);
     if (spot) world.moveToGoal(this, (i, j) => i === spot.i && j === spot.j, spot.i, spot.j, 1500);
   }

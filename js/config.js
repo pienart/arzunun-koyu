@@ -8,6 +8,7 @@ export const CONFIG = Object.freeze({
   MAP_WIDTH: 224,
   MAP_HEIGHT: 224,
   SEED: 1337,
+  START_WALL_R: 19, // başlangıç çitinin Kasaba Merkezi'ne uzaklığı (kare halka); içinde kaynak olmaz
   TILE_WIDTH: 64,   // 2:1 izometrik karo
   TILE_HEIGHT: 32,
 

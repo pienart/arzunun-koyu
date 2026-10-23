@@ -1,4 +1,5 @@
 import { Animal } from '../entities/Animal.js';
+import { CONFIG } from '../config.js';
 
 const KINDS = [
   { type: 'gazelle', n: [3, 5] },
@@ -23,15 +24,20 @@ export class Animals {
   /** Kayıttan yüklenen hayvanları sürülere bağla (her biri kendi merkezinde) */
   adopt(list) {
     for (const a of list) this.herds.push({ type: a.type, home: a.home, members: [a] });
+    const area = (this.world.map.width * this.world.map.height) / (128 * 128);
+    this.target = Math.max(list.length, Math.round(5 * area * 3.3)); // kayıtta tutulmaz: haritanın olağan sayısı
   }
 
   setup() {
     const area = (this.world.map.width * this.world.map.height) / (128 * 128);
     const n = Math.round(5 * area);
     for (let k = 0; k < n; k++) this._spawnHerd(KINDS[k % KINDS.length]);
+    this.target = this._alive();
   }
 
-  _randomLand(minFromTC = 24) {
+  _alive() { return this.herds.reduce((s, h) => s + h.members.filter((a) => !a.dead).length, 0); }
+
+  _randomLand(minFromTC = 30) {
     const w = this.world, map = w.map, tc = w.townCenter;
     for (let a = 0; a < 200; a++) {
       const i = 6 + ((Math.random() * (map.width - 12)) | 0), j = 6 + ((Math.random() * (map.height - 12)) | 0);
@@ -67,8 +73,10 @@ export class Animals {
     if (this.visitT <= 0 && w.townCenter && this.herds.length) {
       this.visitT = 120 + Math.random() * 120;
       const h = this.herds[(Math.random() * this.herds.length) | 0];
-      const tc = w.townCenter, a = Math.random() * Math.PI * 2, r = 9 + Math.random() * 6;
-      const spot = w.map.findWalkableNear(Math.round(tc.centerI + Math.cos(a) * r), Math.round(tc.centerJ + Math.sin(a) * r), 5);
+      // Çitin hemen dışına (içine girip mahsur kalmasın)
+      const tc = w.townCenter, a = Math.random() * Math.PI * 2, r = CONFIG.START_WALL_R + 4 + Math.random() * 5;
+      const m = Math.max(Math.abs(Math.cos(a)), Math.abs(Math.sin(a)));
+      const spot = w.map.findWalkableNear(Math.round(tc.centerI + (Math.cos(a) * r) / m), Math.round(tc.centerJ + (Math.sin(a) * r) / m), 4);
       if (spot) {
         h.home.i = spot.i; h.home.j = spot.j;
         for (const m of h.members) m.grazeT = Math.random() * 2;
@@ -76,12 +84,17 @@ export class Animals {
         w.alert(spot.i, spot.j);
       }
     }
-    // Azalan hayvanların yerine yenileri (kış hariç)
+    // Avlanan hayvanların yerine, eksilen sayı kadarı haritanın rastgele yerlerinde yeniden doğar (sürüler halinde)
     this.spawnT -= dt;
     if (this.spawnT <= 0) {
-      this.spawnT = 90;
-      const target = Math.round(5 * (w.map.width * w.map.height) / (128 * 128));
-      if (this.herds.length < target && w.weather.season.id !== 'winter') this._spawnHerd(KINDS[(Math.random() * KINDS.length) | 0]);
+      this.spawnT = 30;
+      let missing = (this.target ?? 0) - this._alive();
+      for (let k = 0; missing > 0 && k < 6; k++) {
+        const kind = KINDS[(Math.random() * KINDS.length) | 0];
+        const before = this._alive();
+        this._spawnHerd({ type: kind.type, n: [Math.min(missing, kind.n[0]), Math.min(missing, kind.n[1])] });
+        missing -= this._alive() - before;
+      }
     }
   }
 }

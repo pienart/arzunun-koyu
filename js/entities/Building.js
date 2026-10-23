@@ -35,6 +35,8 @@ export class Building extends StaticObject {
   }
 
   get complete() { return this.progress >= 1; }
+  /** Kapı, aynı hattaki önündeki çit parçasından sonra çizilir (geniş çit görseli kapıyı örtmesin) */
+  get depth() { return super.depth + (this.def.gate ? 1.05 : 0); }
   get name() { return this.def.tiers?.[this.tier]?.name ?? this.def.name; }
   /** Zırh: sur/kapıda çağ kademesinin değeri */
   get armor() { return this.def.tiers?.[this.tier]?.armor ?? this.def.armor ?? { melee: 0, pierce: 0 }; }
