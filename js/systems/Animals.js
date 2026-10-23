@@ -43,7 +43,7 @@ export class Animals {
       const i = 6 + ((Math.random() * (map.width - 12)) | 0), j = 6 + ((Math.random() * (map.height - 12)) | 0);
       if (!map.isWalkable(i, j)) continue;
       if (tc && Math.hypot(i - tc.centerI, j - tc.centerJ) < minFromTC) continue;
-      if (w.enemyAI.tc && Math.hypot(i - w.enemyAI.tc.centerI, j - w.enemyAI.tc.centerJ) < 18) continue;
+      if (w.enemyAI.tc && Math.hypot(i - w.enemyAI.tc.centerI, j - w.enemyAI.tc.centerJ) < 30) continue; // düşman çitinin dışı
       return { i, j };
     }
     return null;

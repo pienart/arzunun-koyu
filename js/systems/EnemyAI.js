@@ -33,7 +33,7 @@ export class EnemyAI {
 
   setup() {
     const w = this.world;
-    const spot = this._findBaseSpot();
+    const spot = w.map.enemySpawn ?? this._findBaseSpot(); // harita üretimi düşmanı karşı köşeye ayırır
     if (!spot) return; // ada çok küçükse düşmansız oyna
     this.enabled = true;
     this._clearArea(spot.i + 2, spot.j + 2, 7);
@@ -74,7 +74,7 @@ export class EnemyAI {
     const w = this.world, ci = Math.round(this.tc.centerI), cj = Math.round(this.tc.centerJ);
     for (let k = 0; k < GATHER_ORDER.length; k++) {
       const kind = GATHER_ORDER[(this._gatherIdx + k) % GATHER_ORDER.length];
-      const node = w.findNearestResource(kind, ci, cj, 14, u);
+      const node = w.findNearestResource(kind, ci, cj, 34, u); // kaynaklar çitin dışında
       if (node) { this._gatherIdx = (this._gatherIdx + k + 1) % GATHER_ORDER.length; w.assignGather(u, node); return true; }
     }
     return false;

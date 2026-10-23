@@ -744,54 +744,59 @@ export class World {
   }
 
   /**
-   * Başlangıç çiti: Kasaba Merkezi'nin çevresinde (başlangıç kaynaklarını da içine alan) kare bir halka. Ağaç/çalı
-   * halkadan temizlenir; su, maden ve taş ocağı karoları atlanır (doğal engel). Düşman üssüne bakan kenarın ortasına
-   * bir kapı konur. Düşman üssü ve mağara bu çitten ÖNCE yerleşir (onların erişilebilirlik araması çite takılmasın).
+   * Başlangıç çitleri: her köyün (oyuncu ve düşman) Kasaba Merkezi çevresinde kusursuz bir kare halka. Harita üretimi
+   * bu kareyi tamamen karaya çevirip içini ve halkayı kaynaklardan temizlediği için çit kesintisizdir. Kapılar: karşı
+   * köye bakan kenarın ortasında bir tane ve köyün başlangıç kaynak kümelerine bakan kenarlarda birer tane.
    */
   _buildStartWalls() {
-    const tc = this.townCenter, map = this.map;
-    if (!tc) return;
-    const ci = Math.round(tc.centerI), cj = Math.round(tc.centerJ), R = CONFIG.START_WALL_R;
-    this.enclosure = { ci, cj, R, tiles: [] }; // devriye alanı ve çitin olması gereken karoları (gedik denetimi)
+    const map = this.map, sides = [[PLAYER, this.townCenter, this.enemyAI.tc, 0], [ENEMY, this.enemyAI.tc, this.townCenter, 1]];
+    for (const [owner, tc, foe, k] of sides) {
+      if (!tc) continue;
+      const tiles = this._wallRing(owner, map.bases?.[k] ?? { i: Math.round(tc.centerI), j: Math.round(tc.centerJ) }, foe, map.startClusters?.[k] ?? []);
+      if (owner === PLAYER) this.enclosure = { ci: map.bases?.[0]?.i ?? Math.round(tc.centerI), cj: map.bases?.[0]?.j ?? Math.round(tc.centerJ), R: CONFIG.START_WALL_R, tiles };
+    }
+  }
+
+  /** Bir köyün kare çitini kurar; çitin olması gereken karoları döndürür (devriye gedik denetimi) */
+  _wallRing(owner, c, foe, clusters) {
+    const map = this.map, R = CONFIG.START_WALL_R, ci = c.i, cj = c.j, tiles = [];
     const ring = [];
     for (let k = -R; k <= R; k++) ring.push([ci + k, cj - R], [ci + R, cj + k], [ci - k, cj + R], [ci - R, cj - k]);
-    // Kapı: düşman yönündeki kenarın ortası
-    const e = this.enemyAI.tc;
-    const ang = e ? Math.atan2(e.centerJ - cj, e.centerI - ci) : 0;
-    const gi = Math.abs(Math.cos(ang)) >= Math.abs(Math.sin(ang)) ? ci + Math.sign(Math.cos(ang)) * R : ci;
-    const gj = Math.abs(Math.cos(ang)) >= Math.abs(Math.sin(ang)) ? cj : cj + Math.sign(Math.sin(ang)) * R;
+    // Ana kapı: karşı köye bakan kenarın ortası
+    const ang = foe ? Math.atan2(foe.centerJ - cj, foe.centerI - ci) : 0;
+    const horiz = Math.abs(Math.cos(ang)) >= Math.abs(Math.sin(ang));
+    const gi = horiz ? ci + Math.sign(Math.cos(ang)) * R : ci, gj = horiz ? cj : cj + Math.sign(Math.sin(ang)) * R;
     const seen = new Set();
-    let gate = null;
+    const walls = [];
     for (const [i, j] of ring) {
       const key = j * map.width + i;
       if (seen.has(key) || !map.inBounds(i, j)) continue;
       seen.add(key);
       const o = map.occupancy[j][i];
-      if (o && !o.isBuilding && (o.kind === 'tree' || o.kind === 'berry' || o.kind === 'stump')) map.removeObject(o);
-      if (this.checkPlacement('wall', i, j)) continue; // su, maden, bina → atla
-      const isGate = !gate && Math.abs(i - gi) + Math.abs(j - gj) <= 1;
-      const b = this.addBuilding(isGate ? 'gate' : 'wall', i, j, PLAYER, true);
-      this.enclosure.tiles.push(key);
-      if (isGate) gate = b;
+      if (o && !o.isBuilding) map.removeObject(o);   // halkada hiçbir engel kalmasın
+      if (this.checkPlacement('wall', i, j)) continue;
+      walls.push(this.addBuilding(i === gi && j === gj ? 'gate' : 'wall', i, j, owner, true));
+      tiles.push(key);
     }
-    if (!gate) { // kapı yeri suya denk geldiyse çitin herhangi bir parçasını kapıya çevir
-      const w0 = this.buildings.find((b) => b.owner === PLAYER && b.type === 'wall');
-      if (w0) { this.removeBuilding(w0); gate = this.addBuilding('gate', w0.originI, w0.originJ, PLAYER, true); }
-    }
-    // Kaynaklar çitin dışındadır: her başlangıç kaynağı kümesine bakan kenarda (yakında kapı yoksa) bir kapı açılır
-    const gates = gate ? [gate] : [];
-    for (const c of map.startClusters ?? []) {
+    // Kaynak kümelerine bakan kenarlarda kapı (yakında kapı yoksa)
+    const gates = walls.filter((b) => b.def.gate);
+    for (const cl of clusters) {
       let best = null, bd = Infinity;
-      for (const b of this.buildings) {
-        if (b.owner !== PLAYER || b.type !== 'wall') continue;
-        const d = Math.hypot(b.i - c.i, b.j - c.j);
+      for (const b of walls) {
+        if (b.def.gate || b.dead) continue;
+        // Köşe parçaları kapı olmasın (iki eksene birden komşu)
+        if (Math.abs(b.i - ci) === R && Math.abs(b.j - cj) === R) continue;
+        const d = Math.hypot(b.i - cl.i, b.j - cl.j);
         if (d < bd) { bd = d; best = b; }
       }
       if (!best || gates.some((g) => Math.hypot(g.i - best.i, g.j - best.j) < 8)) continue;
       const oi = best.originI, oj = best.originJ;
       this.removeBuilding(best);
-      gates.push(this.addBuilding('gate', oi, oj, PLAYER, true));
+      best.dead = true;
+      const g = this.addBuilding('gate', oi, oj, owner, true);
+      gates.push(g); walls.push(g);
     }
+    return tiles;
   }
 
   // ───────────── Ekonomi: gıda tüketimi, şarap, huzur, hastane, çeşme ─────────────

@@ -176,15 +176,25 @@ export class GameMap {
     // 2b) Küçük su birikintilerini kurut: kumun ortasında tek karelik "su elmasları" kalmasın
     this._removeSmallLakes(220); // küçük su birikintisi kalmasın: yalnızca geniş göller ve deniz
 
-    // 3) Başlangıç noktası: merkeze en yakın, geniş ve açık alan
-    this.spawn = this._findOpenArea(W >> 1, H >> 1, 4, 3) ?? { i: W >> 1, j: H >> 1 };
-    const sc = { i: this.spawn.i + 2, j: this.spawn.j + 2 }; // 4×4 kasaba merkezinin ortası
+    // 3) Üsler: oyuncu haritanın bir köşesine, düşman karşı köşeye. İki köyün çit karesi (ve biraz dışı) tamamen karaya
+    //    çevrilir: çit su, kaynak ya da başka bir engele denk gelmez, kusursuz bir kare olarak kurulur. İki üs arasında
+    //    karadan yol yoksa sığ bir kum geçidi açılır.
+    const M = 56, jit = () => Math.round((rand() - 0.5) * 12);
+    const anti = rand() < 0.5, swap = rand() < 0.5;
+    let a = { i: M + jit(), j: (anti ? H - 1 - M : M) + jit() }, b = { i: W - 1 - M + jit(), j: (anti ? M : H - 1 - M) + jit() };
+    if (swap) [a, b] = [b, a];
+    this.bases = [a, b];
+    for (const c of this.bases) this._flattenBase(c);
+    this._connectBases(a, b);
+    this.spawn = { i: a.i - 2, j: a.j - 2 };       // oyuncunun 4×4 kasaba merkezinin sol üst karosu
+    this.enemySpawn = { i: b.i - 2, j: b.j - 2 };  // düşmanınki
+    const sc = a;                                  // kasaba merkezinin ortası
 
     // 4) Dağ kayaları ve ormanlar
     for (let j = 0; j < H; j++) {
       for (let i = 0; i < W; i++) {
         const t = this.terrain[j][i];
-        const distSpawn = Math.hypot(i - sc.i, j - sc.j);
+        const distSpawn = Math.min(Math.hypot(i - sc.i, j - sc.j), Math.hypot(i - b.i, j - b.j));
         if (t === TileId.MOUNTAIN) {
           // Her dağ karosu bir kaya sprite'ı; ölçek ve aynalama çeşitliliği sıradağ görünümü verir
           this.addObject(new StaticObject('mountain', i, j, {
@@ -206,12 +216,14 @@ export class GameMap {
       }
     }
 
-    // 5) Köy meydanı: kasaba merkezi çevresi toprak
-    for (let dj = -8; dj <= 8; dj++) {
-      for (let di = -8; di <= 8; di++) {
-        const i = sc.i + di, j = sc.j + dj;
-        if (!this.inBounds(i, j) || Math.hypot(di, dj) + rand() * 2 > 6.5) continue;
-        if (this.terrain[j][i] === TileId.GRASS) this.terrain[j][i] = TileId.DIRT;
+    // 5) Köy meydanı: kasaba merkezi çevresi toprak (iki üste de)
+    for (const c of this.bases) {
+      for (let dj = -8; dj <= 8; dj++) {
+        for (let di = -8; di <= 8; di++) {
+          const i = c.i + di, j = c.j + dj;
+          if (!this.inBounds(i, j) || Math.hypot(di, dj) + rand() * 2 > 6.5) continue;
+          if (this.terrain[j][i] === TileId.GRASS) this.terrain[j][i] = TileId.DIRT;
+        }
       }
     }
 
@@ -220,12 +232,15 @@ export class GameMap {
     this._clusters = [];
     this.startCenter = sc;
     const R = CONFIG.START_WALL_R;
-    const a0 = rand() * Math.PI * 2;
-    this._placeCluster('berry', sc, R + 3, R + 5, 6, a0);
-    this._placeCluster('tree', sc, R + 4, R + 7, 12, a0 + 1.6);
-    this._placeCluster('gold', sc, R + 4, R + 7, 7, a0 + 3.1);
-    this._placeCluster('stone', sc, R + 4, R + 7, 5, a0 + 4.6);
-    this.startClusters = this._clusters.map((c) => ({ ...c }));
+    this.startClusters = [];
+    for (const c of this.bases) {
+      const from = this._clusters.length, a0 = rand() * Math.PI * 2;
+      this._placeCluster('berry', c, R + 3, R + 5, 6, a0);
+      this._placeCluster('tree', c, R + 4, R + 7, 12, a0 + 1.6);
+      this._placeCluster('gold', c, R + 4, R + 7, 7, a0 + 3.1);
+      this._placeCluster('stone', c, R + 4, R + 7, 5, a0 + 4.6);
+      this.startClusters.push(this._clusters.slice(from).map((k) => ({ ...k })));
+    }
     // Haritaya dağınık ek kaynaklar: SEYREK — küçük kümeler, aralarında boşluk, kümeler birbirinden çok uzak
     const area = (W * H) / (128 * 128);
     for (let k = 0; k < Math.round(4 * area); k++) this._placeCluster('gold', null, 0, 0, 2 + ((rand() * 2) | 0));
@@ -235,7 +250,7 @@ export class GameMap {
     for (let k = 0; k < Math.max(2, Math.round(1.2 * area)); k++) this._placeSite('quarry');
     for (let k = 0; k < Math.max(2, Math.round(1.2 * area)); k++) this._placeSite('goldReserve');
 
-    this._clearVillage(sc, rand);
+    for (const c of this.bases) this._clearVillage(c, rand);
     this._analyzeWater();
     this._placeFish();
   }
@@ -259,10 +274,44 @@ export class GameMap {
     }
   }
 
-  /** Karo, başlangıç çitinin içinde (ya da üstünde) mi? */
+  /** Karo, bir köyün (oyuncu ya da düşman) başlangıç çitinin içinde (ya da üstünde) mi? */
   _inVillage(i, j) {
-    const c = this.startCenter;
-    return !!c && Math.max(Math.abs(i - c.i), Math.abs(j - c.j)) <= CONFIG.START_WALL_R + 1;
+    return !!this.bases?.some((c) => Math.max(Math.abs(i - c.i), Math.abs(j - c.j)) <= CONFIG.START_WALL_R + 1);
+  }
+
+  /** Köy karesini (çit + 3 karo dışı) karaya çevirir: su ve kum çimen olur → çit kesintisiz kare kurulur */
+  _flattenBase(c) {
+    const R = CONFIG.START_WALL_R + 3;
+    for (let j = c.j - R; j <= c.j + R; j++) {
+      for (let i = c.i - R; i <= c.i + R; i++) {
+        if (!this.inBounds(i, j)) continue;
+        const t = this.terrain[j][i];
+        if (t === TileId.WATER || t === TileId.SAND || t === TileId.MOUNTAIN) this.terrain[j][i] = TileId.GRASS;
+      }
+    }
+  }
+
+  /** İki üs karadan birbirine ulaşamıyorsa aradaki su karolarını kum geçide çevirir (3 karo genişliğinde) */
+  _connectBases(a, b) {
+    const W = this.width, H = this.height, seen = new Uint8Array(W * H), q = [a.j * W + a.i];
+    seen[q[0]] = 1;
+    for (let k = 0; k < q.length; k++) {
+      const n = q[k], ci = n % W, cj = (n / W) | 0;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ni = ci + di, nj = cj + dj;
+        if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+        const m = nj * W + ni;
+        if (!seen[m] && this.terrain[nj][ni] !== TileId.WATER) { seen[m] = 1; q.push(m); }
+      }
+    }
+    if (seen[b.j * W + b.i]) return;
+    const steps = Math.ceil(Math.hypot(b.i - a.i, b.j - a.j));
+    for (let s = 0; s <= steps; s++) {
+      const ci = Math.round(a.i + ((b.i - a.i) * s) / steps), cj = Math.round(a.j + ((b.j - a.j) * s) / steps);
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        if (this.getTile(ci + di, cj + dj) === TileId.WATER) this.terrain[cj + dj][ci + di] = TileId.SAND;
+      }
+    }
   }
 
   /**
@@ -289,7 +338,7 @@ export class GameMap {
     };
     const add = (i, j) => { placed.push([i, j]); const k = key(i, j); if (!cell.has(k)) cell.set(k, []); cell.get(k).push([i, j]); };
     const s = this.spawn;
-    const near = cand.filter(([i, j]) => Math.hypot(i - s.i, j - s.j) < 20).sort(() => rand() - 0.5);
+    const near = cand.filter(([i, j]) => Math.hypot(i - s.i, j - s.j) < 34).sort(() => rand() - 0.5);
     for (const [i, j] of near) { if (placed.length >= 4) break; if (ok(i, j)) add(i, j); }
     for (let k = 0; k < target * 8 && placed.length < target; k++) {
       const [i, j] = cand[(rand() * cand.length) | 0];
@@ -303,7 +352,7 @@ export class GameMap {
     const rand = this.rand, W = this.width, H = this.height;
     for (let attempt = 0; attempt < 300; attempt++) {
       const oi = 8 + ((rand() * (W - 18)) | 0), oj = 8 + ((rand() * (H - 18)) | 0);
-      if (Math.hypot(oi + 1 - this.spawn.i, oj + 1 - this.spawn.j) < 32) continue;
+      if (this.bases.some((c) => Math.hypot(oi + 1 - c.i, oj + 1 - c.j) < 32)) continue;
       if ((this._sites ?? []).some((s) => Math.hypot(s.i - oi, s.j - oj) < 34)) continue;
       let ok = true;
       for (let j = oj - 1; ok && j < oj + 4; j++) for (let i = oi - 1; ok && i < oi + 4; i++) ok = this._freeLand(i, j) && this.terrain[j][i] !== TileId.SAND;
@@ -359,7 +408,7 @@ export class GameMap {
       } else {
         ci = 10 + ((rand() * (this.width - 20)) | 0);
         cj = 10 + ((rand() * (this.height - 20)) | 0);
-        if (Math.hypot(ci - this.spawn.i, cj - this.spawn.j) < 30) continue;
+        if (this.bases.some((c) => Math.hypot(ci - c.i, cj - c.j) < 30)) continue;
       }
       if (!this._freeLand(ci, cj)) continue;
       const tooClose = (this._clusters ?? []).some((c) => {

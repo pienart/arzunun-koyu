@@ -77,6 +77,11 @@ oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penc
 - **Mobil (telefon/tablet):** Dokun = seç, uzun bas = komut (topla/inşa et/saldır/yürü), tek parmak = kaydır,
   iki parmak = kıstır-büyüt. Sol alttaki düğmeler: **Kutu** (sürükleyerek birlik seç), **Komut** (dokunuş = komut),
   **İptal**. Dar ekranda üst bar kaydırılabilir, alt panel küçülür, mini harita sağ üstte, inşaat listesi onun altında.
+- **Üs yerleşimi:** Harita üretilirken köyünüz haritanın bir köşesine, düşman köyü karşı köşeye konur (aralarında
+  ~150 karo). İki köyün çit karesi tamamen karaya çevrilir: çit suya, kaynağa ya da başka bir engele denk gelmez,
+  **kusursuz bir kare** olarak kurulur. İki köy arasında karadan yol yoksa sığ bir kum geçidi açılır.
+- **Düşmanın da çiti var:** Düşman köyü de aynı büyüklükte, kapılı bir çitle çevrilidir (kaynakları çitin dışındadır;
+  köylüleri kendi kapılarından çıkıp toplar). Saldırırken askerleriniz düşman çitini kırar ya da kapıyı yıkar.
 - **Başlangıç çiti:** Köy ahşap bir çitle çevrili başlar. **Çitin içinde kaynak yoktur** (yalnızca birkaç küçük ağaç);
   başlangıç kaynakları (meyve, orman, altın, taş) çitin hemen dışında farklı yönlerdedir ve her birine bakan kenarda,
   ayrıca düşman yönünde bir kapı vardır. İstediğiniz zaman genişletebilir ya da yıkabilirsiniz (çit çağ atladıkça taş/kale suruna dönüşür).
