@@ -62,7 +62,7 @@ export class SidePanel {
         r.buildings.map((x) => {
           const okB = x.have >= x.need;
           const err = okB ? '' : w.checkBuildable(x.type);
-          return `<button class="req ${okB ? 'done' : 'todo'}" ${okB ? '' : `data-build="${x.type}"`} data-tip="${okB ? 'Tamam' : err ? `Kurulamıyor: ${err}` : 'Tıkla → Kasaba Merkezi yakınında inşaat başlasın (boştaki köylü gider)'}">` +
+          return `<button class="req ${okB ? 'done' : 'todo'}" ${okB ? '' : `data-build="${x.type}"`} data-tip="${okB ? 'Tamam' : err ? `Kurulamıyor: ${err}` : 'Tıkla → yerleştirme modu: yerini haritada siz seçin (boştaki köylü inşa eder)'}">` +
             `<img src="${this.ui.buildingImg(x.type, tier)}" alt=""><span>${BUILDINGS[x.type].name}</span><b>${x.have}/${x.need}</b>${ok(okB)}</button>`;
         }).join('') +
         `<div class="req ${res ? 'done' : ''}">${ICON('age')}<span>Bedel</span><b class="cost">${costHtml(r.age.cost, p)}</b>${ok(res)}</div>`;
@@ -108,7 +108,18 @@ export class SidePanel {
       if (err) this.ui.toast(err, 'warn'); else w.enqueue(this.target, 'tech', el.dataset.tech);
       this._t = 0; this.ui._sig = null; return;
     }
-    if (el.dataset.build) { w.autoPlace(el.dataset.build); this._t = 0; return; }
+    if (el.dataset.build) { // yerleştirme modu: yeri oyuncu seçer; inşaata en yakın boştaki (yoksa herhangi) köylü gider
+      const type = el.dataset.build, err = w.checkBuildable(type);
+      if (err) { this.ui.toast(err, 'warn'); return; }
+      const tc = this.target, vs = w.units.filter((u) => u.owner === PLAYER && u.def.builder);
+      if (!vs.length) { this.ui.toast('İnşa edecek köylü yok.', 'warn'); return; }
+      const idle = vs.filter((u) => u.state === 'idle'), pool = idle.length ? idle : vs;
+      pool.sort((p, q) => Math.hypot(p.x - tc.centerI, p.y - tc.centerJ) - Math.hypot(q.x - tc.centerI, q.y - tc.centerJ));
+      g.select([pool[0]]);
+      g.startPlacement(type);
+      this.ui.toast(`${BUILDINGS[type].name}: yerini haritada seçin (Esc iptal).`, 'info');
+      return;
+    }
     if (el.dataset.goto) {
       const list = w.buildings.filter((b) => b.owner === PLAYER && b.type === el.dataset.goto);
       if (!list.length) return;

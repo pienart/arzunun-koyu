@@ -31,7 +31,8 @@ export const ANIMS = {
 export const UNIT_PREFIX = { villager: 'vil', militia: 'mil', archer: 'arc', cavalry: 'cav', ram: 'ram', fishingBoat: 'boat', yeti: 'yeti', architect: 'arch', commander: 'mil', cart: 'cart', catapult: 'catapult', warWagon: 'warWagon', gazelle: 'gazelle', deer: 'deer', rabbit: 'rabbit', horse: 'horse' };
 
 /** Yönlü SABİT görselli birimler (araç/tekne): dünya birimi cinsinden boy; kare yok, Renderer sallar/iter */
-export const VEHICLE_HEIGHT = { ram: 56, fishingBoat: 64, cart: 58, catapult: 60, warWagon: 76 };
+// Yabani hayvanlar da 8 yönlü sabit görselle çizilir (yürürken sekerek ilerler)
+export const VEHICLE_HEIGHT = { ram: 56, fishingBoat: 64, cart: 58, catapult: 60, warWagon: 76, gazelle: 30, deer: 38, rabbit: 13, horse: 42 };
 
 /**
  * 8 YÖNLÜ YÜRÜYÜŞ

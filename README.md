@@ -84,6 +84,18 @@ oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penc
   Yalnız komutanın **Devriye At** komutu vardır: çitle çevrili köyün içinde sürekli dolaşır, gördüğü düşmanla savaşır ve
   **güvenlik ihlallerini** (köyün içinde düşman/Koca Ayak, çitte gedik, ağır hasarlı çit) ekranda uyarı ve mini harita
   işaretiyle bildirir. Bilerek yıktığınız çit parçası için uyarı vermez.
+- **Otağ (seyyar asker çadırı):** 50 asker alır (askerleri seçip otağa sağ tıklayın; "Askerleri Çıkar" ile çıkarın). Düşman
+  9 karo içine girerse ya da otağa saldırırsa askerler kendiliğinden çıkıp saldırır. Mimarsız ve bedelsiz taşınabilir.
+- **Yapı menüsü sayaçları ve limitler:** Köylü seçiliyken her yapı düğmesinin köşesinde kaç tane kurulduğu yazar; bazı
+  yapılar sınırlıdır (Bilim Merkezi, Üniversite, Simya Atölyesi, Pazar, Harika 1 · Hastane 2 · Taverna, Otağ 4).
+- **Kaynak bilgisi:** Haritada bir kaynağın ya da yabani hayvanın üzerine gelince ne vereceği görünür ("Kazılınca: 800 altın",
+  "Avlanınca: 160 et + 10 deri"). Üst bardaki kaynakların üzerine gelince o kaynağın **nereden** elde edildiği de yazar.
+  Hayvan Çiftliği dakikada ~1 deri de üretir.
+- **Kasaba Merkezi paneli:** Eksik binaya tıklayınca yerleştirme modu açılır (en yakın boştaki köylü seçili gelir), yeri siz seçersiniz.
+- **Hareket yönleri:** Köylü, asker, atlı, mimar ve Koca Ayak 8 yönde yürür (atlının sağ-aşağı animasyonu düzeltildi);
+  yabani hayvanlar gittikleri yöne dönük çizilir ve sekerek ilerler. Birim gölgeleri yumuşatıldı.
+- **Kamera:** Kamera kara parçasının sınırında durur; en uzak zoom karayı ekrana sığdırır (açık deniz görünmez).
+- **Hata dayanıklılığı:** Bir karede hata olursa oyun donmaz; hata bir kez ekranda bildirilir ve oyun sürer.
 - **Ev kapasitesi çağla artar:** Kasaba Merkezi her çağ atladığında evlerin kapasitesi %25 artar (5 → 6 → 8 → 9).
 - **Zoom sınırı:** En uzak zoom tüm haritanın ekrana sığdığı ölçektir; haritanın dışına uzaklaşılmaz.
 - **Çağ şartları:** Kaynak yetmez. Feodal için 3 asker + 2 ev, kereste kampı, değirmen ve kışla; Kale için 8 asker +
@@ -210,7 +222,7 @@ oyuncu hangi sürümde oynadığını ana menünün altında ve **Ayarlar** penc
 | **B** · **N** · **M** (veya Ayarlar menüsü) | Müzik / atmosfer / olay seslerini aç-kapat — ses düğmeleri üst bardan Ayarlar'a taşındı |
 | X veya F1 · L | Kontroller penceresi · Gece/gündüz modu |
 | **Ctrl+1…9** · **1…9** (iki kez) | Seçimi gruba kaydet · grubu seç (iki kez: kamera gruba gider) · Shift+rakam: gruba ekle |
-| **Q R T Y U I F C V Z J K** | Görünen komut butonları sırasıyla (harf butonun sol üst köşesinde) |
+| **Q R T Y U I F C V Z J** | Görünen komut butonları sırasıyla (harf butonun sol üst köşesinde) |
 | **Esc / F10 / P** · **F5** · **B** | Menü ve duraklatma · hızlı kayıt · müzik aç-kapat |
 | H · . · Esc · G · F1 · F3 | Kasaba Merkezi · Boşta köylü · İptal · Grid · Yardım · Performans |
 

@@ -92,7 +92,7 @@ export const SaveGame = {
         buildings: w.buildings.map((b) => ({
           id: b.id, type: b.type, oi: b.originI, oj: b.originJ, owner: b.owner, progress: b.progress, hp: b.hp,
           queue: b.queue, food: b.food, level: b.level, tier: b.tier, maxHp: b.maxHp, cost: b.cost, rally: b.rally ? (b.rally.target ? { t: ref(b.rally.target) } : { i: b.rally.i, j: b.rally.j }) : null,
-          garrison: b.garrison.map(unit),
+          garrison: b.garrison.map(unit), troops: (b.troops ?? []).map(unit),
         })),
         units: w.units.map(unit),
         players, enemy: w.enemyAI.serialize(), wild: w.wild.serialize(), weather: w.weather.serialize(), explored: game.fog.serialize(),
@@ -170,6 +170,7 @@ export const SaveGame = {
     for (const s of d.buildings) {
       const b = byId.get(s.id);
       for (const g of s.garrison ?? []) { const u = make(g); u.garrisoned = b; b.garrison.push(u); }
+      for (const t of s.troops ?? []) { const u = make(t); u.garrisoned = b; (b.troops ??= []).push(u); }
       if (s.rally) b.rally = s.rally.t ? { target: target(s.rally.t) } : { i: s.rally.i, j: s.rally.j };
       if (b.rally?.target === null) b.rally = null;
     }

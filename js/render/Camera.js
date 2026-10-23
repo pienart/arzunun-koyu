@@ -80,7 +80,7 @@ export class Camera {
    * En uzak zoom: haritanın tamamının ekrana sığdığı ölçek (bundan uzağa gidilmez; harita dışı boşluk görünmez).
    * Ekran haritadan büyükse yine de CONFIG.ZOOM_MIN'den uzaklaşılmaz.
    */
-  get minZoom() { return Math.min(CONFIG.ZOOM_MIN, this.fitZoom(1)); }
+  get minZoom() { const f = this.fitZoom(1); return f > 0 ? Math.min(CONFIG.ZOOM_MIN, f) : CONFIG.ZOOM_MIN; }
 
   /** Kıstırma (dokunmatik): imleç/parmak ortası sabit kalarak anında ölçekle */
   zoomInstant(sx, sy, factor) {

@@ -156,6 +156,8 @@ export class World {
     this.portals.update(dt);
     this.animals.update(dt);
     this._economy(dt);
+    this._tentT = (this._tentT ?? 0) - dt;
+    if (this._tentT <= 0) { this._tentT = 0.5; this._tentWatch(); }
   }
 
   // ───────────── Sorgular ─────────────
@@ -179,7 +181,7 @@ export class World {
       for (const u of this.units) if (u.owner === p.id) pop += 1 + (u.cargo?.length ?? 0);
       for (const b of this.buildings) {
         if (b.owner !== p.id) continue;
-        pop += b.garrison.length;
+        pop += b.garrison.length + (b.troops?.length ?? 0);
         if (b.queue[0]?.kind === 'unit' && b.queue[0].started) pop++;
         if (b.complete) cap += this.popOf(b);
       }
@@ -936,8 +938,63 @@ export class World {
     this.recountPopulation();
   }
 
+  // ───────────── Otağ (seyyar asker çadırı) ─────────────
+  commandTent(units, tent) {
+    for (const u of units) {
+      if (!u.isMilitary || u.def.vehicle || u.def.monster) continue;
+      u.stop();
+      u.state = 'tent';
+      u.task = { target: tent };
+      if (!this.moveToTarget(u, tent)) u.stop();
+    }
+  }
+
+  enterTent(u, b) {
+    if (!b.complete || b.destroyed || (b.troops ??= []).length >= b.def.troops) { u.stop(); return; }
+    u.stop();
+    u.garrisoned = b;
+    this.units = this.units.filter((x) => x !== u);
+    b.troops.push(u);
+    this.recountPopulation();
+  }
+
+  /** Askerleri çıkar; foe verilirse ona saldırırlar (çadıra saldırı / yaklaşan düşman) */
+  tentSortie(b, foe = null) {
+    if (!b.troops?.length) return 0;
+    const n = b.troops.length;
+    for (const u of b.troops) {
+      const s = this.findSpawnSpot(b);
+      u.garrisoned = null;
+      if (s) { u.x = u.prevX = s.i; u.y = u.prevY = s.j; }
+      u.stop();
+      this.units.push(u);
+      if (foe && this.isAlive(foe)) u.attack(foe); else u.scanT = 0;
+    }
+    b.troops = [];
+    this.recountPopulation();
+    return n;
+  }
+
+  /** Otağların bekçiliği: 9 karo içine düşman girerse ya da çadır hasar alırsa askerler çıkıp saldırır */
+  _tentWatch() {
+    for (const b of this.buildings) {
+      if (!b.troops?.length || !b.complete) continue;
+      let foe = null, bd = 9;
+      this.grid.each(b.centerI, b.centerJ, 9, (o) => {
+        if (o.owner === b.owner || o.dead || o.def.animal) return;
+        const d = rectEuclid(o.x, o.y, b);
+        if (d < bd) { bd = d; foe = o; }
+      });
+      if (!foe && b._hitBy && this.isAlive(b._hitBy) && this.time - b._hitAt < 3) foe = b._hitBy;
+      if (!foe) continue;
+      const n = this.tentSortie(b, foe);
+      if (b.owner === PLAYER) { this.notify(`Otağdaki ${n} asker düşmana karşı çıktı!`, 'warn'); this.sound('horn', b.centerI, b.centerJ, 0.6); }
+    }
+  }
+
   // ───────────── Bina taşıma (mimar) ─────────────
   relocateCost(b) {
+    if (b.def.portable) return {}; // seyyar (otağ): bedelsiz
     const c = {};
     for (const [k, v] of Object.entries(b.cost ?? b.def.cost)) c[k] = Math.ceil(v * 0.3);
     return c;
@@ -946,7 +1003,7 @@ export class World {
   /** Binayı yeni yere taşı: bir mimar gerekir, bedel maliyetin %30'u. Üretim kuyruğu ve seviye korunur. */
   relocate(b, oi, oj) {
     const arch = this.units.filter((u) => u.owner === PLAYER && u.type === 'architect');
-    if (!arch.length) { this.notify('Binayı taşımak için bir mimar gerekir (Üniversite).', 'warn'); return false; }
+    if (!arch.length && !b.def.portable) { this.notify('Binayı taşımak için bir mimar gerekir (Üniversite).', 'warn'); return false; }
     const err = this.checkPlacement(b.type, oi, oj, b);
     if (err) { this.notify(err, 'warn'); return false; }
     const cost = this.relocateCost(b);
@@ -961,6 +1018,7 @@ export class World {
       if (u.task?.target === b) u.stop();
     }
     if (b.type === 'farm' || b.def.ground) this.map.groundVersion++;
+    if (b.def.portable) { this.notify(`${b.name} yeni yerine kuruldu.`, 'good'); return true; }
     arch.sort((a, c) => Math.hypot(a.x - b.centerI, a.y - b.centerJ) - Math.hypot(c.x - b.centerI, c.y - b.centerJ));
     this.commandMove([arch[0]], b.i + 1, b.j + 1);
     this.notify(`${b.name} taşındı (${formatCost(cost)}). Mimar yeni yere gidiyor.`, 'good');
@@ -1114,6 +1172,7 @@ export class World {
     for (const req of def.requires ?? []) {
       if (!this.buildings.some((b) => b.owner === owner && b.type === req && b.complete)) return `Önce ${BUILDINGS[req].name} gerekli`;
     }
+    if (def.limit && this.buildings.filter((b) => b.owner === owner && b.type === type).length >= def.limit) return `En fazla ${def.limit} adet kurulabilir`;
     if (!p.canAfford(this.costOf(type, owner))) return 'Yetersiz kaynak';
     return null;
   }
@@ -1474,6 +1533,7 @@ export class World {
     // Taş Deri İksiri: binalar hasar almaz
     if (target.isBuilding && (this.players[target.owner]?.effects.stoneSkin ?? 0) > this.time) return;
     if (target.isUnit) target._hurtAt = this.time;
+    if (target.isBuilding && target.troops?.length && attacker?.isUnit) { target._hitBy = attacker; target._hitAt = this.time; }
     let amount = base, armor;
     if (target.isUnit) armor = this.stat(target, kind);
     else {
@@ -1570,6 +1630,7 @@ export class World {
 
   destroyBuilding(b) {
     this.ungarrison(b); // içeridekiler yıkıntıdan kaçar
+    this.tentSortie(b);
     if (b.owner === PLAYER && !b.def.wall && !b.def.gate && !b.def.decor && b.type !== 'farm') {
       const p = this.player, keep = this.protectedShare(PLAYER);
       let lost = 0;

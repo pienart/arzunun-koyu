@@ -117,7 +117,7 @@ export const BUILDINGS = {
   // ── Halk, gıda ve depolama ──
   tavern: {
     name: 'Taverna', size: 3, hp: 1200, cost: { wood: 200, gold: 50 }, buildTime: 35, age: 1, sprite: 'tavern',
-    happiness: 7, wineUse: 0.04, armor: { melee: 0, pierce: 7 },
+    happiness: 7, wineUse: 0.04, limit: 4, armor: { melee: 0, pierce: 7 },
     desc: 'Halkın eğlendiği yer: huzuru artırır (+7; şarap yoksa yalnızca +2). Şarap Mahzeni\'nin şarabını tüketir.',
   },
   wineCellar: {
@@ -152,8 +152,14 @@ export const BUILDINGS = {
   },
   hospital: {
     name: 'Hastane', size: 3, hp: 1500, cost: { wood: 250, stone: 100, gold: 100 }, buildTime: 40, age: 1, sprite: 'hospital',
-    heal: { radius: 9, rate: 3 }, revive: { chance: 0.35, time: 25 }, armor: { melee: 1, pierce: 8 },
+    heal: { radius: 9, rate: 3 }, revive: { chance: 0.35, time: 25 }, limit: 2, armor: { melee: 1, pierce: 8 },
     desc: 'Çevresindeki (9 karo) yaralı askerleri hızla iyileştirir (saniyede 3 can). Ölen askerlerinizin bir kısmı (%35) 25 sn sonra hastanede iyileşip geri döner.',
+  },
+  // Otağ: seyyar asker çadırı. 50 asker içine girer; düşman yaklaşınca/çadıra saldırınca kendiliğinden çıkıp savaşır.
+  otag: {
+    name: 'Otağ', size: 2, hp: 900, cost: { wood: 120, food: 80, hide: 10 }, buildTime: 20, age: 0, requires: ['barracks'], sprite: 'otag',
+    troops: 50, portable: true, limit: 4, armor: { melee: 1, pierce: 6 },
+    desc: 'Seyyar asker çadırı: 50 asker içine girer (askerleri seçip çadıra sağ tıklayın). Düşman yaklaşırsa ya da çadıra saldırırsa askerler kendiliğinden çıkıp savaşır. Mimarsız ve bedelsiz taşınabilir (seyyar).',
   },
   firePit: {
     name: 'Ateş Çukuru', size: 1, hp: 150, cost: { wood: 30, stone: 10 }, buildTime: 6, age: 0, sprite: 'campfire', light: true,
@@ -171,26 +177,26 @@ export const BUILDINGS = {
   },
   market: {
     name: 'Pazar', size: 3, hp: 2100, cost: { wood: 175 }, buildTime: 30, age: 1, trade: true, sprite: 'market',
-    armor: { melee: 0, pierce: 7 }, desc: 'Kaynak alım-satımı yapılır.',
+    limit: 1, armor: { melee: 0, pierce: 7 }, desc: 'Kaynak alım-satımı yapılır.',
   },
   animalFarm: {
     name: 'Hayvan Çiftliği', size: 3, hp: 1000, cost: { wood: 200, gold: 50 }, buildTime: 35, age: 1, sprite: 'animalFarm',
-    income: { food: 0.5 }, incomeMod: 'ranch', levels: true, dayNight: true, armor: { melee: 0, pierce: 7 },
-    desc: 'İnekler ve keçiler sağılır: kendiliğinden yiyecek üretir (dakikada 30, seviye ve Süt Ürünleri ile artar). Gündüz hayvanlar ağılda, gece ahırın içindedir.',
+    income: { food: 0.5, hide: 0.02 }, incomeMod: 'ranch', levels: true, dayNight: true, armor: { melee: 0, pierce: 7 },
+    desc: 'İnekler ve keçiler sağılır: kendiliğinden yiyecek (dakikada 30) ve biraz deri (dakikada ~1) üretir; seviye ve Süt Ürünleri ile artar. Gündüz hayvanlar ağılda, gece ahırın içindedir.',
   },
   scienceCenter: {
     name: 'Bilim Merkezi', size: 3, hp: 1600, cost: { wood: 200, stone: 100 }, buildTime: 40, age: 0, sprite: 'scienceCenter',
-    research: true, armor: { melee: 1, pierce: 8 },
+    research: true, limit: 1, armor: { melee: 1, pierce: 8 },
     desc: 'Tüm araştırmalar burada yapılır: Köy, Ordu, Sağlık ve Savunma başlıklarında araştırma ağacı.',
   },
   university: {
     name: 'Üniversite', size: 3, hp: 1800, cost: { wood: 250, stone: 150, gold: 100 }, buildTime: 45, age: 2, sprite: 'university',
-    trains: ['architect'], armor: { melee: 1, pierce: 8 },
+    trains: ['architect'], limit: 1, armor: { melee: 1, pierce: 8 },
     desc: 'Mimar yetiştirir. Mimarlar patika, çiçek tarhı ve süs ağacıyla şehri güzelleştirir.',
   },
   alchemyLab: {
     name: 'Simya Atölyesi', size: 2, hp: 900, cost: { wood: 150, gold: 150 }, buildTime: 35, age: 2, sprite: 'alchemyLab',
-    alchemy: true, armor: { melee: 0, pierce: 7 },
+    alchemy: true, limit: 1, armor: { melee: 0, pierce: 7 },
     desc: 'İksirler ve aletler üretir. İksirler envantere eklenir ve istediğiniz an kullanılır; aletler kalıcıdır.',
   },
   // Süslemeler: yalnızca MİMAR kurar (decor). Patika üzerinde birimler %35 hızlı yürür.
@@ -232,13 +238,13 @@ export const BUILDINGS = {
   },
   wonder: {
     name: 'Harika', size: 5, hp: 4800, cost: { wood: 1000, gold: 1000, stone: 1000 }, buildTime: 120, age: 3,
-    sprite: 'wonder', armor: { melee: 2, pierce: 8 },
+    sprite: 'wonder', limit: 1, armor: { melee: 2, pierce: 8 },
     desc: 'Medeniyetinizin en büyük eseri. Tamamlandığında zafer kazanırsınız.',
   },
 };
 
 /** Köylünün inşa menüsündeki sıra */
-export const BUILD_MENU = ['house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 'vegetableBed', 'animalFarm', 'greenhouse', 'granary', 'dock', 'waterMill', 'goldPanning', 'wall', 'gate', 'firePit', 'barracks', 'archeryRange', 'stable', 'watchTower', 'hospital', 'tavern', 'wineCellar', 'scienceCenter', 'market', 'siegeWorkshop', 'university', 'alchemyLab', 'wonder'];
+export const BUILD_MENU = ['house', 'lumberCamp', 'mill', 'miningCamp', 'farm', 'vegetableBed', 'animalFarm', 'greenhouse', 'granary', 'dock', 'waterMill', 'goldPanning', 'wall', 'gate', 'firePit', 'barracks', 'otag', 'archeryRange', 'stable', 'watchTower', 'hospital', 'tavern', 'wineCellar', 'scienceCenter', 'market', 'siegeWorkshop', 'university', 'alchemyLab', 'wonder'];
 /** Mimarın süsleme menüsü */
 export const DECOR_MENU = ['path', 'hedge', 'flowerBed', 'cherryTree', 'bench', 'lampPost', 'well', 'statue', 'fountain'];
 

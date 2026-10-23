@@ -1011,7 +1011,7 @@ export class Renderer {
     let { wx, wy } = it;
     const st = u.animState;
     let s, w, h, flip;
-    const veh = u.naval || u.def.siege || u.def.vehicle ? sp.vehicle(u) : null;
+    const veh = u.naval || u.def.siege || u.def.vehicle || u.def.animal ? sp.vehicle(u) : null;
     it.rot = 0;
     if (veh) {
       // Tekne: dalgada iner-kalkar ve yalpalar (balık tutarken de); koçbaşı yalpalar, vururken öne atılır
@@ -1021,13 +1021,13 @@ export class Renderer {
         it.rot = Math.sin(time * 1.4 + u.id * 1.7) * 0.05;
         it.wake = u.moving;
       } else {
-        if (u.moving) wy -= Math.abs(Math.sin(u.walkDist * 6)) * 1.2;
+        if (u.def.animal) { if (u.moving) wy -= Math.abs(Math.sin(u.walkDist * (u.type === 'rabbit' ? 9 : 5))) * (u.type === 'rabbit' ? 4 : 2.5); }
+        else if (u.moving) wy -= Math.abs(Math.sin(u.walkDist * 6)) * 1.2;
         if (u.engaged) { const ph = Math.max(0, Math.sin(((u.def.reload - Math.max(0, u.cooldown)) / u.def.reload) * Math.PI)); wx += u.hx * ph * 9; wy += u.hy * ph * 9; }
       }
     } else {
       s = sp.unitSprite(u, st);
       const k = sp.unitScale[u.type] ?? sp.villagerScale;
-      if (u.def.animal && u.moving) wy -= Math.abs(Math.sin(u.walkDist * (u.type === 'rabbit' ? 9 : 5))) * (u.type === 'rabbit' ? 4 : 2.5);
       w = s.levels[0].width * k; h = s.levels[0].height * k;
       // Yürürken yön dilimi aynalamayı belirler (batı = doğunun aynası); dururken hedefe bakış (facing)
       flip = st?.flip !== undefined ? st.flip : it.facing < 0;
@@ -1042,8 +1042,12 @@ export class Renderer {
     if (it.deco) return;
     const u = it.u, sp = this.sprites;
     if (it.wake) this._drawWake(ctx, u, it.bx, it.by, this._lastFrameT);
-    const big = u.type === 'yeti' ? 2.6 : u.type === 'cavalry' || it.veh ? 1.7 : 1;
-    if (!u.naval) ctx.drawImage(sp.shadow, it.bx - 10 * big, it.by - 5 * big, 24 * big, 10 * big); // temas gölgesi
+    const big = u.type === 'yeti' ? 2.6 : u.def.animal ? (u.type === 'rabbit' ? 0.5 : 1.2) : u.type === 'cavalry' || it.veh ? 1.7 : 1;
+    if (!u.naval) { // temas gölgesi: daha geniş, daha soluk ve hafif sağa kaymış (güneş sol üstten)
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(sp.shadow, it.bx - 12 * big, it.by - 5.5 * big, 28 * big, 11 * big);
+      ctx.globalAlpha = 1;
+    }
     if (selected.has(u)) {
       ctx.beginPath();
       ctx.ellipse(it.bx, it.by, 10 * big, 5 * big, 0, 0, Math.PI * 2);

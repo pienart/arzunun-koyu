@@ -9,7 +9,7 @@ const spriteFile = (key) => MANIFEST.sprites[key]?.file;
 const iconFile = (key) => MANIFEST.icons[key]?.file;
 const UNIT_PORTRAIT = { villager: 'vil_idle', militia: 'mil_idle', archer: 'arc_idle', cavalry: 'cav_idle', ram: 'ram_e', fishingBoat: 'boat_e', commander: 'mil_idle', yeti: 'yeti_idle', architect: 'arch_idle', cart: 'cart_e', catapult: 'catapult_e', warWagon: 'warWagon_e' };
 /** Komut butonlarına sırayla atanan kısayollar (WASD kamera, H/G/L/M/N/B/X/P başka işlere ayrılı) */
-const HOTKEYS = ['KeyQ', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyF', 'KeyC', 'KeyV', 'KeyZ', 'KeyJ', 'KeyK']; // E ve O kamera kısayolu
+const HOTKEYS = ['KeyQ', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyF', 'KeyC', 'KeyV', 'KeyZ', 'KeyJ']; // E, O kamera · K mini harita
 const UNIT_DESC = {
   villager: 'Kaynak toplar, bina inşa eder ve tamir eder.', fishingBoat: 'Balık sürülerinden yiyecek toplar ve tersaneye getirir.',
   architect: 'Patika, çiçek tarhı ve süs ağacı yapar: şehri güzelleştirir. Patikada birimler %35 hızlı yürür.',
@@ -38,6 +38,24 @@ function enemyPortrait(sprites, key) {
     portraitCache.set(key, url);
   }
   return portraitCache.get(key);
+}
+
+/** Bir kaynağın nereden elde edildiği (üst bardaki kaynağın üzerine gelince) */
+const SOURCES = {
+  food: 'meyve çalısı, çiftlik, sebze yatağı, sera, balık (kıyı ve tekne), av eti, hayvan çiftliği, su değirmeni',
+  wood: 'ağaç kesimi (kereste kampına ya da Kasaba Merkezi\'ne taşınır)',
+  gold: 'altın madeni, Altın Rezervi tesisi, Altın Eleme Tesisi (su kenarı), pazarda satış',
+  stone: 'taş ocağı, Taş Ocağı tesisi',
+  hide: 'yabani hayvan avı (ceylan 6, geyik 10, tavşan 2, yaban atı 14 deri) ve Hayvan Çiftliği (dakikada ~1)',
+};
+
+/** Haritadaki kaynağın / hayvanın vereceği (seçim paneli ve fareyle üzerine gelince) */
+function yieldText(o) {
+  const res = (k, n) => `${ICON(k)} ${n} ${RESOURCE_NAMES[k].toLowerCase()}`;
+  if (o.isUnit && o.def.animal) return `Avlanınca: ${res('food', o.def.meat)} (et) + ${res('hide', o.def.hide)}`;
+  if (!o.isResource) return '';
+  const verb = { tree: 'Kesilince', berry: 'Toplanınca', fish: 'Avlanınca', carcass: 'Toplanınca' }[o.kind] ?? 'Kazılınca';
+  return `${verb}: ${res(o.resType, Math.ceil(o.amount))}${o.kind === 'carcass' ? ' (av eti)' : ''}`;
 }
 
 function buildingKey(type, tier) {
@@ -195,6 +213,13 @@ export class UIManager {
     this.el.pendingToggle.setAttribute('aria-expanded', String(!this.pendingFolded));
   }
 
+  /** Haritada fareyle bir kaynağın ya da yabani hayvanın üzerine gelince ne vereceğini göster */
+  hoverWorld(ent, e) {
+    if (!ent || !(ent.isResource || ent.def?.animal)) { if (this._worldTip) { this._worldTip = false; this._hideTip(); } return; }
+    this._worldTip = true;
+    this._tip(`<b>${ent.name}</b><div>${yieldText(ent)}</div>`, e, true);
+  }
+
   // ───────────── Kaynak verimi (saatlik) ─────────────
   /** Toplanan kaynak geçmişinden 10 sn'lik örnekler: son 5 dk'nın ortalaması saatliğe çevrilir */
   _sampleRates() {
@@ -229,7 +254,7 @@ export class UIManager {
     const x = this.rates()[r], w = this.game.world;
     const fmt = (v) => Math.round(v).toLocaleString('tr-TR');
     const win = x && this._rateHist.length ? Math.round(Math.min(300, w.time - this._rateHist[0].t) / 60 * 10) / 10 : 0;
-    this._tip(`<b>${RESOURCE_NAMES[r]}</b>
+    this._tip(`<b>${RESOURCE_NAMES[r]}</b><div class="sub">Nereden: ${SOURCES[r]}</div>
       <div class="rate"><span>Saatlik çıkarım</span><span>${fmt(x.perHour)} / saat</span>
       <span>Dakikalık</span><span>${fmt(x.perHour / 60)} / dk</span>
       <span>Toplayan</span><span>${x.workers} ${r === 'food' ? 'köylü/tekne' : 'köylü'}</span>
@@ -416,7 +441,7 @@ export class UIManager {
     info.innerHTML = `
       <div class="portrait ${farm ? 'farm' : ''} ${enemy ? 'enemy' : ''}"><img src="${img}" alt=""></div>
       <div class="details">
-        <div class="title">${title}${enemy ? ` <span class="foe">${a.type === 'yeti' ? 'Yaratık' : 'Düşman'}</span>` : ''}${a.isBuilding && a.def.levels && a.complete ? ` <span class="lvl">Sv. ${a.level}</span>` : ''}</div>
+        <div class="title">${title}${enemy ? (a.def?.animal ? ' <span class="wildtag">Yabani</span>' : ` <span class="foe">${a.type === 'yeti' ? 'Yaratık' : 'Düşman'}</span>`) : ''}${a.isBuilding && a.def.levels && a.complete ? ` <span class="lvl">Sv. ${a.level}</span>` : ''}</div>
         <div class="hp ${a.isResource ? 'res' : ''} ${enemy ? 'foe' : ''}"><i></i><span></span></div>
         <div class="line l1"></div>
         <div class="line l2"></div>
@@ -468,7 +493,8 @@ export class UIManager {
       }
     } else if (a.isBuilding) {
       frac = a.hp / a.maxHp; text = `${Math.ceil(a.hp)}/${a.maxHp}`;
-      if (a.complete && a.def.garrison && a.owner === PLAYER) l2 = `İçeride: ${a.garrison.length}/${a.def.garrison} köylü${a.repairers ? ` · ${a.repairers} köylü tamir ediyor` : ''}`;
+      if (a.complete && a.def.troops) l2 = `İçeride: ${a.troops?.length ?? 0}/${a.def.troops} asker · düşman yaklaşırsa çıkıp savaşırlar`;
+      else if (a.complete && a.def.garrison && a.owner === PLAYER) l2 = `İçeride: ${a.garrison.length}/${a.def.garrison} köylü${a.repairers ? ` · ${a.repairers} köylü tamir ediyor` : ''}`;
       else if (a.repairers) l2 = `${a.repairers} köylü tamir ediyor`;
       if (!a.complete) l1 = `İnşa ediliyor: %${Math.floor(a.progress * 100)}${a.builders ? ` · ${a.builders} işçi` : ' · işçi yok'}`;
       else if (a.def.farmFood) l1 = `${ICON('food')} Kalan yiyecek: ${Math.ceil(a.food)}${a.level > 1 ? ` · ürün +%${Math.round((g.world.levelMul(a) - 1) * 100)}` : ''}`;
@@ -491,6 +517,7 @@ export class UIManager {
       frac = a.amount / a.maxAmount;
       text = `${Math.ceil(a.amount)}`;
       l1 = `${ICON(a.resType)} ${RESOURCE_NAMES[a.resType]}: ${Math.ceil(a.amount)} / ${a.maxAmount}`;
+      l2 = yieldText(a);
     }
     r.hp.style.width = `${Math.max(0, Math.min(1, frac)) * 100}%`;
     r.hpText.textContent = text;
@@ -511,7 +538,8 @@ export class UIManager {
           const def = BUILDINGS[type];
           specs.push({
             img: buildingFile(type, tier), cls: type === 'farm' ? 'farm' : '', label: def.tiers?.[Math.min(def.tiers.length - 1, tier)].name ?? def.name, title: def.tiers?.[Math.min(def.tiers.length - 1, tier)].name ?? def.name,
-            cost: w.costOf(type), time: def.buildTime, desc: def.desc,
+            cost: w.costOf(type), time: def.buildTime, desc: def.desc + (def.limit ? ` (En fazla ${def.limit} adet.)` : ''),
+            count: () => this._countOf(type, def.limit),
             check: () => w.checkBuildable(type), onClick: () => g.startPlacement(type),
           });
         }
@@ -590,6 +618,13 @@ export class UIManager {
           check: () => (a.garrison.length ? null : 'İçeride kimse yok'), onClick: () => w.ungarrison(a),
         });
       }
+      if (def.troops) {
+        specs.push({
+          img: spriteFile('mil_idle'), label: 'Askerleri Çıkar', title: 'Askerleri Çıkar',
+          desc: 'Otağdaki askerler dışarı çıkar. Askerleri içeri almak için onları seçip otağa sağ tıklayın.',
+          check: () => (a.troops?.length ? null : 'Otağ boş'), onClick: () => w.tentSortie(a),
+        });
+      }
       if (def.wall) {
         specs.push({
           img: buildingFile('gate', tier), label: 'Kapı Aç', title: 'Kapıya Çevir',
@@ -609,7 +644,7 @@ export class UIManager {
         specs.push({
           img: spriteFile('arch_idle'), label: 'Taşı', title: 'Binayı Taşı (Mimar)',
           cost: w.relocateCost(a), desc: 'Bir mimar binayı söküp yeni yerine kurar. Bedel: bina maliyetinin %30\'u. Kuyruk ve seviye korunur.',
-          check: () => (w.units.some((u) => u.owner === PLAYER && u.type === 'architect') ? (p.canAfford(w.relocateCost(a)) ? null : 'Yetersiz kaynak') : 'Mimar gerekli (Üniversite)'),
+          check: () => (def.portable || w.units.some((u) => u.owner === PLAYER && u.type === 'architect') ? (p.canAfford(w.relocateCost(a)) ? null : 'Yetersiz kaynak') : 'Mimar gerekli (Üniversite)'),
           onClick: () => g.startRelocate(a),
         });
       }
@@ -672,7 +707,9 @@ export class UIManager {
       el.className = `cmd ${spec.cls ?? ''}`;
       const hk = HOTKEYS[specs.indexOf(spec)];
       const key = hk ? `<span class="hk">${hk.slice(3)}</span>` : '';
-      el.innerHTML = (spec.img ? `<img src="${spec.img}" alt=""><span class="lbl">${spec.label}</span>` : `<span class="txt">${spec.text}</span>`) + key;
+      el.innerHTML = (spec.img ? `<img src="${spec.img}" alt=""><span class="lbl">${spec.label}</span>` : `<span class="txt">${spec.text}</span>`) + key +
+        (spec.count ? '<span class="cnt"></span>' : '');
+      el._cnt = el.querySelector('.cnt');
       if (hk) el.title = `${spec.title} (${hk.slice(3)})`;
       el.addEventListener('click', () => {
         const err = spec.check();
@@ -701,8 +738,15 @@ export class UIManager {
     if (on) this.el.fps.textContent = `${v} FPS`;
   }
 
+  /** Yapı menüsü rozeti: kurulu (yapımdakiler dahil) / limit */
+  _countOf(type, limit) {
+    const n = this.game.world.buildings.filter((b) => b.owner === PLAYER && b.type === type).length;
+    return limit ? `${n}/${limit}` : n ? String(n) : '';
+  }
+
   _refreshButtons() {
     for (const { el, spec } of this._buttons) {
+      if (spec.count && el._cnt) { const t = spec.count(); if (el._cnt.textContent !== t) { el._cnt.textContent = t; el._cnt.classList.toggle('full', /^(\d+)\/\1$/.test(t)); } }
       const err = spec.check();
       el.classList.toggle('poor', err === 'Yetersiz kaynak');
       el.classList.toggle('locked', !!err && err !== 'Yetersiz kaynak');

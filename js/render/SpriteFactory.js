@@ -365,9 +365,11 @@ export class SpriteFactory {
     const c = makeCanvas(128, 64), ctx = c.getContext('2d');
     ctx.setTransform(1, 0, 0, 0.5, 0, 0);
     const g = ctx.createRadialGradient(64, 64, 4, 64, 64, 64);
-    g.addColorStop(0, 'rgba(0,0,0,0.78)');
-    g.addColorStop(0.5, 'rgba(0,0,0,0.55)');
-    g.addColorStop(0.82, 'rgba(0,0,0,0.22)');
+    // Yumuşak gölge: merkez koyu değil, kenarlara doğru uzun ve düzgün sönüm (sert halka görünmesin)
+    g.addColorStop(0, 'rgba(0,0,0,0.62)');
+    g.addColorStop(0.35, 'rgba(0,0,0,0.45)');
+    g.addColorStop(0.65, 'rgba(0,0,0,0.2)');
+    g.addColorStop(0.85, 'rgba(0,0,0,0.07)');
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 128, 128);

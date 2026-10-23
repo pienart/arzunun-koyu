@@ -65,6 +65,10 @@ SPECS['yeti_attack'] = ('yeti_idle', 14, 1.0, (30, 72))
 SPECS['animalFarm_0'] = ('animalFarm_0', 12, 1.0, (24, 72))
 SPECS['arch_walk'] = ('arch_idle', 16, 1.0, (24, 60))
 SPECS['arch_build'] = ('arch_idle', 14, 1.0, (30, 72))
+# Koca Ayak ve mimar: 4 ek yön (sağ-aşağı, aşağı, sağ-yukarı, yukarı); batı yönleri aynalanır
+for _b, _src in [('yeti_walk', 'yeti_idle'), ('arch_walk', 'arch_idle')]:
+    for _d in ['_s', '_n', '_se', '_ne']:
+        SPECS[_b + _d] = (_src, 16, 1.0, (24, 60))
 # Yel değirmeni kanatları (bina): kaynak sprite'ın kare içindeki yeri "ref" olarak kaydedilir
 for _t in range(3):
     SPECS[f'mill_{_t}'] = (f'mill_{_t}', 12, 2.0, (12, 72))

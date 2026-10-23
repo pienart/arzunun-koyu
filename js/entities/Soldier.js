@@ -21,7 +21,7 @@ export class Soldier extends Unit {
 
   get activity() {
     if (this.def.siege && this.state === 'attack') return 'Kapıya/duvara vuruyor';
-    return { attack: this.resume === 'patrol' ? 'Devriyede: çatışıyor' : 'Savaşıyor', move: 'Yürüyor', attackMove: 'Saldırı yürüyüşü', guard: 'Nöbette', patrol: 'Devriyede (güvenlik denetimi)', board: 'Arabaya biniyor' }[this.state] ?? 'Hazır';
+    return { attack: this.resume === 'patrol' ? 'Devriyede: çatışıyor' : 'Savaşıyor', move: 'Yürüyor', attackMove: 'Saldırı yürüyüşü', guard: 'Nöbette', patrol: 'Devriyede (güvenlik denetimi)', board: 'Arabaya biniyor', tent: 'Otağa gidiyor' }[this.state] ?? 'Hazır';
   }
 
   get animState() {
@@ -49,6 +49,12 @@ export class Soldier extends Unit {
       case 'guard': this._updateGuard(dt, world); break;
       case 'board': this._updateBoard(dt, world); break;
       case 'patrol': this._updatePatrol(dt, world); break;
+      case 'tent': {
+        const b = this.task?.target;
+        if (!b || !world.isAlive(b)) { this.stop(); break; }
+        if (this.followPath(dt, world)) { if (world.isAt(this, b)) world.enterTent(this, b); else if (!world.moveToTarget(this, b)) this.stop(); }
+        break;
+      }
       default: break;
     }
   }

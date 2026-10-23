@@ -833,6 +833,153 @@ export const MANIFEST = {
       "h": 340,
       "anchorX": 0.4968,
       "baseW": 148.0
+    },
+    "gazelle_se": {
+      "file": "assets/sprites/gazelle_se.webp",
+      "w": 96,
+      "h": 150,
+      "anchorX": 0.6146,
+      "baseW": 33.0
+    },
+    "gazelle_s": {
+      "file": "assets/sprites/gazelle_s.webp",
+      "w": 41,
+      "h": 150,
+      "anchorX": 0.378,
+      "baseW": 22.0
+    },
+    "gazelle_ne": {
+      "file": "assets/sprites/gazelle_ne.webp",
+      "w": 69,
+      "h": 150,
+      "anchorX": 0.2971,
+      "baseW": 38.0
+    },
+    "gazelle_n": {
+      "file": "assets/sprites/gazelle_n.webp",
+      "w": 26,
+      "h": 150,
+      "anchorX": 0.5,
+      "baseW": 15.0
+    },
+    "deer_se": {
+      "file": "assets/sprites/deer_se.webp",
+      "w": 100,
+      "h": 150,
+      "anchorX": 0.52,
+      "baseW": 49.0
+    },
+    "deer_s": {
+      "file": "assets/sprites/deer_s.webp",
+      "w": 67,
+      "h": 150,
+      "anchorX": 0.4478,
+      "baseW": 23.0
+    },
+    "deer_ne": {
+      "file": "assets/sprites/deer_ne.webp",
+      "w": 80,
+      "h": 150,
+      "anchorX": 0.425,
+      "baseW": 69.0
+    },
+    "deer_n": {
+      "file": "assets/sprites/deer_n.webp",
+      "w": 52,
+      "h": 150,
+      "anchorX": 0.5,
+      "baseW": 21.0
+    },
+    "rabbit_se": {
+      "file": "assets/sprites/rabbit_se.webp",
+      "w": 138,
+      "h": 150,
+      "anchorX": 0.7246,
+      "baseW": 57.0
+    },
+    "rabbit_s": {
+      "file": "assets/sprites/rabbit_s.webp",
+      "w": 70,
+      "h": 150,
+      "anchorX": 0.4929,
+      "baseW": 60.0
+    },
+    "rabbit_ne": {
+      "file": "assets/sprites/rabbit_ne.webp",
+      "w": 91,
+      "h": 150,
+      "anchorX": 0.2857,
+      "baseW": 53.0
+    },
+    "rabbit_n": {
+      "file": "assets/sprites/rabbit_n.webp",
+      "w": 70,
+      "h": 150,
+      "anchorX": 0.4929,
+      "baseW": 70.0
+    },
+    "horse_se": {
+      "file": "assets/sprites/horse_se.webp",
+      "w": 130,
+      "h": 150,
+      "anchorX": 0.5769,
+      "baseW": 61.0
+    },
+    "horse_s": {
+      "file": "assets/sprites/horse_s.webp",
+      "w": 65,
+      "h": 150,
+      "anchorX": 0.5692,
+      "baseW": 31.0
+    },
+    "horse_ne": {
+      "file": "assets/sprites/horse_ne.webp",
+      "w": 96,
+      "h": 150,
+      "anchorX": 0.3802,
+      "baseW": 74.0
+    },
+    "horse_n": {
+      "file": "assets/sprites/horse_n.webp",
+      "w": 40,
+      "h": 150,
+      "anchorX": 0.5,
+      "baseW": 23.0
+    },
+    "otag_0": {
+      "file": "assets/sprites/otag_0.webp",
+      "w": 477,
+      "h": 480,
+      "anchorX": 0.501,
+      "baseW": 473.0
+    },
+    "gazelle_e": {
+      "file": "assets/sprites/gazelle_idle.webp",
+      "w": 125,
+      "h": 150,
+      "anchorX": 0.336,
+      "baseW": 85.0
+    },
+    "deer_e": {
+      "file": "assets/sprites/deer_idle.webp",
+      "w": 129,
+      "h": 150,
+      "anchorX": 0.3566,
+      "baseW": 93.0
+    },
+    "rabbit_e": {
+      "file": "assets/sprites/rabbit_idle.webp",
+      "w": 145,
+      "h": 150,
+      "anchorX": 0.4,
+      "baseW": 117.0
+    },
+    "horse_e": {
+      "file": "assets/sprites/horse_idle.webp",
+      "w": 150,
+      "h": 127,
+      "anchorX": 0.3467,
+      "baseW": 105.0
     }
   },
   "icons": {
@@ -1514,14 +1661,14 @@ export const MANIFEST = {
     "cav_walk_se": {
       "file": "assets/anims/cav_walk_se.webp",
       "frames": 16,
-      "w": 223,
-      "h": 279,
-      "anchorX": 0.4773,
+      "w": 179,
+      "h": 236,
+      "anchorX": 0.5171,
       "ref": [
-        0.0893,
-        0.1614,
-        0.7587,
-        0.8241
+        0.0458,
+        0.0198,
+        0.9216,
+        0.9728
       ]
     },
     "cav_walk_ne": {
@@ -1600,6 +1747,110 @@ export const MANIFEST = {
         0.0173,
         0.6688,
         0.9741
+      ]
+    },
+    "yeti_walk_se": {
+      "file": "assets/anims/yeti_walk_se.webp",
+      "frames": 16,
+      "w": 214,
+      "h": 313,
+      "anchorX": 0.4735,
+      "ref": [
+        0.0102,
+        0.0348,
+        0.9779,
+        0.9582
+      ]
+    },
+    "yeti_walk_s": {
+      "file": "assets/anims/yeti_walk_s.webp",
+      "frames": 16,
+      "w": 200,
+      "h": 309,
+      "anchorX": 0.4569,
+      "ref": [
+        0.0,
+        0.0265,
+        0.9644,
+        0.9723
+      ]
+    },
+    "yeti_walk_ne": {
+      "file": "assets/anims/yeti_walk_ne.webp",
+      "frames": 16,
+      "w": 197,
+      "h": 313,
+      "anchorX": 0.4795,
+      "ref": [
+        0.0229,
+        0.0314,
+        0.9637,
+        0.959
+      ]
+    },
+    "yeti_walk_n": {
+      "file": "assets/anims/yeti_walk_n.webp",
+      "frames": 16,
+      "w": 186,
+      "h": 301,
+      "anchorX": 0.468,
+      "ref": [
+        0.0,
+        0.0,
+        0.9878,
+        0.9975
+      ]
+    },
+    "arch_walk_se": {
+      "file": "assets/anims/arch_walk_se.webp",
+      "frames": 16,
+      "w": 82,
+      "h": 165,
+      "anchorX": 0.5396,
+      "ref": [
+        0.0914,
+        0.0305,
+        0.9086,
+        0.9668
+      ]
+    },
+    "arch_walk_s": {
+      "file": "assets/anims/arch_walk_s.webp",
+      "frames": 16,
+      "w": 73,
+      "h": 164,
+      "anchorX": 0.4906,
+      "ref": [
+        0.0145,
+        0.0233,
+        0.9651,
+        0.9767
+      ]
+    },
+    "arch_walk_ne": {
+      "file": "assets/anims/arch_walk_ne.webp",
+      "frames": 16,
+      "w": 87,
+      "h": 166,
+      "anchorX": 0.4324,
+      "ref": [
+        0.01,
+        0.0331,
+        0.8562,
+        0.9634
+      ]
+    },
+    "arch_walk_n": {
+      "file": "assets/anims/arch_walk_n.webp",
+      "frames": 16,
+      "w": 74,
+      "h": 164,
+      "anchorX": 0.4916,
+      "ref": [
+        0.0202,
+        0.0254,
+        0.9556,
+        0.9746
       ]
     }
   }

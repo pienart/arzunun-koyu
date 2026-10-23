@@ -227,7 +227,7 @@ body.panel-pinned #panelToggle { border-color: #ffd36b; box-shadow: 0 0 6px rgba
 
 /* Bekleyen inşaatlar listesi (sağ üst) */
 #pending {
-  position: fixed; top: 52px; right: 10px; z-index: 6; width: 240px; max-height: calc(100vh - 240px);
+  position: fixed; top: 52px; right: 10px; z-index: 6; width: 300px; max-height: calc(100vh - 240px);
   display: flex; flex-direction: column; border-radius: 6px; overflow: hidden;
 }
 #pending .ph { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--gold-dim); font-size: 13px; }
@@ -402,7 +402,10 @@ body:not(.ingame) #xpanel, body:not(.ingame) #items { display: none !important; 
 #mapbox.mini #mapToggle::after { top: 3px; border-top: 0; border-bottom: 6px solid var(--ink); }
 #mapToggle:hover { border-color: #ffd36b; }
 /* İnşaat listesinde İşçi Çağır */
-#pendingList li { grid-template-columns: 34px 1fr auto; }
+#pendingList { overflow-x: hidden; }
+#pendingList li { grid-template-columns: 34px minmax(0, 1fr) auto; }
+#pendingList .nm span { overflow: hidden; text-overflow: ellipsis; }
+#pendingList .nm em { flex-shrink: 0; }
 #pendingList li .pb { grid-column: 2 / 3; }
 #pendingList li .call { grid-row: span 2; width: 30px; height: 30px; padding: 2px; cursor: pointer; border-radius: 4px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--gold-dim); }
 #pendingList li .call img { width: 100%; height: 100%; object-fit: contain; }
@@ -474,3 +477,10 @@ body.touch #help { display: none !important; }
 #menu .version { margin-top: 10px; text-align: center; font-size: 12px; opacity: 0.7; }
 #menu .version b { color: #ffe08a; font-weight: 700; }
 #menu .version span { opacity: 0.6; font-size: 11px; }
+
+/* Yapı menüsü: kurulu sayısı / limit rozeti */
+.cmd .cnt { position: absolute; top: 1px; right: 2px; min-width: 14px; padding: 0 3px; border-radius: 7px; font: 700 10px Georgia, serif;
+  color: #ffe08a; background: rgba(0, 0, 0, 0.65); text-align: center; line-height: 14px; }
+.cmd .cnt:empty { display: none; }
+.cmd .cnt.full { color: #ff9a85; }
+.title .wildtag { font-size: 11px; padding: 1px 6px; margin-left: 6px; border-radius: 3px; background: #3d5a2a; color: #d9f2c4; vertical-align: middle; }

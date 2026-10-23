@@ -7,6 +7,7 @@ import { Camera } from '../render/Camera.js';
 import { Renderer } from '../render/Renderer.js';
 import { SpriteFactory } from '../render/SpriteFactory.js';
 import { HW, HH, worldToTile } from '../render/iso.js';
+import { TileId } from '../world/TileTypes.js';
 import { InputHandler } from './InputHandler.js';
 import { UIManager } from '../ui/UIManager.js';
 import { Minimap } from '../ui/Minimap.js';
@@ -113,9 +114,27 @@ export class Game {
     });
   }
 
+  /**
+   * Kamera sınırı = kara parçasının (su olmayan karoların) dünya dikdörtgeni + küçük pay. Böylece kamera denize
+   * kaçmaz ve en uzak zoom karayı ekrana sığdırır (haritanın dışındaki açık deniz görünmez).
+   */
   _worldBounds() {
-    const { MAP_WIDTH: W, MAP_HEIGHT: H, WORLD_PADDING: P } = CONFIG;
-    return { minX: -H * HW - P, maxX: W * HW + P, minY: -HH - P - 120, maxY: (W + H - 1) * HH + P + 140 };
+    const map = this.world.map;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let j = 0; j < map.height; j++) {
+      const row = map.terrain[j];
+      for (let i = 0; i < map.width; i++) {
+        if (row[i] === TileId.WATER) continue;
+        const x = (i - j) * HW, y = (i + j) * HH;
+        if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+    }
+    if (minX === Infinity) {
+      const { MAP_WIDTH: W, MAP_HEIGHT: H } = CONFIG;
+      return { minX: -H * HW, maxX: W * HW, minY: -HH, maxY: (W + H - 1) * HH };
+    }
+    const P = HW * 2;
+    return { minX: minX - P, maxX: maxX + P, minY: minY - P - 80, maxY: maxY + P };
   }
 
   _resize() {
@@ -149,12 +168,26 @@ export class Game {
     });
   }
 
+  /**
+   * Kare döngüsü. Sonraki kare HER ZAMAN önce istenir ve kare içindeki hata yakalanır: tek bir hata eskiden döngüyü
+   * kalıcı olarak durduruyordu (ekran donuk, düğmeler ses çıkarmaya devam ediyordu). Artık oyun sürer, hata bir kez
+   * ekranda bildirilir ve konsola yazılır.
+   */
   _loop(ts) {
+    requestAnimationFrame(this._loop);
     const dt = Math.min((ts - this._lastTs) / 1000, 0.1);
     this._lastTs = ts;
-    this.update(dt);
-    this.render();
-    requestAnimationFrame(this._loop);
+    try {
+      this.update(dt);
+      this.render();
+    } catch (err) {
+      console.error('[Arzu\'nun Köyü] Kare hatası:', err);
+      const msg = `${err?.message ?? err}`;
+      if (this._lastErr !== msg) {
+        this._lastErr = msg;
+        this.ui?.toast(`Bir hata oluştu ama oyun devam ediyor: ${msg}`, 'warn');
+      }
+    }
   }
 
   setPaused(p) {
@@ -184,6 +217,13 @@ export class Game {
 
     this._updatePlacement();
     this._pruneSelection();
+    this._hoverT = (this._hoverT ?? 0) - dt;
+    const m = this.input.mouse;
+    if (this._hoverT <= 0 && !this.input.drag && !this.placement && m.inside && !this.input.isTouch) {
+      this._hoverT = 0.15;
+      const r = this.canvas.getBoundingClientRect();
+      this.ui.hoverWorld(this.pickAt(m.x, m.y), { clientX: m.x + r.left, clientY: m.y + r.top });
+    }
 
     for (const ev of this.world.events.splice(0)) this.ui.toast(ev.text, ev.kind);
     for (const sn of this.world.sounds.splice(0)) this.audio.play(sn.name, sn.i, sn.j, sn.vol);
@@ -339,6 +379,10 @@ export class Game {
         // Düşmana sağ tık → tüm seçili savaşanlar saldırır
         world.commandAttack(units, ent);
         color = 'rgba(255,70,60,0.95)';
+      } else if (ent?.isBuilding && ent.owner === PLAYER && ent.def.troops && ent.complete && soldiers.length) {
+        world.commandTent(soldiers, ent); // askerler otağa girer
+        world.commandMove(units.filter((u) => !u.isMilitary), ent.i + 1, ent.j + 1);
+        color = 'rgba(255,220,90,0.95)';
       } else if (ent?.isUnit && ent.owner === PLAYER && ent.def.transport) {
         world.commandBoard(units.filter((u) => u !== ent), ent); // askerler savaş arabasına biner
       } else if (ent?.isResource) {
